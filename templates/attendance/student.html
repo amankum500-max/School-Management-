@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ student.name }} — Attendance{% endblock %}
+{% block page_title %}Attendance — {{ student.name }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:1rem; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+    <a href="{{ url_for('students.view_student', student_id=student.id) }}"
+       style="color:#64748b; text-decoration:none; font-size:0.9rem;">← Back to Profile</a>
+    <form method="GET" style="margin-left:auto; display:flex; gap:0.5rem;">
+        <input type="month" name="month" value="{{ month }}"
+            style="padding:0.5rem; border:1px solid #cbd5e1; border-radius:6px;">
+        <button type="submit" class="btn">View</button>
+    </form>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:0.75rem; margin-bottom:1rem;">
+    <div class="card" style="padding:0.75rem; text-align:center;">
+        <div style="font-size:0.75rem; color:#64748b;">Present</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#10b981;">{{ summary.present }}</div>
+    </div>
+    <div class="card" style="padding:0.75rem; text-align:center;">
+        <div style="font-size:0.75rem; color:#64748b;">Absent</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#ef4444;">{{ summary.absent }}</div>
+    </div>
+    <div class="card" style="padding:0.75rem; text-align:center;">
+        <div style="font-size:0.75rem; color:#64748b;">Late</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#f59e0b;">{{ summary.late }}</div>
+    </div>
+    <div class="card" style="padding:0.75rem; text-align:center;">
+        <div style="font-size:0.75rem; color:#64748b;">Leave</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#3b82f6;">{{ summary.leave }}</div>
+    </div>
+    <div class="card" style="padding:0.75rem; text-align:center;">
+        <div style="font-size:0.75rem; color:#64748b;">%</div>
+        <div style="font-size:1.5rem; font-weight:700;">{{ summary.percent }}%</div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom:1rem; font-size:1rem;">Day-wise ({{ month }})</h3>
+    <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:4px; font-size:0.75rem;">
+        {% for d in ['S','M','T','W','T','F','S'] %}
+        <div style="text-align:center; color:#94a3b8; padding:0.25rem;">{{ d }}</div>
+        {% endfor %}
+        {% for i in range(35) %}
+            {% if i < 1 %} {% set _ = 0 %} {% endif %}
+        {% endfor %}
+        {# Simple day loop — 1 se 31 tak #}
+        {% for day in range(1, 32) %}
+            {% set day_str = '%s-%02d'|format(month, day) %}
+            {% set st = calendar.get(day_str) %}
+            {% set color = {
+                'present': '#10b981',
+                'absent': '#ef4444',
+                'late': '#f59e0b',
+                'leave': '#3b82f6'
+            }.get(st, '#f1f5f9') %}
+            {% set fg = 'white' if st else '#94a3b8' %}
+            <div style="aspect-ratio:1; background:{{ color }}; color:{{ fg }};
+                border-radius:5px; display:flex; align-items:center; justify-content:center;
+                font-size:0.75rem; font-weight:600;">
+                {{ day }}
+            </div>
+        {% endfor %}
+    </div>
+    <div style="margin-top:1rem; font-size:0.75rem; color:#64748b; display:flex; gap:1rem; flex-wrap:wrap;">
+        <span><span style="display:inline-block; width:10px; height:10px; background:#10b981; border-radius:2px;"></span> Present</span>
+        <span><span style="display:inline-block; width:10px; height:10px; background:#ef4444; border-radius:2px;"></span> Absent</span>
+        <span><span style="display:inline-block; width:10px; height:10px; background:#f59e0b; border-radius:2px;"></span> Late</span>
+        <span><span style="display:inline-block; width:10px; height:10px; background:#3b82f6; border-radius:2px;"></span> Leave</span>
+        <span><span style="display:inline-block; width:10px; height:10px; background:#f1f5f9; border-radius:2px; border:1px solid #cbd5e1;"></span> Unmarked</span>
+    </div>
+</div>
+{% endblock %}
