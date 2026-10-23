@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Enquiry #{{ e.id }}{% endblock %}
+{% block page_title %}Enquiry Details{% endblock %}
+
+{% block content %}
+<div style="max-width:800px;">
+
+    <div style="margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+        <a href="{{ url_for('admissions.index') }}"
+           style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back to list</a>
+        <div style="display:flex; gap:0.5rem;">
+            {% if e.parent_phone %}
+            <a href="https://wa.me/91{{ e.parent_phone|replace(' ','')|replace('-','') }}?text=Namaste%2C%20{{ e.parent_name }}%20ji.%20{{ school.school_name }}%20se%20admission%20enquiry%20ke%20baare%20mein%20contact%20kar%20rahe%20hain."
+               target="_blank"
+               class="btn" style="background:#25d366;">📲 WhatsApp</a>
+            {% endif %}
+            <form method="POST" action="{{ url_for('admissions.remove', enquiry_id=e.id) }}"
+                  onsubmit="return confirm('Delete enquiry #{{ e.id }}?');" style="display:inline;">
+                <button class="btn" style="background:#ef4444;">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Student info -->
+    <div class="card" style="margin-bottom:1rem;">
+        <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#1e293b;">🎓 Student</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; font-size:0.9rem;">
+            <div><span style="color:#64748b;">Name:</span> <strong>{{ e.student_name }}</strong></div>
+            <div><span style="color:#64748b;">DOB:</span> {{ e.dob or '—' }}</div>
+            <div><span style="color:#64748b;">Gender:</span> {{ e.gender or '—' }}</div>
+            <div><span style="color:#64748b;">Class:</span> {{ e.class_applying or '—' }}</div>
+            <div style="grid-column:1/-1;">
+                <span style="color:#64748b;">Previous School:</span> {{ e.previous_school or '—' }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Parent info -->
+    <div class="card" style="margin-bottom:1rem;">
+        <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#1e293b;">👨‍👩‍👧 Parent</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; font-size:0.9rem;">
+            <div><span style="color:#64748b;">Name:</span> <strong>{{ e.parent_name }}</strong></div>
+            <div><span style="color:#64748b;">Phone:</span> <strong>{{ e.parent_phone }}</strong></div>
+            <div style="grid-column:1/-1;">
+                <span style="color:#64748b;">Email:</span> {{ e.parent_email or '—' }}
+            </div>
+            <div style="grid-column:1/-1;">
+                <span style="color:#64748b;">Address:</span> {{ e.address or '—' }}
+            </div>
+        </div>
+    </div>
+
+    {% if e.message %}
+    <div class="card" style="margin-bottom:1rem;">
+        <h3 style="font-size:1rem; margin-bottom:0.5rem; color:#1e293b;">💬 Message</h3>
+        <p style="font-size:0.9rem; color:#334155; white-space:pre-wrap;">{{ e.message }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Status update -->
+    <div class="card">
+        <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#1e293b;">📋 Update Status</h3>
+        <form method="POST">
+            <div style="margin-bottom:1rem;">
+                <label style="font-size:0.85rem; color:#334155;">Status</label>
+                <select name="status"
+                    style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                    {% for st in ['new','contacted','admitted','rejected'] %}
+                    <option value="{{ st }}" {% if e.status == st %}selected{% endif %}>
+                        {{ st|capitalize }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="margin-bottom:1rem;">
+                <label style="font-size:0.85rem; color:#334155;">Admin Note (internal)</label>
+                <textarea name="admin_note" rows="3"
+                    style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">{{ e.admin_note or '' }}</textarea>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+                <button type="submit" class="btn">Save</button>
+                <span style="font-size:0.78rem; color:#94a3b8;">
+                    Received: {{ e.created_at.strftime('%d %b %Y, %I:%M %p') if e.created_at else '—' }}
+                </span>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}
