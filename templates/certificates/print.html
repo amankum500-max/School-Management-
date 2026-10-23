@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ c.cert_type }} — {{ c.name }} ({{ c.cert_no }})</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            background: #e2e8f0;
+            padding: 1.5rem;
+            color: #1e293b;
+        }
+        .page {
+            background: white;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2.5rem 3rem;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        /* Letterhead */
+        .letterhead {
+            text-align: center;
+            border-bottom: 3px double #1e293b;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .letterhead h1 {
+            font-size: 1.9rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #1e293b;
+            text-transform: uppercase;
+        }
+        .letterhead .tagline {
+            font-size: 0.85rem;
+            color: #64748b;
+            font-style: italic;
+            margin-top: 0.2rem;
+        }
+        .letterhead .contact {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 0.35rem;
+        }
+
+        /* Title */
+        .cert-title {
+            text-align: center;
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #1e293b;
+            margin: 1.5rem 0 0.35rem;
+        }
+        .cert-title::before,
+        .cert-title::after {
+            content: '— ';
+        }
+        .cert-title::after { content: ' —'; }
+
+        .cert-meta {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-bottom: 2rem;
+            font-family: system-ui, sans-serif;
+        }
+        .cert-meta span { margin: 0 0.5rem; }
+
+        /* Body */
+        .cert-body {
+            font-size: 1.02rem;
+            line-height: 2;
+            text-align: justify;
+            text-indent: 2rem;
+            color: #1e293b;
+            min-height: 180px;
+        }
+
+        /* Remarks */
+        .remarks {
+            font-size: 0.85rem;
+            color: #475569;
+            margin-top: 1.25rem;
+            padding: 0.6rem 0.9rem;
+            border-left: 3px solid #3b82f6;
+            background: #eff6ff;
+            font-family: system-ui, sans-serif;
+        }
+
+        /* Signature */
+        .signs {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 3.5rem;
+            font-family: system-ui, sans-serif;
+        }
+        .sign {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #334155;
+        }
+        .sign .line {
+            width: 140px;
+            border-top: 1.5px solid #1e293b;
+            margin: 0 auto 0.35rem;
+        }
+
+        /* Seal */
+        .seal {
+            position: absolute;
+            right: 3rem;
+            top: 45%;
+            width: 80px;
+            height: 80px;
+            border: 2px dashed #94a3b8;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            font-size: 0.6rem;
+            text-align: center;
+            font-family: system-ui, sans-serif;
+            transform: rotate(-15deg);
+            line-height: 1.1;
+        }
+
+        /* Footer */
+        .foot {
+            margin-top: 2rem;
+            padding-top: 0.75rem;
+            border-top: 1px dashed #cbd5e1;
+            font-size: 0.68rem;
+            color: #94a3b8;
+            text-align: center;
+            font-family: system-ui, sans-serif;
+        }
+
+        /* Actions */
+        .actions {
+            text-align: center;
+            margin-top: 1.25rem;
+            font-family: system-ui, sans-serif;
+        }
+        .actions button, .actions a {
+            padding: 0.55rem 1.2rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.88rem;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0 0.25rem;
+        }
+        .btn-print { background: #3b82f6; color: white; }
+        .btn-back { background: #64748b; color: white; }
+        .btn-del { background: #ef4444; color: white; }
+
+        @media print {
+            @page { size: A4; margin: 15mm; }
+            body { background: white; padding: 0; }
+            .page {
+                box-shadow: none;
+                border: none;
+                padding: 0;
+                max-width: none;
+            }
+            .actions { display: none; }
+            .seal { border-color: #cbd5e1; color: #cbd5e1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- Letterhead -->
+        <div class="letterhead">
+            <h1>{{ school.school_name }}</h1>
+            {% if school.tagline %}
+            <div class="tagline">{{ school.tagline }}</div>
+            {% endif %}
+            <div class="contact">
+                {% if school.address %}{{ school.address }}{% endif %}
+                {% if school.address and (school.phone or school.email) %} • {% endif %}
+                {% if school.phone %}📞 {{ school.phone }}{% endif %}
+                {% if school.phone and school.email %} • {% endif %}
+                {% if school.email %}✉️ {{ school.email }}{% endif %}
+            </div>
+        </div>
+
+        <!-- Title -->
+        <div class="cert-title">{{ c.cert_type }}</div>
+        <div class="cert-meta">
+            <span>Certificate No: <strong>{{ c.cert_no }}</strong></span>
+            <span>Date: <strong>{{ c.issue_date.strftime('%d %B %Y') if c.issue_date else '—' }}</strong></span>
+        </div>
+
+        <!-- Body -->
+        <div class="cert-body">{{ c.body }}</div>
+
+        {% if c.remarks %}
+        <div class="remarks"><strong>Remarks:</strong> {{ c.remarks }}</div>
+        {% endif %}
+
+        <!-- Seal -->
+        <div class="seal">School<br>Seal</div>
+
+        <!-- Signatures -->
+        <div class="signs">
+            <div class="sign">
+                <div class="line"></div>
+                Class Teacher
+            </div>
+            <div class="sign">
+                <div class="line"></div>
+                Principal
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="foot">
+            This is a computer-generated certificate. Academic Year: {{ ay }}
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+        <a href="{{ url_for('certificates.index') }}" class="btn-back">← All Certificates</a>
+        <form method="POST" action="{{ url_for('certificates.remove', cid=c.id) }}"
+              onsubmit="return confirm('Delete certificate {{ c.cert_no }}?');"
+              style="display:inline;">
+            <button class="btn-del">Delete</button>
+        </form>
+    </div>
+</body>
+</html>
