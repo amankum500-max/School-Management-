@@ -41,6 +41,12 @@
             <h1>🎓 SCHOOL MANAGEMENT</h1>
             <p>{{ exam.name }} — Report Card</p>
         </div>
+        <h1>{{ school.school_name }}</h1>
+{% if school.address or school.phone %}
+<p style="font-size:0.75rem; color:#64748b;">
+    {{ school.address }}{% if school.phone %} • {{ school.phone }}{% endif %}
+</p>
+{% endif %}
 
         <div class="info">
             <div><span>Name:</span> <strong>{{ student.name }}</strong></div>
