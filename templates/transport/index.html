@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Transport{% endblock %}
+{% block page_title %}Transport & Bus Routes{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; gap:0.6rem; flex-wrap:wrap; margin-bottom:1rem; align-items:center;">
+    <form method="GET" style="display:flex; gap:0.5rem; flex:1; min-width:220px;">
+        <input name="q" value="{{ search }}" placeholder="Search route / vehicle / driver..."
+            style="flex:1; padding:0.55rem 0.85rem; border:1px solid #cbd5e1; border-radius:8px;">
+        <button type="submit" class="btn">Search</button>
+    </form>
+    <a href="{{ url_for('transport.add') }}" class="btn"
+       style="background:#0ea5e9;">+ Add Route</a>
+</div>
+
+{% for r in routes %}
+<div class="card" style="margin-bottom:0.75rem; border-left:4px solid
+    {{ '#10b981' if r.status == 'active' else '#94a3b8' }};">
+    <div style="display:flex; justify-content:space-between; align-items:start; gap:0.5rem; flex-wrap:wrap;">
+        <div style="flex:1;">
+            <a href="{{ url_for('transport.view', rid=r.id) }}"
+               style="font-size:1.05rem; font-weight:700; color:#1e293b; text-decoration:none;">
+                🚌 {{ r.name }}
+            </a>
+            {% if r.vehicle_no %}
+            <span style="font-size:0.75rem; background:#f1f5f9; color:#475569;
+                padding:0.15rem 0.45rem; border-radius:3px; margin-left:0.4rem;">
+                {{ r.vehicle_no }}
+            </span>
+            {% endif %}
+            {% if r.status != 'active' %}
+            <span style="font-size:0.7rem; background:#fee2e2; color:#991b1b;
+                padding:0.15rem 0.45rem; border-radius:3px; margin-left:0.4rem;">
+                INACTIVE
+            </span>
+            {% endif %}
+
+            <div style="margin-top:0.5rem; font-size:0.85rem; color:#475569;
+                display:flex; gap:1rem; flex-wrap:wrap;">
+                {% if r.driver_name %}
+                <span>👤 {{ r.driver_name }}</span>
+                {% endif %}
+                {% if r.driver_phone %}
+                <span>📞 {{ r.driver_phone }}</span>
+                {% endif %}
+                <span>🛑 {{ r.stop_count }} stops</span>
+                <span>🎓 {{ r.student_count }}/{{ r.capacity }} students</span>
+                {% if r.fee_per_month %}
+                <span>💰 ₹{{ "%.0f"|format(r.fee_per_month) }}/month</span>
+                {% endif %}
+            </div>
+        </div>
+        <div style="display:flex; gap:0.4rem;">
+            <a href="{{ url_for('transport.edit', rid=r.id) }}"
+               style="color:#f59e0b; text-decoration:none; font-size:0.85rem;">Edit</a>
+            <a href="{{ url_for('transport.view', rid=r.id) }}"
+               style="color:#3b82f6; text-decoration:none; font-size:0.85rem;">View</a>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Koi bus route nahi. "+ Add Route" se shuru karo.
+</div>
+{% endfor %}
+{% endblock %}
