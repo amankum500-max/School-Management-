@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Add' if mode=='add' else 'Edit' }} Notice{% endblock %}
+{% block page_title %}{{ 'New' if mode=='add' else 'Edit' }} Notice{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:700px;">
+<form method="POST">
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Title *</label>
+        <input name="title" required value="{{ notice.title if notice else '' }}"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Content *</label>
+        <textarea name="content" rows="6" required
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">{{ notice.content if notice else '' }}</textarea>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Category</label>
+            <select name="category" style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                {% for c in ['general','exam','fee','holiday','event','urgent'] %}
+                <option value="{{ c }}" {% if notice and notice.category == c %}selected{% endif %}>{{ c|capitalize }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Priority</label>
+            <select name="priority" style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                {% for p in ['normal','high','urgent'] %}
+                <option value="{{ p }}" {% if notice and notice.priority == p %}selected{% endif %}>{{ p|capitalize }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Target Class (optional)</label>
+            <select name="target_class" style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="">All classes</option>
+                {% for c in classes %}
+                <option value="{{ c }}" {% if notice and notice.target_class == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Options</label>
+            <div style="padding:0.4rem 0;">
+                <label style="display:block; font-size:0.85rem; margin-bottom:0.35rem;">
+                    <input type="checkbox" name="is_public" {% if notice and notice.is_public %}checked{% endif %}>
+                    Public board pe dikhao
+                </label>
+                <label style="display:block; font-size:0.85rem;">
+                    <input type="checkbox" name="published" {% if not notice or notice.published %}checked{% endif %}>
+                    Publish karo (uncheck = draft)
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top:1.25rem; display:flex; gap:0.75rem;">
+        <button type="submit" class="btn">{{ 'Publish' if mode=='add' else 'Save' }}</button>
+        <a href="{{ url_for('notices.index') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+    </div>
+</form>
+</div>
+{% endblock %}
