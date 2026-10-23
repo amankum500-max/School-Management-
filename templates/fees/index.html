@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Fees — School MS{% endblock %}
+{% block page_title %}Fees{% endblock %}
+
+{% block content %}
+<div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem; align-items:center;">
+    <form method="GET" style="display:flex; gap:0.5rem;">
+        <input type="month" name="month" value="{{ month }}"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+        <button type="submit" class="btn">View</button>
+    </form>
+    <div style="margin-left:auto; display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <a href="{{ url_for('fees.structure') }}" class="btn" style="background:#64748b;">Fee Structure</a>
+        <a href="{{ url_for('fees.defaulters', month=month) }}" class="btn" style="background:#ef4444;">Defaulters</a>
+        <a href="{{ url_for('fees.collect') }}" class="btn">+ Collect Fee</a>
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; margin-bottom:1.25rem;">
+    <div class="card">
+        <div style="color:#64748b; font-size:0.85rem;">This Month ({{ month }})</div>
+        <div style="font-size:1.6rem; font-weight:700; margin-top:0.25rem;">₹{{ "%.0f"|format(total) }}</div>
+    </div>
+    <div class="card">
+        <div style="color:#64748b; font-size:0.85rem;">All Time</div>
+        <div style="font-size:1.6rem; font-weight:700; margin-top:0.25rem;">₹{{ "%.0f"|format(total_all) }}</div>
+    </div>
+</div>
+
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.7rem; text-align:left;">Receipt</th>
+            <th style="padding:0.7rem; text-align:left;">Student</th>
+            <th style="padding:0.7rem; text-align:left;">Class</th>
+            <th style="padding:0.7rem; text-align:left;">Type</th>
+            <th style="padding:0.7rem; text-align:right;">Amount</th>
+            <th style="padding:0.7rem; text-align:left;">Mode</th>
+            <th style="padding:0.7rem; text-align:left;">Paid At</th>
+            <th style="padding:0.7rem; text-align:right;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in payments %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.65rem; font-family:monospace; font-size:0.8rem;">{{ p.receipt_no }}</td>
+            <td style="padding:0.65rem;"><strong>{{ p.student }}</strong></td>
+            <td style="padding:0.65rem;">{{ p.class_name or '—' }}{% if p.section %} - {{ p.section }}{% endif %}</td>
+            <td style="padding:0.65rem;">{{ p.fee_type }}</td>
+            <td style="padding:0.65rem; text-align:right;">₹{{ "%.0f"|format(p.amount) }}</td>
+            <td style="padding:0.65rem;">{{ p.mode }}</td>
+            <td style="padding:0.65rem; font-size:0.8rem;">{{ p.paid_at.strftime('%d %b, %H:%M') if p.paid_at else '—' }}</td>
+            <td style="padding:0.65rem; text-align:right; white-space:nowrap;">
+                <a href="{{ url_for('fees.receipt', payment_id=p.id) }}"
+                   style="color:#3b82f6; text-decoration:none;">Receipt</a>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" style="padding:2rem; text-align:center; color:#64748b;">
+            Is month koi payment nahi. "+ Collect Fee" se shuru karo.
+        </td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}
