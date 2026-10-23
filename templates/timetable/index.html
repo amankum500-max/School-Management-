@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Timetable{% endblock %}
+{% block page_title %}Timetable{% endblock %}
+
+{% block content %}
+
+<!-- Class selector -->
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:end;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">
+            Class-Section
+        </label>
+        <select name="combo" onchange="const v=this.value.split('|'); this.form.class.value=v[0]; this.form.section.value=v[1]||''; this.form.submit();"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px; min-width:160px;">
+            <option value="|">-- Select --</option>
+            {% for c, s in combos %}
+            <option value="{{ c }}|{{ s }}" {% if c == selected_class and s == selected_section %}selected{% endif %}>
+                Class {{ c }}{% if s %} - {{ s }}{% endif %}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <input type="hidden" name="class" value="{{ selected_class }}">
+    <input type="hidden" name="section" value="{{ selected_section }}">
+
+    {% if selected_class %}
+    <a href="{{ url_for('timetable.edit', **{'class': selected_class, 'section': selected_section}) }}"
+       class="btn" style="background:#8b5cf6; margin-left:auto;">
+        ✏️ Edit Timetable
+    </a>
+    {% endif %}
+</form>
+</div>
+
+{% if not selected_class %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Class-Section select karo, phir timetable dikhega.
+</div>
+
+{% elif not grid %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Is class ka timetable abhi set nahi hai.
+    <a href="{{ url_for('timetable.edit', **{'class': selected_class, 'section': selected_section}) }}"
+       style="color:#3b82f6;">Set karo →</a>
+</div>
+
+{% else %}
+
+<!-- Grid -->
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.82rem; min-width:700px;">
+    <thead>
+        <tr style="background:#1e293b; color:white;">
+            <th style="padding:0.6rem; text-align:left; width:90px;">Period</th>
+            {% for dnum, dname in days %}
+            <th style="padding:0.6rem; text-align:center;">{{ dname }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in periods %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.5rem; background:#f8fafc; font-weight:700; color:#475569;">
+                P{{ p }}
+            </td>
+            {% for dnum, dname in days %}
+                {% set cell = grid.get((dnum, p)) %}
+                <td style="padding:0.4rem; text-align:center; vertical-align:top;
+                    background:{{ '#eff6ff' if cell else 'white' }};">
+                    {% if cell and cell.subject %}
+                    <div style="font-weight:600; color:#1e293b; font-size:0.82rem;">
+                        {{ cell.subject }}
+                    </div>
+                    {% if cell.staff_name %}
+                    <div style="font-size:0.7rem; color:#64748b; margin-top:0.15rem;">
+                        {{ cell.staff_name }}
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <span style="color:#cbd5e1;">—</span>
+                    {% endif %}
+                </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+{% endif %}
+{% endblock %}
