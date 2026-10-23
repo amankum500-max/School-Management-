@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Edit Timetable{% endblock %}
+{% block page_title %}Edit Timetable — Class {{ class_name }}{% if section %} - {{ section }}{% endif %}{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+    <a href="{{ url_for('timetable.index', **{'class': class_name, 'section': section}) }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back to View</a>
+    <div style="font-size:0.8rem; color:#64748b;">
+        💡 Subject khaali chhod do toh slot delete ho jayega. Teacher optional hai.
+    </div>
+</div>
+
+<form method="POST">
+<div class="card" style="padding:0; overflow:auto;">
+<table style="border-collapse:collapse; font-size:0.78rem; min-width:900px; width:100%;">
+    <thead>
+        <tr style="background:#1e293b; color:white;">
+            <th style="padding:0.55rem; text-align:left; width:80px; position:sticky; left:0; background:#1e293b; z-index:1;">
+                Period
+            </th>
+            {% for dnum, dname in days %}
+            <th style="padding:0.55rem; text-align:center;">{{ dname }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in periods %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.5rem; background:#f8fafc; font-weight:700; color:#475569;
+                position:sticky; left:0; z-index:1;">
+                P{{ p }}
+            </td>
+            {% for dnum, dname in days %}
+                {% set cell = grid.get((dnum, p), {}) %}
+                <td style="padding:0.35rem; vertical-align:top; min-width:130px;">
+                    <input name="sub_{{ dnum }}_{{ p }}"
+                        value="{{ cell.subject or '' }}"
+                        placeholder="Subject"
+                        style="width:100%; padding:0.35rem; border:1px solid #e2e8f0;
+                        border-radius:4px; font-size:0.78rem; margin-bottom:0.2rem;">
+                    <select name="staff_{{ dnum }}_{{ p }}"
+                        style="width:100%; padding:0.3rem; border:1px solid #e2e8f0;
+                        border-radius:4px; font-size:0.72rem; color:#475569;">
+                        <option value="">— Teacher —</option>
+                        {% for s in staff_list %}
+                        <option value="{{ s.id }}" {% if cell.staff_id == s.id %}selected{% endif %}>
+                            {{ s.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<div class="card" style="margin-top:1rem; display:flex; gap:0.75rem;">
+    <button type="submit" class="btn">💾 Save Timetable</button>
+    <a href="{{ url_for('timetable.index', **{'class': class_name, 'section': section}) }}"
+       style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+</div>
+</form>
+{% endblock %}
