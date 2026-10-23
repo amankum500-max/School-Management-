@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Students — School MS{% endblock %}
+{% block page_title %}Students{% endblock %}
+
+{% block content %}
+<div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem; align-items:center;">
+    <form method="GET" style="display:flex; gap:0.5rem; flex:1; min-width:250px;">
+        <input type="text" name="q" value="{{ search }}" placeholder="Search naam, roll, phone..."
+            style="flex:1; padding:0.55rem 0.85rem; border:1px solid #cbd5e1; border-radius:8px;">
+        <select name="class" style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+            <option value="">All Classes</option>
+            {% for c in classes %}
+            <option value="{{ c }}" {% if c == selected_class %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn">Filter</button>
+    </form>
+    <a href="{{ url_for('students.add_student') }}" class="btn">+ Add Student</a>
+</div>
+
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.75rem; text-align:left;">Roll</th>
+            <th style="padding:0.75rem; text-align:left;">Name</th>
+            <th style="padding:0.75rem; text-align:left;">Class</th>
+            <th style="padding:0.75rem; text-align:left;">Parent Phone</th>
+            <th style="padding:0.75rem; text-align:left;">Status</th>
+            <th style="padding:0.75rem; text-align:right;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for s in students %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.7rem;">{{ s.roll_no or '—' }}</td>
+            <td style="padding:0.7rem;"><strong>{{ s.name }}</strong></td>
+            <td style="padding:0.7rem;">{{ s.class_name or '—' }}{% if s.section %} - {{ s.section }}{% endif %}</td>
+            <td style="padding:0.7rem;">{{ s.parent_phone or '—' }}</td>
+            <td style="padding:0.7rem;">
+                <span style="padding:0.2rem 0.5rem; border-radius:4px; font-size:0.75rem;
+                    background:{{ '#d1fae5' if s.status=='active' else '#fee2e2' }};
+                    color:{{ '#065f46' if s.status=='active' else '#991b1b' }};">
+                    {{ s.status }}
+                </span>
+            </td>
+            <td style="padding:0.7rem; text-align:right; white-space:nowrap;">
+                <a href="{{ url_for('students.view_student', student_id=s.id) }}"
+                   style="color:#3b82f6; text-decoration:none; margin-right:0.5rem;">View</a>
+                <a href="{{ url_for('students.edit_student', student_id=s.id) }}"
+                   style="color:#f59e0b; text-decoration:none;">Edit</a>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="padding:2rem; text-align:center; color:#64748b;">
+            Koi student nahi mila. "+ Add Student" se pehla student banao.
+        </td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}
