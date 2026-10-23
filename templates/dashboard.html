@@ -31,3 +31,6 @@
 <div style="font-size:1.8rem; font-weight:700; margin-top:0.25rem;">{{ total_students or 0 }}</div>
 <div style="font-size:1.8rem; font-weight:700; margin-top:0.25rem;">₹0</div>
 <div style="font-size:1.8rem; font-weight:700; margin-top:0.25rem;">₹{{ "%.0f"|format(fees_collected or 0) }}</div>
+<div style="font-size:1.8rem; font-weight:700; margin-top:0.25rem;">
+    {{ (attendance_today|string + '%') if attendance_today is not none else '—' }}
+</div>
