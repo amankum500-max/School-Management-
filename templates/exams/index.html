@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Exams{% endblock %}
+{% block page_title %}Exams & Marks{% endblock %}
+
+{% block content %}
+<div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem; align-items:center;">
+    <form method="GET" style="display:flex; gap:0.5rem;">
+        <select name="class" onchange="this.form.submit()"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+            <option value="">All Classes</option>
+            {% for c in classes %}
+            <option value="{{ c }}" {% if c == selected_class %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+        </select>
+    </form>
+    <a href="{{ url_for('exams.add') }}" class="btn" style="margin-left:auto;">+ New Exam</a>
+</div>
+
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.7rem; text-align:left;">Exam</th>
+            <th style="padding:0.7rem; text-align:left;">Class</th>
+            <th style="padding:0.7rem; text-align:left;">Date</th>
+            <th style="padding:0.7rem; text-align:left;">Subjects</th>
+            <th style="padding:0.7rem; text-align:right;">Max</th>
+            <th style="padding:0.7rem; text-align:right;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for e in exams %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.7rem;"><strong>{{ e.name }}</strong></td>
+            <td style="padding:0.7rem;">{{ e.class_name }}</td>
+            <td style="padding:0.7rem;">{{ e.exam_date or '—' }}</td>
+            <td style="padding:0.7rem; font-size:0.8rem;">{{ e.subjects|join(', ') }}</td>
+            <td style="padding:0.7rem; text-align:right;">{{ e.max_marks }}</td>
+            <td style="padding:0.7rem; text-align:right; white-space:nowrap;">
+                <a href="{{ url_for('exams.marks_entry', exam_id=e.id) }}"
+                   style="color:#3b82f6; text-decoration:none; margin-right:0.5rem;">Marks</a>
+                <a href="{{ url_for('exams.merit', exam_id=e.id) }}"
+                   style="color:#8b5cf6; text-decoration:none; margin-right:0.5rem;">Merit</a>
+                <form method="POST" action="{{ url_for('exams.remove', exam_id=e.id) }}"
+                      onsubmit="return confirm('Delete exam? Sab marks bhi delete ho jayenge.');"
+                      style="display:inline;">
+                    <button style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.9rem;">
+                        Delete
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="padding:2rem; text-align:center; color:#64748b;">
+            Koi exam nahi. "+ New Exam" se banao.
+        </td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}
