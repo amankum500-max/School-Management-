@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Bills{% endblock %}
+{% block page_title %}Monthly Bills{% endblock %}
+
+{% block content %}
+
+<!-- Filter bar -->
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:end;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Month</label>
+        <input type="month" name="month" value="{{ month }}"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Class</label>
+        <select name="class"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">All</option>
+            {% for c in classes %}
+            <option value="{{ c }}" {% if c == selected_class %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Status</label>
+        <select name="status"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">All</option>
+            {% for st in ['pending','partial','paid'] %}
+            <option value="{{ st }}" {% if st == selected_status %}selected{% endif %}>{{ st|capitalize }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Search</label>
+        <input name="q" value="{{ search }}" placeholder="name / roll"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+    <button type="submit" class="btn">Filter</button>
+    <a href="{{ url_for('bills.generate') }}" class="btn"
+       style="background:#8b5cf6; margin-left:auto;">+ Generate Bills</a>
+</form>
+</div>
+
+<!-- Summary -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:0.75rem; margin-bottom:1rem;">
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.75rem; color:#64748b;">Total Bills</div>
+        <div style="font-size:1.5rem; font-weight:700;">{{ summary.total_bills }}</div>
+    </div>
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.75rem; color:#64748b;">Expected</div>
+        <div style="font-size:1.5rem; font-weight:700;">₹{{ "%.0f"|format(summary.total_amount) }}</div>
+    </div>
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.75rem; color:#64748b;">Collected</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#10b981;">₹{{ "%.0f"|format(summary.collected) }}</div>
+    </div>
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.75rem; color:#64748b;">Pending</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#ef4444;">₹{{ "%.0f"|format(summary.pending) }}</div>
+    </div>
+</div>
+
+{% if not bills %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Is month ke liye koi bills nahi hain.
+    <a href="{{ url_for('bills.generate') }}" style="color:#3b82f6;">Generate karo →</a>
+</div>
+{% else %}
+
+<!-- Delete month (danger) -->
+<form method="POST" action="{{ url_for('bills.delete_month') }}"
+      onsubmit="return confirm('{{ month }} ke SAARE bills delete karein? Payments safe rahenge.');"
+      style="margin-bottom:0.5rem; text-align:right;">
+    <input type="hidden" name="month" value="{{ month }}">
+    {% if selected_class %}<input type="hidden" name="class_name" value="{{ selected_class }}">{% endif %}
+    <button style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.78rem;">
+        🗑️ Delete all bills of this month
+    </button>
+</form>
+
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:750px;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.6rem; text-align:left;">Student</th>
+            <th style="padding:0.6rem; text-align:left;">Class</th>
+            <th style="padding:0.6rem; text-align:right;">Total</th>
+            <th style="padding:0.6rem; text-align:right;">Paid</th>
+            <th style="padding:0.6rem; text-align:right;">Pending</th>
+            <th style="padding:0.6rem; text-align:center;">Status</th>
+            <th style="padding:0.6rem; text-align:right;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for b in bills %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.6rem;">
+                <strong>{{ b.student_name }}</strong>
+                <div style="color:#94a3b8; font-size:0.72rem;">Roll: {{ b.roll or '—' }}</div>
+            </td>
+            <td style="padding:0.6rem;">{{ b.class_name or '—' }}{% if b.section %}-{{ b.section }}{% endif %}</td>
+            <td style="padding:0.6rem; text-align:right;">₹{{ "%.0f"|format(b.total) }}</td>
+            <td style="padding:0.6rem; text-align:right; color:#10b981;">₹{{ "%.0f"|format(b.paid) }}</td>
+            <td style="padding:0.6rem; text-align:right; font-weight:600;
+                color:{{ '#ef4444' if b.pending > 0 else '#94a3b8' }};">
+                ₹{{ "%.0f"|format(b.pending) }}
+            </td>
+            <td style="padding:0.6rem; text-align:center;">
+                <span style="font-size:0.72rem; padding:0.15rem 0.5rem; border-radius:3px; font-weight:600;
+                    background:{{ '#d1fae5' if b.status=='paid' else ('#fef3c7' if b.status=='partial' else '#fee2e2') }};
+                    color:{{ '#065f46' if b.status=='paid' else ('#92400e' if b.status=='partial' else '#991b1b') }};">
+                    {{ b.status }}
+                </span>
+            </td>
+            <td style="padding:0.6rem; text-align:right; white-space:nowrap;">
+                <a href="{{ url_for('bills.view', bill_id=b.id) }}"
+                   style="color:#3b82f6; text-decoration:none; font-size:0.82rem; margin-right:0.5rem;">
+                    View
+                </a>
+                {% if b.pending > 0 %}
+                <a href="{{ url_for('fees.collect') }}"
+                   style="color:#10b981; text-decoration:none; font-size:0.82rem;">
+                    Pay →
+                </a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}
