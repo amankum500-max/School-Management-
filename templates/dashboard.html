@@ -34,3 +34,7 @@
 <div style="font-size:1.8rem; font-weight:700; margin-top:0.25rem;">
     {{ (attendance_today|string + '%') if attendance_today is not none else '—' }}
 </div>
+<div class="card">
+    <div style="color:#64748b; font-size:0.85rem;">New Notices (7d)</div>
+    <div style="font-size:1.8rem; font-weight:700; margin-top:0.25rem;">{{ recent_notices or 0 }}</div>
+</div>
