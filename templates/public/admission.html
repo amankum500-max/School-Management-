@@ -1,0 +1,87 @@
+{% extends "public/base.html" %}
+{% block title %}Admission Enquiry — {{ school.school_name }}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:700px;">
+    <h1 class="section-title">Admission Enquiry</h1>
+    <p style="color:#64748b; margin-bottom:1.5rem; font-size:0.9rem;">
+        Fill the form below and our team will contact you soon.
+    </p>
+
+    <form method="POST" class="pub-card">
+        <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:#1e293b;">Student Details</h3>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+            <div style="grid-column:1/-1;">
+                <label style="font-size:0.85rem; color:#334155;">Student's Name *</label>
+                <input name="student_name" required
+                    style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.95rem;">
+            </div>
+            <div>
+                <label style="font-size:0.85rem; color:#334155;">Date of Birth</label>
+                <input name="dob" type="date"
+                    style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+                <label style="font-size:0.85rem; color:#334155;">Gender</label>
+                <select name="gender"
+                    style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:6px;">
+                    <option value="">Select</option>
+                    <option>Male</option>
+                    <option>Female</option>
+                    <option>Other</option>
+                </select>
+            </div>
+            <div style="grid-column:1/-1;">
+                <label style="font-size:0.85rem; color:#334155;">Class Applying For</label>
+                <input name="class_applying" placeholder="e.g. 1, 5, 10"
+                    style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div style="grid-column:1/-1;">
+                <label style="font-size:0.85rem; color:#334155;">Previous School (if any)</label>
+                <input name="previous_school"
+                    style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+        </div>
+
+        <h3 style="font-size:0.95rem; margin-bottom:0.75rem; margin-top:1.5rem; color:#1e293b;">Parent Details</h3>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+            <div style="grid-column:1/-1;">
+                <label style="font-size:0.85rem; color:#334155;">Parent's Name *</label>
+                <input name="parent_name" required
+                    style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+                <label style="font-size:0.85rem; color:#334155;">Phone *</label>
+                <input name="parent_phone" required type="tel" pattern="[0-9]{10,15}" placeholder="10-digit"
+                    style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+                <label style="font-size:0.85rem; color:#334155;">Email</label>
+                <input name="parent_email" type="email"
+                    style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div style="grid-column:1/-1;">
+                <label style="font-size:0.85rem; color:#334155;">Address</label>
+                <textarea name="address" rows="2"
+                    style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:6px;"></textarea>
+            </div>
+            <div style="grid-column:1/-1;">
+                <label style="font-size:0.85rem; color:#334155;">Message / Questions</label>
+                <textarea name="message" rows="3" placeholder="Anything you'd like us to know?"
+                    style="width:100%; padding:0.65rem; border:1px solid #cbd5e1; border-radius:6px;"></textarea>
+            </div>
+        </div>
+
+        <button type="submit"
+            style="width:100%; padding:0.85rem; background:#3b82f6; color:white;
+            border:none; border-radius:6px; font-size:1rem; font-weight:600; cursor:pointer;">
+            Submit Enquiry
+        </button>
+        <p style="font-size:0.75rem; color:#94a3b8; text-align:center; margin-top:0.75rem;">
+            We'll contact you within 2-3 working days.
+        </p>
+    </form>
+</div>
+{% endblock %}
