@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ exam.name }} — Marks{% endblock %}
+{% block page_title %}{{ exam.name }} — {{ exam.class_name }} — Marks Entry{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:1rem; display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+    <div style="color:#64748b; font-size:0.9rem;">
+        Max: <strong>{{ exam.max_marks }}</strong> per subject •
+        Subjects: <strong>{{ exam.subjects|length }}</strong>
+    </div>
+    <a href="{{ url_for('exams.merit', exam_id=exam.id) }}" class="btn"
+       style="margin-left:auto; background:#8b5cf6;">View Merit List</a>
+</div>
+
+{% if not students %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Is class mein koi student nahi. Pehle students add karo.
+</div>
+{% else %}
+<form method="POST">
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:600px;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.6rem; text-align:left; position:sticky; left:0; background:#f1f5f9;">Student</th>
+            {% for subj in exam.subjects %}
+            <th style="padding:0.6rem; text-align:center;">{{ subj }}</th>
+            {% endfor %}
+            <th style="padding:0.6rem; text-align:right;">Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for s in students %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.5rem; position:sticky; left:0; background:white;">
+                <strong>{{ s.name }}</strong>
+                <div style="font-size:0.75rem; color:#64748b;">Roll: {{ s.roll or '—' }}{% if s.section %} • {{ s.section }}{% endif %}</div>
+            </td>
+            {% for subj in exam.subjects %}
+            <td style="padding:0.4rem; text-align:center;">
+                <input type="number" name="mark_{{ s.id }}_{{ subj }}"
+                    value="{{ marks.get(s.id, {}).get(subj) if marks.get(s.id, {}).get(subj) is not none else '' }}"
+                    min="0" max="{{ exam.max_marks }}"
+                    style="width:60px; padding:0.35rem; border:1px solid #cbd5e1; border-radius:4px; text-align:center;">
+            </td>
+            {% endfor %}
+            <td style="padding:0.5rem; text-align:right; font-weight:600;">
+                {% set student_marks = marks.get(s.id, {}) %}
+                {% set total = student_marks.values()|sum if student_marks else 0 %}
+                {{ total }}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<div style="margin-top:1rem; display:flex; gap:0.75rem;">
+    <button type="submit" class="btn">💾 Save All Marks</button>
+    <a href="{{ url_for('exams.index') }}"
+       style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Back</a>
+</div>
+</form>
+{% endif %}
+{% endblock %}
