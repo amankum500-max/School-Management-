@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Bill — {{ b.student_name }}{% endblock %}
+{% block page_title %}Bill Detail{% endblock %}
+
+{% block content %}
+<div style="max-width:700px;">
+
+    <div style="margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+        <a href="{{ url_for('bills.index', month=b.month) }}"
+           style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+        <div style="display:flex; gap:0.5rem;">
+            <a href="{{ url_for('bills.print_bill', bill_id=b.id) }}"
+               class="btn" target="_blank" style="background:#64748b;">🖨️ Print</a>
+            {% if b.total > b.paid %}
+            <a href="{{ url_for('fees.collect') }}"
+               class="btn" style="background:#10b981;">Record Payment</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:0.5rem;">
+            <div>
+                <h2 style="font-size:1.15rem;">{{ b.student_name }}</h2>
+                <p style="color:#64748b; font-size:0.85rem;">
+                    {{ b.class_name or '—' }}{% if b.section %}-{{ b.section }}{% endif %}
+                    • Roll: {{ b.roll or '—' }}
+                </p>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-size:0.75rem; color:#64748b;">Month</div>
+                <div style="font-size:1.05rem; font-weight:700;">{{ b.month }}</div>
+            </div>
+        </div>
+
+        <hr style="border:none; border-top:1px solid #e2e8f0; margin:1rem 0;">
+
+        <h3 style="font-size:0.9rem; margin-bottom:0.5rem;">Fee Breakdown</h3>
+        <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+            {% for item in b.items %}
+            <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:0.5rem 0;">{{ item.fee_type }}</td>
+                <td style="padding:0.5rem 0; text-align:right;">₹{{ "%.0f"|format(item.amount) }}</td>
+            </tr>
+            {% endfor %}
+            <tr style="border-top:2px solid #1e293b;">
+                <td style="padding:0.75rem 0; font-weight:700;">Total</td>
+                <td style="padding:0.75rem 0; text-align:right; font-weight:700;">
+                    ₹{{ "%.0f"|format(b.total) }}
+                </td>
+            </tr>
+            <tr>
+                <td style="padding:0.5rem 0; color:#10b981;">Paid</td>
+                <td style="padding:0.5rem 0; text-align:right; color:#10b981; font-weight:600;">
+                    ₹{{ "%.0f"|format(b.paid) }}
+                </td>
+            </tr>
+            <tr>
+                <td style="padding:0.5rem 0; color:#ef4444; font-weight:700;">Pending</td>
+                <td style="padding:0.5rem 0; text-align:right; color:#ef4444; font-weight:700;">
+                    ₹{{ "%.0f"|format(b.total - b.paid) }}
+                </td>
+            </tr>
+        </table>
+
+        <div style="margin-top:1rem; padding:0.75rem; background:#f8fafc; border-radius:6px;
+            font-size:0.82rem; color:#64748b;">
+            Parent: <strong style="color:#334155;">{{ b.parent_name or '—' }}</strong>
+            {% if b.phone %} • {{ b.phone }}{% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
