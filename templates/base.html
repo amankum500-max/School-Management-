@@ -220,3 +220,5 @@
 <a href="{{ url_for('exams.index') }}">Exams & Marks</a>
 <a href="{{ url_for('notices.index') }}">Notices</a>
 <a href="{{ url_for('reports.index') }}">Reports</a>
+<a href="{{ url_for('auth.profile') }}">{{ session.admin_name }}</a>
+<a href="{{ url_for('auth.logout') }}">Logout</a>
