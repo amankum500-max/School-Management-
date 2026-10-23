@@ -11,7 +11,6 @@ def create_user(name, email):
     conn = get_conn()
     cur = conn.cursor()
     
-    # RETURNING id जोड़ें और placeholders (%s) का प्रयोग करें
     cur.execute(
         "INSERT INTO users (name, email) VALUES (%s, %s) RETURNING id;",
         (name, email)
@@ -22,7 +21,6 @@ def create_user(name, email):
     cur.close()
     conn.close()
     return uid
-    
 
 def get_users():
     conn = get_conn()
