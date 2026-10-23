@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Add' if mode=='add' else 'Edit' }} Route{% endblock %}
+{% block page_title %}{{ 'New' if mode=='add' else 'Edit' }} Bus Route{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:650px;">
+<form method="POST">
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Route Name *</label>
+        <input name="name" required
+            value="{{ route.name if route else '' }}"
+            placeholder="e.g. Route 1 - North Delhi"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Driver Name</label>
+            <input name="driver_name" value="{{ route.driver_name if route else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Driver Phone</label>
+            <input name="driver_phone" value="{{ route.driver_phone if route else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Vehicle No</label>
+            <input name="vehicle_no" value="{{ route.vehicle_no if route else '' }}"
+                placeholder="DL-01-AB-1234"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Capacity</label>
+            <input name="capacity" type="number" min="1"
+                value="{{ route.capacity if route else 40 }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Monthly Fee (₹)</label>
+            <input name="fee_per_month" type="number" step="0.01"
+                value="{{ route.fee_per_month if route else 0 }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Status</label>
+            <select name="status"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="active" {% if route and route.status=='active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if route and route.status=='inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+        </div>
+    </div>
+
+    <div style="display:flex; gap:0.75rem;">
+        <button type="submit" class="btn">{{ 'Create' if mode=='add' else 'Save' }}</button>
+        <a href="{{ url_for('transport.index') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+    </div>
+</form>
+</div>
+{% endblock %}
