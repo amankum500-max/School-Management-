@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Fee Structure{% endblock %}
+{% block page_title %}Fee Structure{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="margin-bottom:1rem; font-size:1rem;">Add Structure Entry</h3>
+    <form method="POST" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:0.75rem;">
+        <input name="class_name" placeholder="Class (e.g. 5)" required
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+        <input name="fee_type" placeholder="Fee type (Tuition)" required
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+        <input name="amount" type="number" step="0.01" placeholder="Amount" required
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+        <select name="frequency" style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="yearly">Yearly</option>
+            <option value="one-time">One-time</option>
+        </select>
+        <button type="submit" class="btn">Add</button>
+    </form>
+</div>
+
+<form method="GET" style="margin-bottom:1rem;">
+    <select name="class" onchange="this.form.submit()"
+        style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+        <option value="">All Classes</option>
+        {% for c in classes %}
+        <option value="{{ c }}" {% if c == selected_class %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+    </select>
+</form>
+
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.7rem; text-align:left;">Class</th>
+            <th style="padding:0.7rem; text-align:left;">Type</th>
+            <th style="padding:0.7rem; text-align:right;">Amount</th>
+            <th style="padding:0.7rem; text-align:left;">Frequency</th>
+            <th style="padding:0.7rem; text-align:right;"></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for it in items %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.65rem;">{{ it.class_name }}</td>
+            <td style="padding:0.65rem;">{{ it.fee_type }}</td>
+            <td style="padding:0.65rem; text-align:right;">₹{{ "%.0f"|format(it.amount) }}</td>
+            <td style="padding:0.65rem;">{{ it.frequency }}</td>
+            <td style="padding:0.65rem; text-align:right;">
+                <form method="POST" action="{{ url_for('fees.structure_delete', fid=it.id) }}"
+                      onsubmit="return confirm('Delete?');" style="display:inline;">
+                    <button style="background:#ef4444; color:white; border:none; padding:0.35rem 0.7rem; border-radius:4px; cursor:pointer; font-size:0.8rem;">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="padding:2rem; text-align:center; color:#64748b;">
+            Koi structure nahi. Upar se add karo.
+        </td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}
