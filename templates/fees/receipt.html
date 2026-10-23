@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Receipt {{ p.receipt_no }}</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: system-ui, sans-serif; padding:1rem; background:#f5f6fa; }
+        .receipt {
+            background:white; max-width:600px; margin:0 auto;
+            padding:1.5rem; border-radius:10px; border:2px solid #1e293b;
+        }
+        .head { text-align:center; border-bottom:2px dashed #cbd5e1; padding-bottom:0.75rem; margin-bottom:1rem; }
+        .head h1 { font-size:1.3rem; }
+        .head p { font-size:0.8rem; color:#64748b; }
+        .row { display:flex; justify-content:space-between; padding:0.35rem 0; font-size:0.9rem; }
+        .row span:first-child { color:#64748b; }
+        .amount-box { background:#f1f5f9; padding:0.75rem; border-radius:6px;
+                       text-align:center; margin:1rem 0; }
+        .amount-box .amt { font-size:1.6rem; font-weight:700; color:#1e293b; }
+        .footer { text-align:center; font-size:0.7rem; color:#94a3b8; margin-top:1rem;
+                   border-top:1px dashed #cbd5e1; padding-top:0.5rem; }
+        .actions { text-align:center; margin-top:1rem; }
+        .btn { padding:0.6rem 1.2rem; border:none; border-radius:6px; cursor:pointer;
+                font-size:0.9rem; margin:0 0.25rem; text-decoration:none; display:inline-block; }
+        .btn-primary { background:#3b82f6; color:white; }
+        .btn-secondary { background:#64748b; color:white; }
+
+        @media print {
+            body { background:white; padding:0; }
+            .receipt { border:1px solid #000; box-shadow:none; }
+            .actions { display:none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt">
+        <div class="head">
+            <h1>🎓 SCHOOL MANAGEMENT</h1>
+            <p>Fee Payment Receipt</p>
+        </div>
+
+        <div class="row"><span>Receipt No</span><strong>{{ p.receipt_no }}</strong></div>
+        <div class="row"><span>Date</span><strong>{{ p.paid_at.strftime('%d %b %Y, %I:%M %p') if p.paid_at else '—' }}</strong></div>
+
+        <div style="border-top:1px dashed #cbd5e1; margin:0.75rem 0; padding-top:0.75rem;">
+            <div class="row"><span>Student</span><strong>{{ p.student_name }}</strong></div>
+            <div class="row"><span>Roll No</span><strong>{{ p.roll_no or '—' }}</strong></div>
+            <div class="row"><span>Class</span><strong>{{ p.class_name or '—' }}{% if p.section %} - {{ p.section }}{% endif %}</strong></div>
+            <div class="row"><span>Parent</span><strong>{{ p.parent_name or '—' }}</strong></div>
+            <div class="row"><span>Phone</span><strong>{{ p.parent_phone or '—' }}</strong></div>
+        </div>
+
+        <div style="border-top:1px dashed #cbd5e1; margin:0.75rem 0; padding-top:0.75rem;">
+            <div class="row"><span>Fee Type</span><strong>{{ p.fee_type }}</strong></div>
+            <div class="row"><span>Month</span><strong>{{ p.month }}</strong></div>
+            <div class="row"><span>Mode</span><strong>{{ p.mode|upper }}</strong></div>
+            {% if p.note %}<div class="row"><span>Note</span><strong>{{ p.note }}</strong></div>{% endif %}
+        </div>
+
+        <div class="amount-box">
+            <div style="font-size:0.8rem; color:#64748b;">Amount Paid</div>
+            <div class="amt">₹{{ "%.2f"|format(p.amount) }}</div>
+        </div>
+
+        <div class="footer">
+            Thank you! Ye computer-generated receipt hai.
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn btn-primary" onclick="window.print()">🖨️ Print</button>
+        <a href="{{ url_for('fees.index') }}" class="btn btn-secondary">Back to Fees</a>
+    </div>
+</body>
+</html>
