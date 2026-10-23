@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Import Result{% endblock %}
+{% block page_title %}Import Result{% endblock %}
+
+{% block content %}
+<div style="max-width:800px;">
+    <div class="card" style="text-align:center; margin-bottom:1rem;">
+        <div style="font-size:3rem; margin-bottom:0.5rem;">{{ '✅' if inserted > 0 else '❌' }}</div>
+        <h2 style="font-size:1.4rem; margin-bottom:0.35rem; color:#1e293b;">
+            Import Complete
+        </h2>
+        <p style="color:#64748b; font-size:0.9rem;">
+            <strong style="color:#10b981;">{{ inserted }}</strong> students successfully add hue
+            {% if failed %} • <strong style="color:#ef4444;">{{ failed|length }}</strong> fail hue{% endif %}
+        </p>
+    </div>
+
+    {% if failed %}
+    <div class="card" style="padding:0; overflow:auto; margin-bottom:1rem;">
+        <div style="padding:0.75rem 1rem; background:#fef2f2; border-bottom:1px solid #e2e8f0;">
+            <strong style="color:#991b1b; font-size:0.9rem;">Failed Rows</strong>
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+            <thead style="background:#f8fafc;">
+                <tr>
+                    <th style="padding:0.5rem; text-align:left;">Row</th>
+                    <th style="padding:0.5rem; text-align:left;">Name</th>
+                    <th style="padding:0.5rem; text-align:left;">Error</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in failed %}
+                <tr style="border-top:1px solid #e2e8f0;">
+                    <td style="padding:0.5rem; color:#94a3b8;">{{ f.row }}</td>
+                    <td style="padding:0.5rem;">{{ f.name }}</td>
+                    <td style="padding:0.5rem; color:#991b1b; font-size:0.78rem;">{{ f.error }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+        <a href="{{ url_for('students.list_students') }}" class="btn">
+            View All Students
+        </a>
+        <a href="{{ url_for('bulk.upload') }}"
+           style="padding:0.6rem 1.1rem; background:#8b5cf6; color:white;
+           text-decoration:none; border-radius:6px; font-size:0.9rem;">
+            Import More
+        </a>
+    </div>
+</div>
+{% endblock %}
