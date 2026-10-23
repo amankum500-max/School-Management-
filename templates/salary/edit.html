@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Adjust Salary — {{ rec.name }}{% endblock %}
+{% block page_title %}Adjust Salary{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:520px;">
+    <div style="margin-bottom:1rem;">
+        <h3 style="font-size:1.05rem;">{{ rec.name }}</h3>
+        <p style="font-size:0.85rem; color:#64748b; text-transform:capitalize;">
+            {{ rec.role }} • {{ rec.month }}
+        </p>
+    </div>
+
+    <form method="POST">
+        <div style="background:#f8fafc; padding:0.75rem 1rem; border-radius:6px; margin-bottom:1rem;
+            font-size:0.9rem;">
+            <div style="display:flex; justify-content:space-between;">
+                <span style="color:#64748b;">Base Salary</span>
+                <strong>₹{{ "%.0f"|format(rec.base) }}</strong>
+            </div>
+        </div>
+
+        <div style="margin-bottom:0.75rem;">
+            <label style="font-size:0.85rem; color:#334155;">Bonus (₹)</label>
+            <input name="bonus" type="number" step="0.01" value="{{ rec.bonus or 0 }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+
+        <div style="margin-bottom:0.75rem;">
+            <label style="font-size:0.85rem; color:#334155;">Deductions (₹)</label>
+            <input name="deductions" type="number" step="0.01" value="{{ rec.deductions or 0 }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <small style="color:#94a3b8; font-size:0.72rem;">Leave, advance, etc.</small>
+        </div>
+
+        <div style="background:#eff6ff; padding:0.75rem 1rem; border-radius:6px;
+            font-size:0.85rem; color:#1e40af; margin-bottom:1rem;">
+            <strong>Net amount</strong> automatically calculate hoga.
+        </div>
+
+        <div style="display:flex; gap:0.75rem;">
+            <button type="submit" class="btn">Save Adjustments</button>
+            <a href="{{ url_for('salary.index', month=rec.month) }}"
+               style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
