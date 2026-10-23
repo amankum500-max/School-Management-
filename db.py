@@ -33,6 +33,7 @@ def create_user(name, email):
     cursor.execute("INSERT INTO users (name, email) VALUES (?, ?)", (name, email))
     conn.commit()
     uid = cursor.lastrowid
+    cursor.close()
     conn.close()
     return uid
 
@@ -41,8 +42,39 @@ def get_users():
     cursor = conn.cursor()
     cursor.execute("SELECT id, name, email FROM users")
     rows = cursor.fetchall()
+    cursor.close()
     conn.close()
     return rows
+
+def get_user(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, email FROM users WHERE id = ?", (user_id,))
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return row
+
+def update_user(user_id, name, email):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE users SET name = ?, email = ? WHERE id = ?",
+        (name, email, user_id)
+    )
+    conn.commit()
+    updated = cursor.rowcount > 0
+    cursor.close()
+    conn.close()
+    return user_id if updated else None
+
+def delete_user(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 # ---------- Todos ----------
 def create_todo(user_id, title):
@@ -51,6 +83,7 @@ def create_todo(user_id, title):
     cursor.execute("INSERT INTO todos (user_id, title, done) VALUES (?, ?, 0)", (user_id, title))
     conn.commit()
     tid = cursor.lastrowid
+    cursor.close()
     conn.close()
     return tid
 
@@ -62,6 +95,7 @@ def get_todos(user_id=None):
     else:
         cursor.execute("SELECT id, user_id, title, done FROM todos")
     rows = cursor.fetchall()
+    cursor.close()
     conn.close()
     return rows
 
@@ -71,11 +105,13 @@ def toggle_todo(todo_id):
     cursor.execute("SELECT done FROM todos WHERE id = ?", (todo_id,))
     row = cursor.fetchone()
     if not row:
+        cursor.close()
         conn.close()
         return None
     new_done = 0 if row[0] else 1
     cursor.execute("UPDATE todos SET done = ? WHERE id = ?", (new_done, todo_id))
     conn.commit()
+    cursor.close()
     conn.close()
     return new_done
 
@@ -84,35 +120,7 @@ def delete_todo(todo_id):
     cursor = conn.cursor()
     cursor.execute("DELETE FROM todos WHERE id = ?", (todo_id,))
     conn.commit()
-    conn.close()
-    def get_user(user_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT id, name, email FROM users WHERE id=%s;", (user_id,))
-    row = cur.fetchone()
-    cur.close()
-    conn.close()
-    return row
-
-def update_user(user_id, name, email):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute(
-        "UPDATE users SET name=%s, email=%s WHERE id=%s RETURNING id;",
-        (name, email, user_id)
-    )
-    res = cur.fetchone()
-    conn.commit()
-    cur.close()
-    conn.close()
-    return res[0] if res else None
-
-def delete_user(user_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM users WHERE id=%s;", (user_id,))
-    conn.commit()
-    cur.close()
+    cursor.close()
     conn.close()
 
 # Database initialize karein
