@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Add' if mode=='add' else 'Edit' }} Homework{% endblock %}
+{% block page_title %}{{ 'New' if mode=='add' else 'Edit' }} Homework{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:700px;">
+<form method="POST">
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Title *</label>
+        <input name="title" required value="{{ h.title if h else '' }}"
+            placeholder="e.g. Chapter 5 - Algebra problems"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; margin-bottom:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Class *</label>
+            <select name="class_name" required
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="">Select</option>
+                {% for c in classes %}
+                <option value="{{ c }}" {% if h and h.class_name == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Section</label>
+            <input name="section" placeholder="A / empty"
+                value="{{ h.section if h else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Subject *</label>
+            <input name="subject" required placeholder="Math"
+                value="{{ h.subject if h else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Description</label>
+        <textarea name="description" rows="5"
+            placeholder="Assignment details, questions, instructions..."
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">{{ h.description if h else '' }}</textarea>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Due Date</label>
+            <input name="due_date" type="date"
+                value="{{ h.due_date if h and h.due_date else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Attachment URL</label>
+            <input name="attachment_url" type="url" placeholder="https://..."
+                value="{{ h.attachment_url if h else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+    </div>
+
+    <div style="margin-top:1.5rem; display:flex; gap:0.75rem;">
+        <button type="submit" class="btn">{{ 'Create' if mode=='add' else 'Save' }}</button>
+        <a href="{{ url_for('homework.index') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+    </div>
+</form>
+</div>
+{% endblock %}
