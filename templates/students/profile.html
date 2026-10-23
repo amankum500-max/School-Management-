@@ -16,6 +16,8 @@
             <a href="{{ url_for('students.edit_student', student_id=student.id) }}" class="btn">Edit</a>
             <form method="POST" action="{{ url_for('students.remove_student', student_id=student.id) }}"
                   onsubmit="return confirm('Delete {{ student.name }}? Ye action wapas nahi hoga.');">
+                <a href="{{ url_for('id_card.single', student_id=student.id) }}" target="_blank"
+   class="btn" style="background:#8b5cf6;">🪪 ID Card</a>
                 <button type="submit"
                     style="background:#ef4444; color:white; padding:0.6rem 1.1rem; border:none; border-radius:6px; cursor:pointer;">
                     Delete
