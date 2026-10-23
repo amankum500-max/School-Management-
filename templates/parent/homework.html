@@ -1,0 +1,67 @@
+{% extends "parent/base.html" %}
+{% block title %}Homework{% endblock %}
+
+{% block content %}
+
+{% if children|length > 1 %}
+<div style="margin-bottom:0.75rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+    {% for c in children %}
+    <a href="{{ url_for('parent.homework_list', child_id=c.id) }}"
+       style="padding:0.5rem 1rem; border-radius:6px; text-decoration:none;
+       font-size:0.85rem; font-weight:600;
+       background:{{ '#f59e0b' if selected and c.id == selected.id else 'white' }};
+       color:{{ 'white' if selected and c.id == selected.id else '#475569' }};
+       border:1px solid {{ '#f59e0b' if selected and c.id == selected.id else '#cbd5e1' }};">
+        {{ c.name }}
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if selected %}
+<h2 style="font-size:1.05rem; margin-bottom:0.75rem; color:#1e293b;">
+    {{ selected.name }} — Class {{ selected.class_name or '—' }}{% if selected.section %}-{{ selected.section }}{% endif %}
+</h2>
+{% endif %}
+
+{% for h in homework %}
+<div class="card" style="border-left:4px solid
+    {{ '#ef4444' if h.status == 'overdue' else ('#f59e0b' if h.status == 'today' else '#3b82f6') }};">
+    <div style="display:flex; justify-content:space-between; align-items:start; gap:0.5rem; flex-wrap:wrap;">
+        <div style="flex:1;">
+            <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.35rem;">
+                <h3 style="font-size:1rem; color:#1e293b;">{{ h.title }}</h3>
+                <span style="font-size:0.7rem; background:#eff6ff; color:#1e40af;
+                    padding:0.15rem 0.45rem; border-radius:3px; font-weight:600;">
+                    {{ h.subject }}
+                </span>
+                {% if h.status == 'overdue' %}
+                <span style="font-size:0.7rem; background:#fee2e2; color:#991b1b;
+                    padding:0.15rem 0.45rem; border-radius:3px; font-weight:600;">OVERDUE</span>
+                {% elif h.status == 'today' %}
+                <span style="font-size:0.7rem; background:#fef3c7; color:#92400e;
+                    padding:0.15rem 0.45rem; border-radius:3px; font-weight:600;">DUE TODAY</span>
+                {% endif %}
+            </div>
+            {% if h.description %}
+            <p style="font-size:0.88rem; color:#475569; white-space:pre-wrap; margin:0;">
+                {{ h.description }}
+            </p>
+            {% endif %}
+            <div style="margin-top:0.5rem; font-size:0.75rem; color:#94a3b8;">
+                {% if h.due_date %}Due: <strong style="color:#475569;">{{ h.due_date.strftime('%d %b %Y') }}</strong> • {% endif %}
+                Posted {{ h.created_at.strftime('%d %b') if h.created_at else '' }}
+                {% if h.attachment_url %}
+                • <a href="{{ h.attachment_url }}" target="_blank"
+                     style="color:#3b82f6; text-decoration:none;">Attachment →</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Abhi koi homework nahi mila.
+</div>
+{% endfor %}
+{% endblock %}
