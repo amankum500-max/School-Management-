@@ -1,0 +1,30 @@
+{% extends "parent/base.html" %}
+{% block title %}Notices{% endblock %}
+
+{% block content %}
+<h2 style="font-size:1.15rem; margin-bottom:0.75rem; color:#1e293b;">Notices</h2>
+
+{% for n in notices %}
+<div class="card" style="border-left:4px solid
+    {{ '#ef4444' if n.priority == 'urgent' else ('#f59e0b' if n.priority == 'high' else '#3b82f6') }};">
+    <div style="display:flex; justify-content:space-between; align-items:start; gap:0.5rem; flex-wrap:wrap;">
+        <h3 style="font-size:1rem; color:#1e293b;">{{ n.title }}</h3>
+        {% if n.priority != 'normal' %}
+        <span style="font-size:0.65rem; padding:0.15rem 0.4rem; border-radius:3px;
+            background:{{ '#fee2e2' if n.priority == 'urgent' else '#fef3c7' }};
+            color:{{ '#991b1b' if n.priority == 'urgent' else '#92400e' }};">
+            {{ n.priority|upper }}
+        </span>
+        {% endif %}
+    </div>
+    <div style="font-size:0.7rem; color:#94a3b8; margin:0.3rem 0; text-transform:capitalize;">
+        {{ n.category }} • {{ n.created_at.strftime('%d %b %Y') if n.created_at else '' }}
+    </div>
+    <p style="font-size:0.9rem; color:#334155; line-height:1.6; white-space:pre-wrap;">{{ n.content }}</p>
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Abhi koi notice nahi.
+</div>
+{% endfor %}
+{% endblock %}
