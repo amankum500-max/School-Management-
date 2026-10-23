@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}New Certificate{% endblock %}
+{% block page_title %}Generate Certificate{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:750px;">
+<form method="POST" id="certForm">
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Student *</label>
+            <select name="student_id" required
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="">Select student</option>
+                {% for s in students %}
+                <option value="{{ s.id }}"
+                    {% if preselect_student and preselect_student.id == s.id %}selected{% endif %}>
+                    {{ s.name }} ({{ s.roll or '—' }} • {{ s.class_name or '?' }}{% if s.section %}-{{ s.section }}{% endif %})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Certificate Type *</label>
+            <select name="cert_type" required id="certType"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                {% for t in cert_types %}
+                <option value="{{ t }}" {% if t == default_type %}selected{% endif %}>{{ t }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Issue Date</label>
+            <input name="issue_date" type="date"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <small style="color:#94a3b8; font-size:0.7rem;">Blank = aaj ki date</small>
+        </div>
+
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Remarks (optional)</label>
+            <input name="remarks"
+                placeholder="e.g. TC for higher studies"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+    </div>
+
+    <div style="margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center;">
+        <label style="font-size:0.85rem; color:#334155;">Certificate Body</label>
+        <button type="button" onclick="resetBody()"
+            style="background:none; border:none; color:#3b82f6;
+            cursor:pointer; font-size:0.78rem;">↻ Use Default Text</button>
+    </div>
+    <textarea name="body" id="certBody" rows="8"
+        placeholder="Khaali chhod do — default text type ke hisaab se auto-generate ho jayega."
+        style="width:100%; padding:0.7rem; border:1px solid #cbd5e1; border-radius:6px;
+        font-family:system-ui, sans-serif; font-size:0.9rem; line-height:1.6;">{{ default_body }}</textarea>
+
+    <div style="background:#eff6ff; padding:0.75rem 1rem; border-radius:6px;
+        font-size:0.82rem; color:#1e40af; margin-top:0.75rem;">
+        <strong>💡 Note:</strong>
+        Body khaali chhodo toh default text (student name, class, roll auto-fill ke saath)
+        use hoga. Edit bhi kar sakte ho before saving.
+    </div>
+
+    <div style="margin-top:1.25rem; display:flex; gap:0.75rem;">
+        <button type="submit" class="btn">Generate Certificate</button>
+        <a href="{{ url_for('certificates.index') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+    </div>
+</form>
+</div>
+
+<script>
+    const templates = {{ templates|tojson }};
+    const certTypeEl = document.getElementById('certType');
+    const studentEl = document.querySelector('select[name="student_id"]');
+    const bodyEl = document.getElementById('certBody');
+
+    // Server-side data (from selected student on GET)
+    const studentDefaults = {
+        {% if preselect_student %}
+        id: {{ preselect_student.id }},
+        name: {{ (preselect_student.name or '')|tojson }},
+        parent_name: {{ (preselect_student.parent_name or '')|tojson }},
+        class_name: {{ (preselect_student.class_name or '')|tojson }},
+        section: {{ (preselect_student.section or '')|tojson }},
+        roll: {{ (preselect_student.roll_no or '')|tojson }}
+        {% endif %}
+    };
+
+    function buildDefault(type, st) {
+        const tpl = templates[type];
+        if (!tpl) return '';
+        return tpl
+            .replace(/{name}/g, st.name || '___')
+            .replace(/{parent_name}/g, st.parent_name || '___')
+            .replace(/{class_name}/g, st.class_name || '___')
+            .replace(/{section}/g, st.section ? '-' + st.section : '')
+            .replace(/{roll}/g, st.roll || '___')
+            .replace(/{ay}/g, {{ ay|tojson }});
+    }
+
+    function resetBody() {
+        const type = certTypeEl.value;
+        const opt = studentEl.options[studentEl.selectedIndex];
+        if (!opt || !opt.value) {
+            bodyEl.value = '';
+            return;
+        }
+        // If we don't have detailed data client-side for the newly picked student,
+        // fallback to reload. Only preselect_student has full data client-side.
+        if (studentDefaults.id && String(studentDefaults.id) === opt.value) {
+            bodyEl.value = buildDefault(type, studentDefaults);
+        } else {
+            // Trigger server reload with selected student preselect
+            window.location.href = "{{ url_for('certificates.new') }}?student_id=" + opt.value;
+        }
+    }
+
+    // Auto-fill body when student OR type changes
+    certTypeEl.addEventListener('change', () => {
+        if (!bodyEl.value.trim() || bodyEl.value.includes('___') || bodyEl.value.length < 40) {
+            resetBody();
+        }
+    });
+    studentEl.addEventListener('change', () => {
+        resetBody();
+    });
+</script>
+{% endblock %}
