@@ -1,1 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ student.name }} — Profile{% endblock %}
+{% block page_title %}Student Profile{% endblock %}
 
+{% block content %}
+<div class="card" style="max-width:800px;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+        <div>
+            <h2 style="margin-bottom:0.25rem;">{{ student.name }}</h2>
+            <p style="color:#64748b; font-size:0.9rem;">
+                {{ student.class_name or '—' }}{% if student.section %} - {{ student.section }}{% endif %}
+                • Roll: {{ student.roll_no or '—' }}
+            </p>
+        </div>
+        <div style="display:flex; gap:0.5rem;">
+            <a href="{{ url_for('students.edit_student', student_id=student.id) }}" class="btn">Edit</a>
+            <form method="POST" action="{{ url_for('students.remove_student', student_id=student.id) }}"
+                  onsubmit="return confirm('Delete {{ student.name }}? Ye action wapas nahi hoga.');">
+                <button type="submit"
+                    style="background:#ef4444; color:white; padding:0.6rem 1.1rem; border:none; border-radius:6px; cursor:pointer;">
+                    Delete
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div style="margin-top:1.5rem; display:grid; grid-template-columns:1fr 1fr; gap:1rem; font-size:0.9rem;">
+        <div><span style="color:#64748b;">Gender:</span> {{ student.gender or '—' }}</div>
+        <div><span style="color:#64748b;">DOB:</span> {{ student.dob or '—' }}</div>
+        <div><span style="color:#64748b;">Parent:</span> {{ student.parent_name or '—' }}</div>
+        <div><span style="color:#64748b;">Phone:</span> {{ student.parent_phone or '—' }}</div>
+        <div><span style="color:#64748b;">Admission Date:</span> {{ student.admission_date or '—' }}</div>
+        <div>
+            <span style="color:#64748b;">Status:</span>
+            <span style="padding:0.2rem 0.5rem; border-radius:4px; font-size:0.75rem;
+                background:{{ '#d1fae5' if student.status=='active' else '#fee2e2' }};
+                color:{{ '#065f46' if student.status=='active' else '#991b1b' }};">
+                {{ student.status }}
+            </span>
+        </div>
+        <div style="grid-column:1/-1;">
+            <span style="color:#64748b;">Address:</span> {{ student.address or '—' }}
+        </div>
+    </div>
+</div>
+
+<div class="card" style="max-width:800px; margin-top:1rem; color:#64748b; font-size:0.9rem;">
+    <strong>Coming soon:</strong> Attendance %, Fee status, Recent marks — ye sab agle modules mein isi profile pe dikhenge.
+</div>
+{% endblock %}
