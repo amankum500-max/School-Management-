@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Add' if mode=='add' else 'Edit' }} Template{% endblock %}
+{% block page_title %}{{ 'Add' if mode=='add' else 'Edit' }} WhatsApp Template{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:700px;">
+<form method="POST">
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Name *</label>
+        <input name="name" required value="{{ template.name if template else '' }}"
+            placeholder="e.g. Fee Reminder - Hindi"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Category</label>
+        <select name="category"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+            {% for cat in ['fee','attendance','notice','custom'] %}
+            <option value="{{ cat }}" {% if template and template.category == cat %}selected{% endif %}>
+                {{ cat|capitalize }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Message Body *</label>
+        <textarea name="body" rows="7" required
+            placeholder="Namaste {parent} ji,&#10;&#10;{name} ({class}) ki fees pending hai:&#10;Amount: ₹{amount}&#10;Month: {month}"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px; font-family:monospace; font-size:0.88rem;">{{ template.body if template else '' }}</textarea>
+    </div>
+
+    <div style="background:#eff6ff; padding:0.75rem 1rem; border-radius:6px;
+        font-size:0.82rem; color:#1e40af; margin-bottom:1rem;">
+        <strong>Available placeholders:</strong>
+        <div style="margin-top:0.35rem; display:flex; gap:0.35rem; flex-wrap:wrap; font-family:monospace;">
+            <code style="background:white; padding:0.1rem 0.35rem; border-radius:3px;">{name}</code>
+            <code style="background:white; padding:0.1rem 0.35rem; border-radius:3px;">{parent}</code>
+            <code style="background:white; padding:0.1rem 0.35rem; border-radius:3px;">{class}</code>
+            <code style="background:white; padding:0.1rem 0.35rem; border-radius:3px;">{roll}</code>
+            <code style="background:white; padding:0.1rem 0.35rem; border-radius:3px;">{amount}</code>
+            <code style="background:white; padding:0.1rem 0.35rem; border-radius:3px;">{month}</code>
+            <code style="background:white; padding:0.1rem 0.35rem; border-radius:3px;">{school}</code>
+        </div>
+    </div>
+
+    <div style="display:flex; gap:0.75rem;">
+        <button type="submit" class="btn">Save</button>
+        <a href="{{ url_for('whatsapp.templates_list') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+    </div>
+</form>
+</div>
+{% endblock %}
