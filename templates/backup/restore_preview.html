@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Preview Restore{% endblock %}
+{% block page_title %}Preview Restore{% endblock %}
+
+{% block content %}
+<div style="max-width:800px;">
+
+    <div class="card" style="margin-bottom:1rem;">
+        <h3 style="font-size:1rem; margin-bottom:0.5rem; color:#1e293b;">
+            📦 Backup File Preview
+        </h3>
+        {% if backup_at %}
+        <p style="font-size:0.82rem; color:#64748b;">
+            Backup created: <strong>{{ backup_at }}</strong>
+        </p>
+        {% endif %}
+    </div>
+
+    {% if not summary %}
+    <div class="card" style="text-align:center; padding:2rem; color:#ef4444;">
+        Backup file mein koi data nahi mila. Shayad empty backup hai.
+    </div>
+    {% else %}
+
+    <div class="card" style="padding:0; overflow:auto; margin-bottom:1rem;">
+        <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+            <thead style="background:#f1f5f9;">
+                <tr>
+                    <th style="padding:0.6rem; text-align:left;">Table</th>
+                    <th style="padding:0.6rem; text-align:right;">Rows to restore</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in summary %}
+                <tr style="border-top:1px solid #e2e8f0;">
+                    <td style="padding:0.6rem; font-family:monospace; font-size:0.82rem;">{{ item.table }}</td>
+                    <td style="padding:0.6rem; text-align:right; font-weight:600;">{{ item.count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot style="background:#f8fafc; font-weight:700;">
+                <tr>
+                    <td style="padding:0.6rem;">Total</td>
+                    <td style="padding:0.6rem; text-align:right;">
+                        {{ summary|sum(attribute='count') }}
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+        <form method="POST" action="{{ url_for('backup.restore_confirm') }}" style="display:inline;">
+            <button type="submit" class="btn" style="background:#ef4444;"
+                onclick="return confirm('{{ summary|sum(attribute='count') }} rows insert karein? Ye action undo nahi ho sakta.');">
+                ⚠️ Confirm Restore
+            </button>
+        </form>
+        <form method="POST" action="{{ url_for('backup.restore_cancel') }}" style="display:inline;">
+            <button type="submit"
+                style="padding:0.6rem 1.2rem; background:#64748b; color:white;
+                border:none; border-radius:6px; cursor:pointer; font-size:0.9rem;">
+                Cancel
+            </button>
+        </form>
+    </div>
+
+    {% endif %}
+</div>
+{% endblock %}
