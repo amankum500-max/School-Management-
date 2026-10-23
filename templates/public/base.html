@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ school.school_name }}{% endblock %}</title>
+    <meta name="description" content="{{ school.tagline or 'School website' }}">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .site-header {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky; top: 0; z-index: 50;
+        }
+        .site-header .wrap {
+            max-width: 1100px; margin: 0 auto;
+            padding: 0.75rem 1rem;
+            display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 0.5rem;
+        }
+        .site-logo {
+            display: flex; align-items: center; gap: 0.5rem;
+            text-decoration: none; color: inherit;
+            font-weight: 700; font-size: 1rem;
+        }
+        .site-logo img { width: 32px; height: 32px; border-radius: 6px; }
+        .site-logo .emoji { font-size: 1.5rem; }
+        .site-nav { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .site-nav a {
+            color: #475569; text-decoration: none; font-size: 0.88rem;
+            padding: 0.35rem 0;
+        }
+        .site-nav a:hover { color: #3b82f6; }
+        .btn-adm {
+            background: #3b82f6; color: white !important;
+            padding: 0.45rem 1rem !important; border-radius: 6px;
+            font-weight: 600 !important;
+        }
+        .btn-adm:hover { background: #2563eb; color: white !important; }
+
+        /* Main */
+        main { min-height: 70vh; }
+        .container {
+            max-width: 1100px; margin: 0 auto; padding: 2rem 1rem;
+        }
+        .section-title {
+            font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem;
+            color: #1e293b;
+        }
+
+        .flash {
+            max-width: 1100px; margin: 1rem auto 0; padding: 0.75rem 1rem;
+            border-radius: 6px; font-size: 0.9rem;
+        }
+        .flash.error { background: #fee2e2; color: #991b1b; }
+        .flash.success { background: #d1fae5; color: #065f46; }
+
+        /* Footer */
+        .site-footer {
+            background: #1e293b; color: #cbd5e1;
+            padding: 2rem 1rem 1rem; margin-top: 3rem;
+        }
+        .site-footer .wrap {
+            max-width: 1100px; margin: 0 auto;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+            gap: 1.5rem;
+        }
+        .site-footer h4 {
+            color: white; font-size: 0.9rem; margin-bottom: 0.5rem;
+        }
+        .site-footer p, .site-footer a {
+            font-size: 0.82rem; color: #cbd5e1;
+            text-decoration: none; line-height: 1.7;
+        }
+        .site-footer a:hover { color: white; }
+        .site-footer .copy {
+            text-align: center; margin-top: 2rem; padding-top: 1rem;
+            border-top: 1px solid #334155; font-size: 0.75rem; color: #94a3b8;
+        }
+
+        /* Generic card */
+        .pub-card {
+            background: white; border-radius: 12px;
+            padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        @media (max-width: 600px) {
+            .site-nav { gap: 0.75rem; font-size: 0.82rem; }
+            .container { padding: 1.25rem 0.75rem; }
+            .section-title { font-size: 1.25rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="site-header">
+    <div class="wrap">
+        <a href="{{ url_for('public_site.home') }}" class="site-logo">
+            {% if school.logo_url %}
+            <img src="{{ school.logo_url }}" alt="">
+            {% else %}
+            <span class="emoji">🎓</span>
+            {% endif %}
+            {{ school.school_name }}
+        </a>
+        <nav class="site-nav">
+            <a href="{{ url_for('public_site.home') }}">Home</a>
+            <a href="{{ url_for('public_site.about') }}">About</a>
+            <a href="{{ url_for('public_site.notices_list') }}">Notices</a>
+            <a href="{{ url_for('public_site.contact') }}">Contact</a>
+            <a href="{{ url_for('public_site.admission') }}" class="btn-adm">Apply</a>
+        </nav>
+    </div>
+</header>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+        <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+{% endwith %}
+
+<main>
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+    <div class="wrap">
+        <div>
+            <h4>{{ school.school_name }}</h4>
+            <p>{{ school.tagline or 'Quality education for every child.' }}</p>
+        </div>
+        <div>
+            <h4>Contact</h4>
+            {% if school.address %}<p>📍 {{ school.address }}</p>{% endif %}
+            {% if school.phone %}<p>📞 {{ school.phone }}</p>{% endif %}
+            {% if school.email %}<p>✉️ {{ school.email }}</p>{% endif %}
+        </div>
+        <div>
+            <h4>Quick Links</h4>
+            <a href="{{ url_for('public_site.admission') }}">Apply for Admission</a><br>
+            <a href="{{ url_for('public_site.notices_list') }}">Notice Board</a><br>
+            <a href="{{ url_for('parent.login') }}">Parent Portal</a><br>
+            <a href="{{ url_for('auth.login') }}">Staff Login</a>
+        </div>
+    </div>
+    <div class="copy">
+        © {{ school.school_name }} • Powered by School Management System
+    </div>
+</footer>
+
+</body>
+</html>
