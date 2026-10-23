@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ notice.title }}{% endblock %}
+{% block page_title %}Notice{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:800px;">
+    <div style="display:flex; justify-content:space-between; align-items:start; gap:1rem; flex-wrap:wrap;">
+        <div>
+            <h1 style="font-size:1.4rem; margin-bottom:0.35rem;">{{ notice.title }}</h1>
+            <div style="font-size:0.85rem; color:#64748b;">
+                <span style="text-transform:capitalize;">{{ notice.category }}</span>
+                {% if notice.target_class %} • Class {{ notice.target_class }}{% endif %}
+                • {{ notice.created_at.strftime('%d %b %Y, %I:%M %p') if notice.created_at else '—' }}
+            </div>
+        </div>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <a href="{{ url_for('notices.whatsapp_broadcast', notice_id=notice.id) }}"
+               class="btn" style="background:#25d366;">📲 WhatsApp</a>
+            <a href="{{ url_for('notices.edit', notice_id=notice.id) }}"
+               class="btn" style="background:#f59e0b;">Edit</a>
+            <form method="POST" action="{{ url_for('notices.remove', notice_id=notice.id) }}"
+                  onsubmit="return confirm('Delete notice?');" style="display:inline;">
+                <button class="btn" style="background:#ef4444;">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    <hr style="border:none; border-top:1px solid #e2e8f0; margin:1rem 0;">
+
+    <p style="white-space:pre-wrap; line-height:1.7; color:#334155; font-size:0.95rem;">{{ notice.content }}</p>
+</div>
+{% endblock %}
