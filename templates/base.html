@@ -139,7 +139,12 @@
 <div class="layout">
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
-        <div class="brand">🎓 School MS</div>
+        <div class="brand">
+    {% if school.logo_url %}
+    <img src="{{ school.logo_url }}" alt="" style="width:20px; height:20px; vertical-align:middle; border-radius:4px;">
+    {% else %}🎓{% endif %}
+    {{ school.school_name }}
+        </div>
 
         <div class="section-label">Main</div>
         <a href="{{ url_for('dashboard') }}">Dashboard</a>
