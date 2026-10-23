@@ -1,0 +1,45 @@
+{% extends "parent/base.html" %}
+{% block title %}My Children{% endblock %}
+
+{% block content %}
+<h2 style="font-size:1.15rem; margin-bottom:0.75rem; color:#1e293b;">My Children</h2>
+
+{% for c in children %}
+<a href="{{ url_for('parent.child_detail', student_id=c.id) }}"
+   style="text-decoration:none; color:inherit;">
+    <div class="card" style="cursor:pointer;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+            <div>
+                <h3 style="font-size:1.05rem; color:#1e293b;">{{ c.name }}</h3>
+                <p style="font-size:0.85rem; color:#64748b; margin-top:0.15rem;">
+                    {{ c.class_name or '—' }}{% if c.section %} - {{ c.section }}{% endif %}
+                    • Roll: {{ c.roll or '—' }}
+                </p>
+            </div>
+            <div style="font-size:1.5rem; color:#f59e0b;">→</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-top:0.75rem;">
+            <div style="background:#f1f5f9; padding:0.5rem; border-radius:6px;">
+                <div style="font-size:0.7rem; color:#64748b;">Attendance ({{ month }})</div>
+                <div style="font-size:1.15rem; font-weight:700;
+                    color:{{ '#10b981' if c.attendance_percent >= 75 else ('#f59e0b' if c.attendance_percent >= 50 else '#ef4444') }};">
+                    {{ c.attendance_percent }}%
+                </div>
+            </div>
+            <div style="background:#f1f5f9; padding:0.5rem; border-radius:6px;">
+                <div style="font-size:0.7rem; color:#64748b;">Fees Pending ({{ month }})</div>
+                <div style="font-size:1.15rem; font-weight:700;
+                    color:{{ '#ef4444' if c.pending_fees > 0 else '#10b981' }};">
+                    ₹{{ "%.0f"|format(c.pending_fees) }}
+                </div>
+            </div>
+        </div>
+    </div>
+</a>
+{% else %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Koi student record nahi mila. School office se sampark karo.
+</div>
+{% endfor %}
+{% endblock %}
