@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Salary{% endblock %}
+{% block page_title %}Salary Management{% endblock %}
+
+{% block content %}
+
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:end;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Month</label>
+        <input type="month" name="month" value="{{ month }}"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Status</label>
+        <select name="status"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">All</option>
+            <option value="pending" {% if selected_status=='pending' %}selected{% endif %}>Pending</option>
+            <option value="paid" {% if selected_status=='paid' %}selected{% endif %}>Paid</option>
+        </select>
+    </div>
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Search</label>
+        <input name="q" value="{{ search }}" placeholder="staff name"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+    <button type="submit" class="btn">Filter</button>
+</form>
+
+<form method="POST" action="{{ url_for('salary.generate') }}"
+      style="margin-top:0.75rem; display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+    <input type="hidden" name="month" value="{{ month }}">
+    <button type="submit" class="btn" style="background:#8b5cf6;"
+        onclick="return confirm('{{ month }} ke liye saare active staff ke salary records banayein?');">
+        + Generate Salary for {{ month }}
+    </button>
+    <span style="font-size:0.78rem; color:#94a3b8;">
+        (already existing records skip honge)
+    </span>
+</form>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:0.75rem; margin-bottom:1rem;">
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.75rem; color:#64748b;">Total Records</div>
+        <div style="font-size:1.5rem; font-weight:700;">{{ summary.total }}</div>
+    </div>
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.75rem; color:#64748b;">Pending</div>
+        <div style="font-size:1.4rem; font-weight:700; color:#ef4444;">
+            ₹{{ "%.0f"|format(summary.pending_amount) }}
+        </div>
+        <div style="font-size:0.7rem; color:#94a3b8;">{{ summary.pending_count }} staff</div>
+    </div>
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.75rem; color:#64748b;">Paid</div>
+        <div style="font-size:1.4rem; font-weight:700; color:#10b981;">
+            ₹{{ "%.0f"|format(summary.paid_amount) }}
+        </div>
+        <div style="font-size:0.7rem; color:#94a3b8;">{{ summary.paid_count }} staff</div>
+    </div>
+</div>
+
+{% if not records %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Is month ke liye koi salary record nahi hai.
+    Upar "+ Generate Salary" dabao.
+</div>
+{% else %}
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:700px;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.6rem; text-align:left;">Staff</th>
+            <th style="padding:0.6rem; text-align:left;">Role</th>
+            <th style="padding:0.6rem; text-align:right;">Base</th>
+            <th style="padding:0.6rem; text-align:right;">Bonus</th>
+            <th style="padding:0.6rem; text-align:right;">Deduct</th>
+            <th style="padding:0.6rem; text-align:right;">Net</th>
+            <th style="padding:0.6rem; text-align:center;">Status</th>
+            <th style="padding:0.6rem; text-align:right;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in records %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.6rem;"><strong>{{ r.name }}</strong></td>
+            <td style="padding:0.6rem; text-transform:capitalize;">{{ r.role }}</td>
+            <td style="padding:0.6rem; text-align:right;">₹{{ "%.0f"|format(r.base) }}</td>
+            <td style="padding:0.6rem; text-align:right; color:#10b981;">
+                {{ '+₹%.0f'|format(r.bonus) if r.bonus else '—' }}
+            </td>
+            <td style="padding:0.6rem; text-align:right; color:#ef4444;">
+                {{ '-₹%.0f'|format(r.deductions) if r.deductions else '—' }}
+            </td>
+            <td style="padding:0.6rem; text-align:right; font-weight:700;">
+                ₹{{ "%.0f"|format(r.net) }}
+            </td>
+            <td style="padding:0.6rem; text-align:center;">
+                <span style="font-size:0.72rem; padding:0.15rem 0.5rem; border-radius:3px; font-weight:600;
+                    background:{{ '#d1fae5' if r.status=='paid' else '#fef3c7' }};
+                    color:{{ '#065f46' if r.status=='paid' else '#92400e' }};">
+                    {{ r.status }}
+                </span>
+            </td>
+            <td style="padding:0.6rem; text-align:right; white-space:nowrap;">
+                {% if r.status == 'pending' %}
+                <a href="{{ url_for('salary.edit', rid=r.id) }}"
+                   style="color:#f59e0b; text-decoration:none; font-size:0.82rem; margin-right:0.5rem;">
+                    Adjust
+                </a>
+                <form method="POST" action="{{ url_for('salary.pay', rid=r.id) }}"
+                      style="display:inline;"
+                      onsubmit="return confirm('Mark as paid? ₹{{ '%.0f'|format(r.net) }}');">
+                    <input type="hidden" name="mode" value="cash">
+                    <button style="background:none; border:none; color:#10b981; cursor:pointer;
+                        font-size:0.82rem; font-weight:600;">
+                        Mark Paid
+                    </button>
+                </form>
+                {% else %}
+                <a href="{{ url_for('salary.slip', rid=r.id) }}"
+                   style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">
+                    Slip
+                </a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}
