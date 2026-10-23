@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{{ teacher.name }} — Schedule{% endblock %}
+{% block page_title %}{{ teacher.name }}'s Timetable{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem;">
+    <div>
+        <a href="{{ url_for('staff.view', staff_id=teacher.id) }}"
+           style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Staff Profile</a>
+    </div>
+    <button onclick="window.print()" class="btn"
+        style="font-size:0.85rem;">🖨️ Print</button>
+</div>
+
+<div class="card" style="margin-bottom:1rem;">
+    <div style="font-size:0.85rem; color:#64748b;">
+        <strong style="color:#1e293b; text-transform:capitalize;">{{ teacher.role }}</strong>
+        {% if teacher.qualification %} • {{ teacher.qualification }}{% endif %}
+    </div>
+    <div style="margin-top:0.35rem; font-size:0.82rem; color:#475569;">
+        Total slots: <strong>{{ grid|length }}</strong> per week
+    </div>
+</div>
+
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.82rem; min-width:700px;">
+    <thead>
+        <tr style="background:#1e293b; color:white;">
+            <th style="padding:0.6rem; text-align:left; width:80px;">Period</th>
+            {% for dnum, dname in days %}
+            <th style="padding:0.6rem; text-align:center;">{{ dname }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in periods %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.5rem; background:#f8fafc; font-weight:700; color:#475569;">
+                P{{ p }}
+            </td>
+            {% for dnum, dname in days %}
+                {% set cell = grid.get((dnum, p)) %}
+                <td style="padding:0.5rem; text-align:center; vertical-align:top;
+                    background:{{ '#f0f9ff' if cell else 'white' }};">
+                    {% if cell %}
+                    <div style="font-weight:600; color:#1e293b;">{{ cell.subject }}</div>
+                    <div style="font-size:0.7rem; color:#64748b; margin-top:0.15rem;">
+                        {{ cell.class_name }}{% if cell.section %}-{{ cell.section }}{% endif %}
+                    </div>
+                    {% else %}
+                    <span style="color:#e2e8f0;">—</span>
+                    {% endif %}
+                </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<div class="card" style="margin-top:1rem; background:#fef3c7; border-left:3px solid #f59e0b;
+    font-size:0.85rem; color:#92400e;">
+    ⚠️ <strong>Conflict check:</strong> Ek teacher ko same day+period pe do classes mein assign na karo.
+    Save karte waqt conflict detect nahi hota — manually verify karo (ya next phase mein add hoga).
+</div>
+{% endblock %}
