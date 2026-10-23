@@ -1,128 +1,98 @@
-import sqlite3
+import os
+import psycopg2
 
-def get_db():
-    conn = sqlite3.connect('database.db')
-    return conn
-
-def init_db():
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT NOT NULL
-        )
-    ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS todos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            title TEXT NOT NULL,
-            done BOOLEAN NOT NULL DEFAULT 0,
-            FOREIGN KEY (user_id) REFERENCES users (id)
-        )
-    ''')
-    conn.commit()
-    conn.close()
+def get_conn():
+    return psycopg2.connect(
+        os.getenv("DATABASE_URL"),
+        sslmode="require"
+    )
 
 # ---------- Users ----------
 def create_user(name, email):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO users (name, email) VALUES (?, ?)", (name, email))
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO users (name, email) VALUES (%s, %s) RETURNING id;",
+        (name, email)
+    )
+    uid = cur.fetchone()[0]
     conn.commit()
-    uid = cursor.lastrowid
-    cursor.close()
+    cur.close()
     conn.close()
     return uid
 
 def get_users():
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, name, email FROM users")
-    rows = cursor.fetchall()
-    cursor.close()
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id, name, email FROM users ORDER BY id;")
+    rows = cur.fetchall()
+    cur.close()
     conn.close()
     return rows
 
 def get_user(user_id):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, name, email FROM users WHERE id = ?", (user_id,))
-    row = cursor.fetchone()
-    cursor.close()
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id, name, email FROM users WHERE id=%s;", (user_id,))
+    row = cur.fetchone()
+    cur.close()
     conn.close()
     return row
 
 def update_user(user_id, name, email):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute(
-        "UPDATE users SET name = ?, email = ? WHERE id = ?",
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE users SET name=%s, email=%s WHERE id=%s RETURNING id;",
         (name, email, user_id)
     )
+    res = cur.fetchone()
     conn.commit()
-    updated = cursor.rowcount > 0
-    cursor.close()
+    cur.close()
     conn.close()
-    return user_id if updated else None
+    return res[0] if res else None
 
 def delete_user(user_id):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM users WHERE id=%s;", (user_id,))
     conn.commit()
-    cursor.close()
+    cur.close()
     conn.close()
 
 # ---------- Todos ----------
 def create_todo(user_id, title):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO todos (user_id, title, done) VALUES (?, ?, 0)", (user_id, title))
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO todos (user_id, title, done) VALUES (%s, %s, FALSE) RETURNING id;",
+        (user_id, title)
+    )
+    tid = cur.fetchone()[0]
     conn.commit()
-    tid = cursor.lastrowid
-    cursor.close()
+    cur.close()
     conn.close()
     return tid
 
-def get_todos(user_id=None):
-    conn = get_db()
-    cursor = conn.cursor()
+def get_todos(user_id=None, done=None):
+    conn = get_conn()
+    cur = conn.cursor()
+    query = "SELECT id, user_id, title, done FROM todos WHERE 1=1"
+    params = []
     if user_id:
-        cursor.execute("SELECT id, user_id, title, done FROM todos WHERE user_id = ?", (user_id,))
-    else:
-        cursor.execute("SELECT id, user_id, title, done FROM todos")
-    rows = cursor.fetchall()
-    cursor.close()
+        query += " AND user_id=%s"
+        params.append(user_id)
+    if done is not None:
+        query += " AND done=%s"
+        params.append(done)
+    query += " ORDER BY id;"
+    cur.execute(query, tuple(params))
+    rows = cur.fetchall()
+    cur.close()
     conn.close()
     return rows
 
-def toggle_todo(todo_id):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT done FROM todos WHERE id = ?", (todo_id,))
-    row = cursor.fetchone()
-    if not row:
-        cursor.close()
-        conn.close()
-        return None
-    new_done = 0 if row[0] else 1
-    cursor.execute("UPDATE todos SET done = ? WHERE id = ?", (new_done, todo_id))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return new_done
-
-def delete_todo(todo_id):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM todos WHERE id = ?", (todo_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    def update_todo(todo_id, title):
+def update_todo(todo_id, title):
     conn = get_conn()
     cur = conn.cursor()
     cur.execute(
@@ -135,5 +105,23 @@ def delete_todo(todo_id):
     conn.close()
     return res[0] if res else None
 
-# Database initialize karein
-init_db()
+def toggle_todo(todo_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE todos SET done = NOT done WHERE id=%s RETURNING done;",
+        (todo_id,)
+    )
+    res = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
+    return res[0] if res else None
+
+def delete_todo(todo_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM todos WHERE id=%s;", (todo_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
