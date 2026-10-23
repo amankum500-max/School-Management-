@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notice Board — School</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: system-ui, sans-serif;
+            background: #f5f6fa;
+            padding: 1.5rem;
+        }
+        .wrap { max-width: 800px; margin: 0 auto; }
+        header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #1e293b;
+        }
+        header h1 { font-size: 1.6rem; color: #1e293b; }
+        header p { color: #64748b; font-size: 0.9rem; margin-top: 0.25rem; }
+        .notice {
+            background: white;
+            padding: 1.25rem;
+            border-radius: 10px;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border-left: 4px solid #3b82f6;
+        }
+        .notice.urgent { border-left-color: #ef4444; }
+        .notice.high { border-left-color: #f59e0b; }
+        .notice h2 { font-size: 1.1rem; margin-bottom: 0.35rem; color: #1e293b; }
+        .notice .meta { font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.5rem; text-transform: capitalize; }
+        .notice p { color: #475569; font-size: 0.92rem; line-height: 1.6; white-space: pre-wrap; }
+        .empty { text-align: center; padding: 3rem; color: #94a3b8; }
+        footer { text-align: center; margin-top: 2rem; color: #94a3b8; font-size: 0.75rem; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <header>
+            <h1>🎓 School Notice Board</h1>
+            <p>Latest announcements</p>
+        </header>
+
+        {% for n in notices %}
+        <div class="notice {{ n.priority }}">
+            <h2>{{ n.title }}</h2>
+            <div class="meta">
+                {{ n.category }} • {{ n.created_at.strftime('%d %b %Y') if n.created_at else '' }}
+            </div>
+            <p>{{ n.content }}</p>
+        </div>
+        {% else %}
+        <div class="empty">Abhi koi notice publish nahi hua.</div>
+        {% endfor %}
+
+        <footer>Powered by School Management System</footer>
+    </div>
+</body>
+</html>
