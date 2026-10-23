@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Salary Slip — {{ r.name }} — {{ r.month }}</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: system-ui, sans-serif; padding:1rem; background:#f5f6fa; }
+        .slip {
+            background:white; max-width:620px; margin:0 auto; padding:1.5rem;
+            border:2px solid #1e293b; border-radius:10px;
+        }
+        .head {
+            text-align:center; border-bottom:2px solid #1e293b;
+            padding-bottom:0.75rem; margin-bottom:1rem;
+        }
+        .head h1 { font-size:1.2rem; }
+        .head p { font-size:0.78rem; color:#64748b; margin-top:0.15rem; }
+        .info {
+            display:grid; grid-template-columns:1fr 1fr;
+            gap:0.35rem; font-size:0.88rem; margin-bottom:1rem;
+        }
+        .info span:first-child { color:#64748b; }
+        table { width:100%; border-collapse:collapse; font-size:0.88rem; }
+        th, td { padding:0.5rem; text-align:left; border-bottom:1px solid #e2e8f0; }
+        th { background:#f1f5f9; }
+        td:last-child, th:last-child { text-align:right; }
+        .total { border-top:2px solid #1e293b; font-weight:700; }
+        .actions { text-align:center; margin-top:1rem; }
+        .btn { padding:0.6rem 1.2rem; border:none; border-radius:6px; cursor:pointer;
+               font-size:0.9rem; margin:0 0.25rem; text-decoration:none; display:inline-block; }
+        @media print { body { background:white; padding:0; }
+                       .slip { border:1px solid #000; }
+                       .actions { display:none; } }
+    </style>
+</head>
+<body>
+    <div class="slip">
+        <div class="head">
+            <h1>{{ school.school_name }}</h1>
+            <p>{{ school.address or '' }}{% if school.phone %} • {{ school.phone }}{% endif %}</p>
+            <p style="margin-top:0.35rem; font-weight:600; color:#1e293b;">
+                Salary Slip — {{ r.month }}
+            </p>
+        </div>
+
+        <div class="info">
+            <div><span>Name:</span> <strong>{{ r.name }}</strong></div>
+            <div><span>Role:</span> <strong style="text-transform:capitalize;">{{ r.role }}</strong></div>
+            <div><span>Slip No:</span> <strong>{{ r.slip_no }}</strong></div>
+            <div><span>Paid On:</span>
+                <strong>{{ r.paid_at.strftime('%d %b %Y') if r.paid_at else '—' }}</strong>
+            </div>
+            {% if r.qualification %}
+            <div><span>Qualification:</span> <strong>{{ r.qualification }}</strong></div>
+            {% endif %}
+            {% if r.phone %}
+            <div><span>Phone:</span> <strong>{{ r.phone }}</strong></div>
+            {% endif %}
+        </div>
+
+        <table>
+            <thead>
+                <tr><th>Description</th><th>Amount</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Base Salary</td><td>₹{{ "%.0f"|format(r.base) }}</td></tr>
+                {% if r.bonus %}
+                <tr><td>Bonus</td><td style="color:#10b981;">+ ₹{{ "%.0f"|format(r.bonus) }}</td></tr>
+                {% endif %}
+                {% if r.deductions %}
+                <tr><td>Deductions</td><td style="color:#ef4444;">- ₹{{ "%.0f"|format(r.deductions) }}</td></tr>
+                {% endif %}
+                <tr class="total">
+                    <td>Net Payable</td>
+                    <td>₹{{ "%.0f"|format(r.net) }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top:1rem; font-size:0.82rem; color:#64748b;">
+            <strong>Payment Mode:</strong> {{ (r.mode or '—')|upper }}
+            {% if r.note %} • {{ r.note }}{% endif %}
+        </div>
+
+        <div style="margin-top:1rem; font-size:0.72rem; color:#94a3b8; text-align:center;">
+            Ye computer-generated salary slip hai.
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn" onclick="window.print()"
+            style="background:#3b82f6; color:white;">🖨️ Print</button>
+        <a href="{{ url_for('salary.index', month=r.month) }}" class="btn"
+           style="background:#64748b; color:white;">← Back</a>
+    </div>
+</body>
+</html>
