@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}WhatsApp Templates{% endblock %}
+{% block page_title %}WhatsApp Templates{% endblock %}
+
+{% block content %}
+<div style="display:flex; gap:0.75rem; margin-bottom:1rem; flex-wrap:wrap;">
+    <a href="{{ url_for('whatsapp.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back to Reminders</a>
+    <a href="{{ url_for('whatsapp.template_add') }}"
+       class="btn" style="margin-left:auto;">+ New Template</a>
+</div>
+
+{% for t in templates %}
+<div class="card" style="margin-bottom:0.75rem;">
+    <div style="display:flex; justify-content:space-between; align-items:start; gap:0.5rem; flex-wrap:wrap;">
+        <div>
+            <h3 style="font-size:1rem; margin-bottom:0.15rem;">{{ t.name }}</h3>
+            <span style="font-size:0.72rem; background:#f1f5f9; padding:0.15rem 0.45rem;
+                border-radius:3px; color:#475569; text-transform:capitalize;">{{ t.category }}</span>
+        </div>
+        <div style="display:flex; gap:0.5rem;">
+            <a href="{{ url_for('whatsapp.template_edit', tid=t.id) }}"
+               style="color:#f59e0b; text-decoration:none; font-size:0.85rem;">Edit</a>
+            <form method="POST" action="{{ url_for('whatsapp.template_delete', tid=t.id) }}"
+                  onsubmit="return confirm('Delete template?');" style="display:inline;">
+                <button style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.85rem;">
+                    Delete
+                </button>
+            </form>
+        </div>
+    </div>
+    <div style="background:#f8fafc; padding:0.65rem; border-radius:6px;
+        font-family:monospace; font-size:0.8rem; white-space:pre-wrap;
+        margin-top:0.5rem; color:#334155;">{{ t.body }}</div>
+</div>
+{% endfor %}
+{% endblock %}
