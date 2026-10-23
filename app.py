@@ -21,7 +21,25 @@ def add_user():
     data = request.json
     uid = create_user(data["name"], data["email"])
     return jsonify({"id": uid}), 201
+@app.route("/users/<int:user_id>", methods=["GET"])
+def get_one_user(user_id):
+    row = get_user(user_id)
+    if not row:
+        return jsonify({"error": "not found"}), 404
+    return jsonify({"id": row[0], "name": row[1], "email": row[2]})
 
+@app.route("/users/<int:user_id>", methods=["PUT"])
+def edit_user(user_id):
+    data = request.json
+    res = update_user(user_id, data["name"], data["email"])
+    if not res:
+        return jsonify({"error": "not found"}), 404
+    return jsonify({"updated": res})
+
+@app.route("/users/<int:user_id>", methods=["DELETE"])
+def remove_user(user_id):
+    delete_user(user_id)
+    return jsonify({"deleted": user_id})
 # ---------- Todos ----------
 @app.route("/todos", methods=["GET"])
 def list_todos():
