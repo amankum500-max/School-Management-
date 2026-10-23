@@ -67,6 +67,29 @@ def toggle(todo_id):
 def remove(todo_id):
     delete_todo(todo_id)
     return jsonify({"deleted": todo_id})
+    from db import (
+    create_user, get_users, get_user, update_user, delete_user,
+    create_todo, get_todos, update_todo, toggle_todo, delete_todo
+    )
+    @app.route("/todos", methods=["GET"])
+def list_todos():
+    user_id = request.args.get("user_id")
+    done_param = request.args.get("done")  # "true" / "false"
+    done = None
+    if done_param is not None:
+        done = done_param.lower() == "true"
+    rows = get_todos(user_id, done)
+    return jsonify([
+        {"id": r[0], "user_id": r[1], "title": r[2], "done": r[3]}
+        for r in rows
+    ])
+    @app.route("/todos/<int:todo_id>", methods=["PUT"])
+def edit_todo(todo_id):
+    data = request.json
+    res = update_todo(todo_id, data["title"])
+    if not res:
+        return jsonify({"error": "not found"}), 404
+    return jsonify({"updated": res})
 
 if __name__ == "__main__":
     app.run()
