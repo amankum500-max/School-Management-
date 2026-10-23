@@ -13,6 +13,8 @@
             </p>
         </div>
         <div style="display:flex; gap:0.5rem;">
+            <a href="{{ url_for('certificates.new', student_id=student.id) }}"
+   class="btn" style="background:#8b5cf6;">📜 Certificate</a>
             <a href="{{ url_for('students.edit_student', student_id=student.id) }}" class="btn">Edit</a>
             <form method="POST" action="{{ url_for('students.remove_student', student_id=student.id) }}"
                   onsubmit="return confirm('Delete {{ student.name }}? Ye action wapas nahi hoga.');">
