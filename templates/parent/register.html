@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parent Registration</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: system-ui, sans-serif; min-height:100vh;
+            background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+            display: flex; align-items:center; justify-content:center; padding:1rem;
+        }
+        .card {
+            background:white; padding:2rem; border-radius:14px;
+            width:100%; max-width:380px; box-shadow:0 20px 50px rgba(0,0,0,0.2);
+        }
+        h1 { font-size:1.4rem; margin-bottom:0.25rem; color:#1e293b; }
+        p.sub { color:#64748b; font-size:0.85rem; margin-bottom:1.5rem; }
+        label { display:block; font-size:0.85rem; color:#334155; margin-bottom:0.35rem; font-weight:500; }
+        input {
+            width:100%; padding:0.65rem 0.85rem; border:1px solid #cbd5e1;
+            border-radius:8px; font-size:0.95rem; margin-bottom:1rem;
+        }
+        input:focus { outline:none; border-color:#f59e0b; }
+        button {
+            width:100%; padding:0.75rem; background:#f59e0b; color:white;
+            border:none; border-radius:8px; font-size:0.95rem; font-weight:600; cursor:pointer;
+        }
+        .err { background:#fee2e2; color:#991b1b; padding:0.65rem; border-radius:6px; font-size:0.85rem; margin-bottom:1rem; }
+        .ok { background:#d1fae5; color:#065f46; padding:0.65rem; border-radius:6px; font-size:0.85rem; margin-bottom:1rem; }
+        .link { text-align:center; margin-top:1rem; font-size:0.85rem; color:#64748b; }
+        .link a { color:#f59e0b; text-decoration:none; font-weight:500; }
+        small { color:#94a3b8; display:block; font-size:0.75rem; margin-top:-0.5rem; margin-bottom:1rem; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Create Parent Account</h1>
+        <p class="sub">Same phone jo school records mein hai</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for cat, msg in messages %}
+                <div class="{{ 'err' if cat=='error' else 'ok' }}">{{ msg }}</div>
+            {% endfor %}
+        {% endwith %}
+
+        <form method="POST">
+            <label>Phone Number *</label>
+            <input name="phone" required placeholder="10-digit parent phone">
+            <small>Ye wahi number hona chahiye jo school ne rakha hai.</small>
+
+            <label>Your Name</label>
+            <input name="name" placeholder="Optional">
+
+            <label>Password *</label>
+            <input name="password" type="password" required minlength="6">
+            <small>Kam se kam 6 characters</small>
+
+            <button type="submit">Create Account</button>
+        </form>
+
+        <div class="link">
+            Already have account? <a href="{{ url_for('parent.login') }}">Login</a>
+        </div>
+    </div>
+</body>
+</html>
