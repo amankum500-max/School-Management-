@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Profit & Loss — {{ month }}{% endblock %}
+{% block page_title %}Profit & Loss{% endblock %}
+
+{% block content %}
+
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:end;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Month</label>
+        <input type="month" name="month" value="{{ month }}"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+    <button type="submit" class="btn">Generate</button>
+    <a href="{{ url_for('expenses.index', month=month) }}" class="btn"
+       style="background:#64748b; margin-left:auto;">View Expenses</a>
+</form>
+</div>
+
+<!-- Net result hero -->
+<div class="card" style="background:linear-gradient(135deg,
+    {{ '#10b981,#34d399' if p.profit else '#ef4444,#f87171' }});
+    color:white; margin-bottom:1rem; text-align:center; padding:2rem 1rem;">
+    <div style="font-size:0.9rem; opacity:0.9;">
+        {{ 'PROFIT' if p.profit else 'LOSS' }} — {{ month }}
+    </div>
+    <div style="font-size:2.8rem; font-weight:800; margin-top:0.35rem;">
+        ₹{{ "%.0f"|format(p.net|abs) }}
+    </div>
+</div>
+
+<!-- Inflow / Outflow breakdown -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:0.75rem; margin-bottom:1rem;">
+    <div class="card" style="border-left:4px solid #10b981;">
+        <div style="font-size:0.75rem; color:#64748b;">Fees Collected</div>
+        <div style="font-size:1.6rem; font-weight:700; color:#10b981;">
+            + ₹{{ "%.0f"|format(p.fees_collected) }}
+        </div>
+        <div style="font-size:0.72rem; color:#94a3b8;">{{ p.fee_count }} payments</div>
+    </div>
+    <div class="card" style="border-left:4px solid #3b82f6;">
+        <div style="font-size:0.75rem; color:#64748b;">Salary Paid</div>
+        <div style="font-size:1.6rem; font-weight:700; color:#ef4444;">
+            − ₹{{ "%.0f"|format(p.salary_paid) }}
+        </div>
+        <div style="font-size:0.72rem; color:#94a3b8;">
+            {{ p.salary_paid_count }} paid
+            {% if p.salary_pending_count %}
+            • {{ p.salary_pending_count }} pending (₹{{ "%.0f"|format(p.salary_pending) }})
+            {% endif %}
+        </div>
+    </div>
+    <div class="card" style="border-left:4px solid #f59e0b;">
+        <div style="font-size:0.75rem; color:#64748b;">Other Expenses</div>
+        <div style="font-size:1.6rem; font-weight:700; color:#ef4444;">
+            − ₹{{ "%.0f"|format(p.expenses_total) }}
+        </div>
+        <div style="font-size:0.72rem; color:#94a3b8;">{{ p.expenses_count }} entries</div>
+    </div>
+</div>
+
+<!-- Detailed P&L statement -->
+<div class="card">
+    <h3 style="font-size:1rem; margin-bottom:1rem; color:#1e293b;">Statement — {{ month }}</h3>
+    <table style="width:100%; border-collapse:collapse; font-size:0.92rem;">
+        <tbody>
+            <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:0.65rem 0;">Fees Collected</td>
+                <td style="padding:0.65rem 0; text-align:right; color:#10b981; font-weight:600;">
+                    ₹{{ "%.0f"|format(p.fees_collected) }}
+                </td>
+            </tr>
+            <tr><td colspan="2" style="padding:0.35rem 0;"></td></tr>
+            <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:0.65rem 0;">
+                    Salary Paid
+                    {% if p.salary_pending_count %}
+                    <span style="font-size:0.72rem; color:#f59e0b;">
+                        (+ ₹{{ "%.0f"|format(p.salary_pending) }} pending)
+                    </span>
+                    {% endif %}
+                </td>
+                <td style="padding:0.65rem 0; text-align:right; color:#ef4444;">
+                    ₹{{ "%.0f"|format(p.salary_paid) }}
+                </td>
+            </tr>
+            {% for cat in p.expense_categories %}
+            <tr style="border-bottom:1px solid #f8fafc;">
+                <td style="padding:0.5rem 0 0.5rem 1.2rem; color:#475569; font-size:0.85rem;">
+                    {{ cat.category }}
+                </td>
+                <td style="padding:0.5rem 0; text-align:right; color:#ef4444; font-size:0.85rem;">
+                    ₹{{ "%.0f"|format(cat.amount) }}
+                </td>
+            </tr>
+            {% endfor %}
+            <tr style="border-top:2px solid #1e293b;">
+                <td style="padding:0.85rem 0; font-weight:700;">Net {{ 'Profit' if p.profit else 'Loss' }}</td>
+                <td style="padding:0.85rem 0; text-align:right; font-weight:700; font-size:1.15rem;
+                    color:{{ '#10b981' if p.profit else '#ef4444' }};">
+                    ₹{{ "%.0f"|format(p.net|abs) }}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="card" style="margin-top:1rem; background:#eff6ff; border-left:3px solid #3b82f6;
+    font-size:0.82rem; color:#1e40af;">
+    <strong>ℹ️ Note:</strong>
+    Salary "pending" wale records net mein include nahi hain — sirf paid salary minus hoti hai.
+    Salary generate karke mark paid karo sahi numbers ke liye.
+</div>
+
+{% endblock %}
