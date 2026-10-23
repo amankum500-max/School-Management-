@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Expenses{% endblock %}
+{% block page_title %}Expense Tracking{% endblock %}
+
+{% block content %}
+
+<!-- Filters -->
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:end;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Month</label>
+        <input type="month" name="month" value="{{ month }}"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Category</label>
+        <select name="category"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">All</option>
+            {% for c in categories %}
+            <option value="{{ c }}" {% if c == selected_category %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Search</label>
+        <input name="q" value="{{ search }}" placeholder="vendor, description..."
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px; width:150px;">
+    </div>
+    <button type="submit" class="btn">Filter</button>
+    <a href="{{ url_for('expenses.add') }}" class="btn"
+       style="background:#ef4444; margin-left:auto;">+ Add Expense</a>
+    <a href="{{ url_for('expenses.pnl', month=month) }}" class="btn"
+       style="background:#10b981;">📊 P&L</a>
+</form>
+</div>
+
+<!-- Summary cards -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.75rem; margin-bottom:1rem;">
+    <div class="card" style="padding:0.85rem;">
+        <div style="font-size:0.75rem; color:#64748b;">Total Expense ({{ month }})</div>
+        <div style="font-size:1.6rem; font-weight:700; color:#ef4444;">
+            ₹{{ "%.0f"|format(summary.total) }}
+        </div>
+        <div style="font-size:0.72rem; color:#94a3b8;">{{ summary.count }} categories</div>
+    </div>
+    {% for cat in summary.categories[:3] %}
+    <div class="card" style="padding:0.85rem;">
+        <div style="font-size:0.75rem; color:#64748b;">{{ cat.category }}</div>
+        <div style="font-size:1.3rem; font-weight:700; color:#475569;">
+            ₹{{ "%.0f"|format(cat.total) }}
+        </div>
+        <div style="font-size:0.72rem; color:#94a3b8;">{{ cat.count }} entries</div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Expenses table -->
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:700px;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.6rem; text-align:left;">Date</th>
+            <th style="padding:0.6rem; text-align:left;">Category</th>
+            <th style="padding:0.6rem; text-align:left;">Description</th>
+            <th style="padding:0.6rem; text-align:left;">Vendor</th>
+            <th style="padding:0.6rem; text-align:left;">Mode</th>
+            <th style="padding:0.6rem; text-align:right;">Amount</th>
+            <th style="padding:0.6rem; text-align:right;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for e in items %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.55rem; font-size:0.8rem; color:#64748b;">
+                {{ e.expense_date.strftime('%d %b') if e.expense_date else '—' }}
+            </td>
+            <td style="padding:0.55rem;">
+                <span style="font-size:0.72rem; background:#f1f5f9; color:#475569;
+                    padding:0.15rem 0.45rem; border-radius:3px;">{{ e.category }}</span>
+            </td>
+            <td style="padding:0.55rem;">{{ e.description or '—' }}</td>
+            <td style="padding:0.55rem;">{{ e.vendor or '—' }}</td>
+            <td style="padding:0.55rem; text-transform:capitalize; font-size:0.8rem;">{{ e.payment_mode }}</td>
+            <td style="padding:0.55rem; text-align:right; font-weight:600; color:#ef4444;">
+                ₹{{ "%.0f"|format(e.amount) }}
+            </td>
+            <td style="padding:0.55rem; text-align:right; white-space:nowrap;">
+                <a href="{{ url_for('expenses.edit', eid=e.id) }}"
+                   style="color:#f59e0b; text-decoration:none; font-size:0.8rem; margin-right:0.4rem;">Edit</a>
+                <form method="POST" action="{{ url_for('expenses.remove', eid=e.id) }}"
+                      onsubmit="return confirm('Delete expense?');" style="display:inline;">
+                    <button style="background:none; border:none; color:#ef4444;
+                        cursor:pointer; font-size:0.8rem;">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="padding:2rem; text-align:center; color:#64748b;">
+            Is month koi expense nahi. "+ Add Expense" se shuru karo.
+        </td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}
