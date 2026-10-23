@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}WhatsApp Broadcast{% endblock %}
+{% block page_title %}WhatsApp Broadcast{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="margin-bottom:0.5rem; font-size:1rem;">Message Preview</h3>
+    <div style="background:#dcf8c6; padding:1rem; border-radius:8px; white-space:pre-wrap;
+        font-family:monospace; font-size:0.85rem;">*{{ notice.title }}*
+
+{{ notice.content }}
+
+— School Management</div>
+    <p style="color:#64748b; font-size:0.8rem; margin-top:0.5rem;">
+        ⓘ Har parent ko ek-ek karke click karna hoga (WhatsApp auto-send API nahi chahiye).
+        Ya copy karke WhatsApp group mein paste karo.
+    </p>
+</div>
+
+<div style="display:flex; gap:0.75rem; margin-bottom:1rem; flex-wrap:wrap;">
+    <form method="GET" style="display:flex; gap:0.5rem;">
+        <select name="class" style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+            <option value="">All Classes</option>
+            {% for c in classes %}
+            <option value="{{ c }}" {% if c == selected_class %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn">Filter</button>
+    </form>
+</div>
+
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.7rem; text-align:left;">Name</th>
+            <th style="padding:0.7rem; text-align:left;">Class</th>
+            <th style="padding:0.7rem; text-align:left;">Phone</th>
+            <th style="padding:0.7rem; text-align:right;">Send</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for s in students %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.65rem;"><strong>{{ s.name }}</strong></td>
+            <td style="padding:0.65rem;">{{ s.class_name or '—' }}{% if s.section %}-{{ s.section }}{% endif %}</td>
+            <td style="padding:0.65rem; font-family:monospace;">{{ s.phone }}</td>
+            <td style="padding:0.65rem; text-align:right;">
+                <a href="https://wa.me/91{{ s.phone|replace(' ', '')|replace('-', '') }}?text={{ msg_encoded }}"
+                   target="_blank"
+                   style="background:#25d366; color:white; padding:0.35rem 0.8rem; border-radius:4px; text-decoration:none; font-size:0.8rem;">
+                    Send ↗
+                </a>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="padding:2rem; text-align:center; color:#64748b;">
+            Koi parent phone nahi mila. Students ke phone numbers check karo.
+        </td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}
