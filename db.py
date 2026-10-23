@@ -85,6 +85,35 @@ def delete_todo(todo_id):
     cursor.execute("DELETE FROM todos WHERE id = ?", (todo_id,))
     conn.commit()
     conn.close()
+    def get_user(user_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id, name, email FROM users WHERE id=%s;", (user_id,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    return row
+
+def update_user(user_id, name, email):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE users SET name=%s, email=%s WHERE id=%s RETURNING id;",
+        (name, email, user_id)
+    )
+    res = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
+    return res[0] if res else None
+
+def delete_user(user_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM users WHERE id=%s;", (user_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
 
 # Database initialize karein
 init_db()
