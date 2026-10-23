@@ -122,6 +122,18 @@ def delete_todo(todo_id):
     conn.commit()
     cursor.close()
     conn.close()
+    def update_todo(todo_id, title):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE todos SET title=%s WHERE id=%s RETURNING id;",
+        (title, todo_id)
+    )
+    res = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
+    return res[0] if res else None
 
 # Database initialize karein
 init_db()
