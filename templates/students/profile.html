@@ -48,3 +48,10 @@
     <strong>Coming soon:</strong> Attendance %, Fee status, Recent marks — ye sab agle modules mein isi profile pe dikhenge.
 </div>
 {% endblock %}
+<div class="card" style="max-width:800px; margin-top:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="font-size:1rem;">Attendance</h3>
+        <a href="{{ url_for('attendance.student_attendance', student_id=student.id) }}"
+           class="btn" style="padding:0.4rem 0.9rem; font-size:0.85rem;">View Full</a>
+    </div>
+</div>
