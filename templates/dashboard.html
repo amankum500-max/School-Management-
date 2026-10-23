@@ -38,3 +38,158 @@
     <div style="color:#64748b; font-size:0.85rem;">New Notices (7d)</div>
     <div style="font-size:1.8rem; font-weight:700; margin-top:0.25rem;">{{ recent_notices or 0 }}</div>
 </div>
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:1rem;">
+    <h2 style="margin-bottom:0.35rem; font-size:1.15rem;">Welcome, {{ session.admin_name }} 👋</h2>
+    <p style="color:#64748b; font-size:0.88rem;">
+        {{ school.school_name }} — Management Dashboard
+    </p>
+</div>
+
+<!-- KPI Cards -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:0.75rem; margin-bottom:1rem;">
+    <div class="card">
+        <div style="color:#64748b; font-size:0.8rem;">Total Students</div>
+        <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem;">{{ total_students or 0 }}</div>
+    </div>
+    <div class="card">
+        <div style="color:#64748b; font-size:0.8rem;">Fees Collected</div>
+        <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem; color:#10b981;">
+            ₹{{ "%.0f"|format(fees_collected or 0) }}
+        </div>
+    </div>
+    <div class="card">
+        <div style="color:#64748b; font-size:0.8rem;">Today's Attendance</div>
+        <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem; color:#3b82f6;">
+            {{ (attendance_today|string + '%') if attendance_today is not none else '—' }}
+        </div>
+    </div>
+    <div class="card">
+        <div style="color:#64748b; font-size:0.8rem;">New Notices (7d)</div>
+        <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem;">{{ recent_notices or 0 }}</div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1rem; margin-bottom:1rem;">
+    <div class="card">
+        <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:#1e293b;">📈 Fees (Last 6 Months)</h3>
+        <div style="height:180px; position:relative;">
+            <canvas id="feesChart"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:#1e293b;">📊 Attendance (Last 7 Days)</h3>
+        <div style="height:180px; position:relative;">
+            <canvas id="attChart"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:#1e293b;">🎓 Students by Class</h3>
+        <div style="height:180px; position:relative;">
+            <canvas id="classChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Quick links -->
+<div class="card">
+    <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:#1e293b;">⚡ Quick Actions</h3>
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <a href="{{ url_for('students.add_student') }}" class="btn" style="font-size:0.85rem;">+ Student</a>
+        <a href="{{ url_for('fees.collect') }}" class="btn" style="background:#10b981; font-size:0.85rem;">+ Payment</a>
+        <a href="{{ url_for('attendance.index') }}" class="btn" style="background:#3b82f6; font-size:0.85rem;">Mark Attendance</a>
+        <a href="{{ url_for('notices.add') }}" class="btn" style="background:#f59e0b; font-size:0.85rem;">+ Notice</a>
+        <a href="{{ url_for('exams.add') }}" class="btn" style="background:#8b5cf6; font-size:0.85rem;">+ Exam</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    const feesData = {{ fees_trend | tojson }};
+    const attData = {{ att_trend | tojson }};
+    const classData = {{ class_dist | tojson }};
+
+    // Fees bar chart
+    if (feesData.length) {
+        new Chart(document.getElementById('feesChart'), {
+            type: 'bar',
+            data: {
+                labels: feesData.map(d => d.label),
+                datasets: [{
+                    data: feesData.map(d => d.value),
+                    backgroundColor: '#3b82f6',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { callback: v => '₹' + v } }
+                }
+            }
+        });
+    } else {
+        document.getElementById('feesChart').parentElement.innerHTML =
+            '<p style="color:#94a3b8; font-size:0.85rem; padding:1rem; text-align:center;">Abhi koi payment nahi</p>';
+    }
+
+    // Attendance line chart
+    if (attData.length) {
+        new Chart(document.getElementById('attChart'), {
+            type: 'line',
+            data: {
+                labels: attData.map(d => d.label),
+                datasets: [{
+                    data: attData.map(d => d.value),
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16,185,129,0.1)',
+                    fill: true, tension: 0.35, pointRadius: 3
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } }
+                }
+            }
+        });
+    } else {
+        document.getElementById('attChart').parentElement.innerHTML =
+            '<p style="color:#94a3b8; font-size:0.85rem; padding:1rem; text-align:center;">Abhi koi attendance nahi</p>';
+    }
+
+    // Class distribution pie
+    if (classData.length) {
+        new Chart(document.getElementById('classChart'), {
+            type: 'doughnut',
+            data: {
+                labels: classData.map(d => d.label),
+                datasets: [{
+                    data: classData.map(d => d.value),
+                    backgroundColor: [
+                        '#3b82f6','#10b981','#f59e0b','#ef4444',
+                        '#8b5cf6','#06b6d4','#f97316','#ec4899',
+                        '#14b8a6','#a855f7'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'right', labels: { font: { size: 11 } } } }
+            }
+        });
+    } else {
+        document.getElementById('classChart').parentElement.innerHTML =
+            '<p style="color:#94a3b8; font-size:0.85rem; padding:1rem; text-align:center;">Koi student nahi</p>';
+    }
+</script>
+{% endblock %}
