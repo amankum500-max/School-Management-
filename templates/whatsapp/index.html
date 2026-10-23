@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}WhatsApp Reminder{% endblock %}
+{% block page_title %}WhatsApp Reminders{% endblock %}
+
+{% block content %}
+
+<!-- Filter bar -->
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:end;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Mode</label>
+        <select name="mode" onchange="this.form.submit()"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="defaulters" {% if mode=='defaulters' %}selected{% endif %}>Fee Defaulters</option>
+            <option value="low_att" {% if mode=='low_att' %}selected{% endif %}>Low Attendance (&lt;75%)</option>
+            <option value="all" {% if mode=='all' %}selected{% endif %}>All Students</option>
+        </select>
+    </div>
+
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Month</label>
+        <input type="month" name="month" value="{{ month }}"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Class</label>
+        <select name="class"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px; min-width:90px;">
+            <option value="">All</option>
+            {% for c in classes %}
+            <option value="{{ c }}" {% if c == selected_class %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Template</label>
+        <select name="template_id" onchange="this.form.submit()"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px; min-width:160px;">
+            {% for t in templates %}
+            <option value="{{ t.id }}" {% if selected_template and t.id == selected_template.id %}selected{% endif %}>
+                {{ t.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <button type="submit" class="btn">Refresh</button>
+    <a href="{{ url_for('whatsapp.templates_list') }}" class="btn"
+       style="background:#64748b; margin-left:auto;">⚙️ Templates</a>
+    <a href="{{ url_for('whatsapp.history') }}" class="btn"
+       style="background:#8b5cf6;">📜 History</a>
+</form>
+</div>
+
+{% if not selected_template %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Koi template nahi. Pehle <a href="{{ url_for('whatsapp.template_add') }}" style="color:#3b82f6;">template banao</a>.
+</div>
+{% elif not students %}
+<div class="card" style="text-align:center; padding:2rem; color:#10b981;">
+    🎉 Is mode mein koi student nahi mila — sab clear hai!
+</div>
+{% else %}
+
+<!-- Summary -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:0.75rem; margin-bottom:1rem;">
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.75rem; color:#64748b;">Students</div>
+        <div style="font-size:1.5rem; font-weight:700;">{{ students|length }}</div>
+    </div>
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.75rem; color:#64748b;">Already Sent (7d)</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#f59e0b;">
+            {{ students|selectattr('recent_sent')|list|length }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.75rem; color:#64748b;">Total Pending</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#ef4444;">
+            ₹{{ "%.0f"|format(students|sum(attribute='pending_fees')) }}
+        </div>
+    </div>
+</div>
+
+<!-- Preview template -->
+<div class="card" style="margin-bottom:1rem; background:#dcf8c6;">
+    <div style="font-size:0.7rem; color:#64748b; font-weight:600; margin-bottom:0.35rem;">
+        TEMPLATE PREVIEW ({{ selected_template.name }})
+    </div>
+    <div style="font-size:0.85rem; white-space:pre-wrap; font-family:monospace; color:#1e293b;"
+        id="template-body">{{ selected_template.body }}</div>
+</div>
+
+<!-- Student list with send buttons -->
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.65rem; text-align:left;">Student</th>
+            <th style="padding:0.65rem; text-align:left;">Class</th>
+            <th style="padding:0.65rem; text-align:left;">Parent</th>
+            <th style="padding:0.65rem; text-align:right;">Pending</th>
+            <th style="padding:0.65rem; text-align:center;">Att%</th>
+            <th style="padding:0.65rem; text-align:right;">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for s in students %}
+        <tr style="border-top:1px solid #e2e8f0;" id="row-{{ s.id }}">
+            <td style="padding:0.6rem;">
+                <strong>{{ s.name }}</strong>
+                <div style="color:#94a3b8; font-size:0.72rem;">Roll: {{ s.roll or '—' }}</div>
+            </td>
+            <td style="padding:0.6rem;">{{ s.class_name or '—' }}{% if s.section %}-{{ s.section }}{% endif %}</td>
+            <td style="padding:0.6rem;">
+                <div>{{ s.parent_name or '—' }}</div>
+                <div style="color:#94a3b8; font-size:0.72rem; font-family:monospace;">{{ s.phone }}</div>
+            </td>
+            <td style="padding:0.6rem; text-align:right;
+                color:{{ '#ef4444' if s.pending_fees > 0 else '#94a3b8' }};">
+                ₹{{ "%.0f"|format(s.pending_fees) }}
+            </td>
+            <td style="padding:0.6rem; text-align:center;
+                color:{{ '#ef4444' if s.attendance_pct is not none and s.attendance_pct < 75 else '#10b981' }};">
+                {{ (s.attendance_pct|string + '%') if s.attendance_pct is not none else '—' }}
+            </td>
+            <td style="padding:0.6rem; text-align:right; white-space:nowrap;">
+                {% if s.recent_sent %}
+                <span style="font-size:0.72rem; color:#f59e0b; margin-right:0.35rem;">
+                    ✓ Sent
+                </span>
+                {% endif %}
+                <a href="https://wa.me/91{{ s.phone_clean }}?text={{ s.message_encoded }}"
+                   target="_blank"
+                   onclick="logSend({{ s.id }}, {{ selected_template.id }}, '{{ s.phone_clean }}', {{ s.message|tojson }})"
+                   style="display:inline-block; background:#25d366; color:white;
+                   padding:0.4rem 0.85rem; border-radius:5px; text-decoration:none;
+                   font-size:0.8rem; font-weight:600;">
+                    Send ↗
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<div class="card" style="margin-top:1rem; font-size:0.8rem; color:#64748b;">
+    💡 <strong>Tip:</strong> "Send" click karne pe WhatsApp khulega pre-filled message ke saath.
+    Bas "Send" dabana hai. Yeh log automatically maintain hota hai.
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function logSend(studentId, templateId, phone, message) {
+    fetch('{{ url_for("whatsapp.log_send") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            student_id: studentId,
+            template_id: templateId,
+            phone: phone,
+            message: message
+        })
+    }).then(() => {
+        // small visual feedback - mark "sent" chip
+        const row = document.getElementById('row-' + studentId);
+        if (row && !row.querySelector('.sent-chip')) {
+            const chip = document.createElement('span');
+            chip.className = 'sent-chip';
+            chip.style.cssText = 'font-size:0.72rem; color:#f59e0b; margin-right:0.35rem;';
+            chip.textContent = '✓ Sent';
+            const actionCell = row.querySelector('td:last-child');
+            actionCell.insertBefore(chip, actionCell.firstChild);
+        }
+    }).catch(() => {});
+}
+</script>
+{% endblock %}
