@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Preview Import{% endblock %}
+{% block page_title %}Preview Import{% endblock %}
+
+{% block content %}
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:0.75rem; margin-bottom:1rem;">
+    <div class="card" style="padding:0.75rem; border-left:3px solid #3b82f6;">
+        <div style="font-size:0.75rem; color:#64748b;">Total Rows</div>
+        <div style="font-size:1.5rem; font-weight:700;">{{ total }}</div>
+    </div>
+    <div class="card" style="padding:0.75rem; border-left:3px solid #10b981;">
+        <div style="font-size:0.75rem; color:#64748b;">Valid</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#10b981;">{{ valid_count }}</div>
+    </div>
+    <div class="card" style="padding:0.75rem; border-left:3px solid #ef4444;">
+        <div style="font-size:0.75rem; color:#64748b;">Errors</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#ef4444;">{{ error_count }}</div>
+    </div>
+</div>
+
+{% if error_count > 0 %}
+<div class="card" style="background:#fef3c7; border-left:3px solid #f59e0b; margin-bottom:1rem;
+    font-size:0.85rem; color:#92400e;">
+    ⚠️ <strong>{{ error_count }} row(s) mein error hai</strong> — ye insert nahi hongi.
+    Sirf <strong>{{ valid_count }} valid</strong> rows database mein jayengi.
+</div>
+{% endif %}
+
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.82rem; min-width:800px;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.5rem; text-align:left;">Row</th>
+            <th style="padding:0.5rem; text-align:left;">Status</th>
+            <th style="padding:0.5rem; text-align:left;">Name</th>
+            <th style="padding:0.5rem; text-align:left;">Roll</th>
+            <th style="padding:0.5rem; text-align:left;">Class</th>
+            <th style="padding:0.5rem; text-align:left;">Gender</th>
+            <th style="padding:0.5rem; text-align:left;">DOB</th>
+            <th style="padding:0.5rem; text-align:left;">Parent</th>
+            <th style="padding:0.5rem; text-align:left;">Phone</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in rows %}
+        <tr style="border-top:1px solid #e2e8f0;
+            background:{{ '#fef2f2' if r.error else 'white' }};">
+            <td style="padding:0.5rem; color:#94a3b8;">{{ r.row_num }}</td>
+            <td style="padding:0.5rem;">
+                {% if r.error %}
+                <span style="color:#ef4444; font-size:0.72rem; font-weight:600;">✗ ERROR</span>
+                {% else %}
+                <span style="color:#10b981; font-size:0.72rem; font-weight:600;">✓ OK</span>
+                {% endif %}
+            </td>
+            <td style="padding:0.5rem;">{{ r.data.name or '—' }}</td>
+            <td style="padding:0.5rem;">{{ r.data.roll_no or '—' }}</td>
+            <td style="padding:0.5rem;">{{ r.data.class_name or '—' }}{% if r.data.section %}-{{ r.data.section }}{% endif %}</td>
+            <td style="padding:0.5rem;">{{ r.data.gender or '—' }}</td>
+            <td style="padding:0.5rem; font-size:0.78rem;">{{ r.data.dob or '—' }}</td>
+            <td style="padding:0.5rem;">{{ r.data.parent_name or '—' }}</td>
+            <td style="padding:0.5rem; font-family:monospace; font-size:0.78rem;">{{ r.data.parent_phone or '—' }}</td>
+        </tr>
+        {% if r.error %}
+        <tr style="background:#fef2f2;">
+            <td colspan="9" style="padding:0.4rem 0.5rem 0.6rem 2rem;
+                color:#991b1b; font-size:0.75rem;">
+                ⚠️ {{ r.error }}
+            </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<div class="card" style="margin-top:1rem; display:flex; gap:0.75rem; flex-wrap:wrap;">
+    <form method="POST" action="{{ url_for('bulk.confirm') }}" style="display:inline;">
+        <button type="submit" class="btn"
+            style="background:#10b981; {{ 'opacity:0.5; cursor:not-allowed;' if valid_count == 0 else '' }}"
+            {{ 'disabled' if valid_count == 0 }}
+            onclick="return confirm('{{ valid_count }} valid students insert karein?');">
+            ✓ Import {{ valid_count }} Students
+        </button>
+    </form>
+    <form method="POST" action="{{ url_for('bulk.cancel') }}" style="display:inline;">
+        <button type="submit"
+            style="padding:0.6rem 1.1rem; background:#ef4444; color:white;
+            border:none; border-radius:6px; cursor:pointer; font-size:0.9rem;">
+            Cancel
+        </button>
+    </form>
+    <a href="{{ url_for('bulk.upload') }}"
+       style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">
+        ← Upload Different File
+    </a>
+</div>
+{% endblock %}
