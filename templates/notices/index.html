@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Notices{% endblock %}
+{% block page_title %}Notice Board{% endblock %}
+
+{% block content %}
+<div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem; align-items:center;">
+    <form method="GET" style="display:flex; gap:0.5rem;">
+        <select name="category" onchange="this.form.submit()"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+            <option value="">All Categories</option>
+            {% for c in ['general','exam','fee','holiday','event','urgent'] %}
+            <option value="{{ c }}" {% if c == selected_category %}selected{% endif %}>{{ c|capitalize }}</option>
+            {% endfor %}
+        </select>
+    </form>
+    <div style="margin-left:auto; display:flex; gap:0.5rem;">
+        <a href="{{ url_for('notices.public_board') }}" target="_blank" class="btn" style="background:#64748b;">
+            Public Board ↗
+        </a>
+        <a href="{{ url_for('notices.add') }}" class="btn">+ New Notice</a>
+    </div>
+</div>
+
+{% for n in notices %}
+<div class="card" style="margin-bottom:0.75rem; border-left:4px solid
+    {{ '#ef4444' if n.priority == 'urgent' else ('#f59e0b' if n.priority == 'high' else '#3b82f6') }};">
+    <div style="display:flex; justify-content:space-between; align-items:start; gap:0.5rem; flex-wrap:wrap;">
+        <div style="flex:1;">
+            <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.35rem;">
+                <a href="{{ url_for('notices.view', notice_id=n.id) }}"
+                   style="font-size:1.05rem; font-weight:600; color:#1e293b; text-decoration:none;">
+                    {{ n.title }}
+                </a>
+                {% if not n.published %}
+                <span style="font-size:0.7rem; background:#fee2e2; color:#991b1b; padding:0.15rem 0.4rem; border-radius:3px;">DRAFT</span>
+                {% endif %}
+                {% if n.priority != 'normal' %}
+                <span style="font-size:0.7rem; padding:0.15rem 0.4rem; border-radius:3px;
+                    background:{{ '#fee2e2' if n.priority == 'urgent' else '#fef3c7' }};
+                    color:{{ '#991b1b' if n.priority == 'urgent' else '#92400e' }};">
+                    {{ n.priority|upper }}
+                </span>
+                {% endif %}
+                {% if n.is_public %}
+                <span style="font-size:0.7rem; background:#d1fae5; color:#065f46; padding:0.15rem 0.4rem; border-radius:3px;">PUBLIC</span>
+                {% endif %}
+            </div>
+            <p style="color:#475569; font-size:0.88rem; margin:0;">
+                {{ n.content[:150] }}{% if n.content|length > 150 %}...{% endif %}
+            </p>
+            <div style="margin-top:0.5rem; font-size:0.75rem; color:#94a3b8;">
+                <span style="text-transform:capitalize;">{{ n.category }}</span>
+                {% if n.target_class %} • Class {{ n.target_class }}{% endif %}
+                • {{ n.created_at.strftime('%d %b %Y, %I:%M %p') if n.created_at else '—' }}
+            </div>
+        </div>
+        <div style="display:flex; gap:0.35rem;">
+            <a href="{{ url_for('notices.edit', notice_id=n.id) }}"
+               style="color:#f59e0b; text-decoration:none; font-size:0.85rem;">Edit</a>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Koi notice nahi hai. "+ New Notice" se shuru karo.
+</div>
+{% endfor %}
+{% endblock %}
