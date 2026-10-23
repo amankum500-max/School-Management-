@@ -1,0 +1,37 @@
+{% extends "public/base.html" %}
+{% block title %}Contact — {{ school.school_name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="section-title">Contact Us</h1>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:1rem;">
+        <div class="pub-card">
+            <h3 style="font-size:1rem; margin-bottom:0.75rem;">Get in touch</h3>
+            <p style="font-size:0.9rem; color:#475569; margin-bottom:0.5rem;">
+                📍 {{ school.address or 'Address not set' }}
+            </p>
+            <p style="font-size:0.9rem; color:#475569; margin-bottom:0.5rem;">
+                📞 {{ school.phone or 'Phone not set' }}
+            </p>
+            <p style="font-size:0.9rem; color:#475569;">
+                ✉️ {{ school.email or 'Email not set' }}
+            </p>
+        </div>
+
+        <div class="pub-card">
+            <h3 style="font-size:1rem; margin-bottom:0.75rem;">Admission Enquiry</h3>
+            <p style="font-size:0.85rem; color:#64748b; margin-bottom:1rem;">
+                Interested in joining {{ school.school_name }}? Fill the admission
+                form and we'll get in touch with you.
+            </p>
+            <a href="{{ url_for('public_site.admission') }}"
+               style="display:inline-block; background:#3b82f6; color:white;
+               padding:0.6rem 1.25rem; border-radius:6px; text-decoration:none;
+               font-weight:600; font-size:0.9rem;">
+                Apply for Admission
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
