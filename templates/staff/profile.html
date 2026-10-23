@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}{{ m.name }} — Staff{% endblock %}
+{% block page_title %}Staff Profile{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:800px;">
+    <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:1rem;">
+        <div>
+            <h2 style="font-size:1.25rem;">{{ m.name }}</h2>
+            <p style="color:#64748b; font-size:0.9rem; margin-top:0.15rem; text-transform:capitalize;">
+                {{ m.role }}
+                {% if m.qualification %} • {{ m.qualification }}{% endif %}
+            </p>
+        </div>
+        <div style="display:flex; gap:0.5rem;">
+            <a href="{{ url_for('staff.edit', staff_id=m.id) }}" class="btn">Edit</a>
+            <form method="POST" action="{{ url_for('staff.remove', staff_id=m.id) }}"
+                  onsubmit="return confirm('Delete {{ m.name }}? Ye action wapas nahi hoga.');">
+                <button style="background:#ef4444; color:white; padding:0.6rem 1.1rem; border:none; border-radius:6px; cursor:pointer;">
+                    Delete
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <hr style="border:none; border-top:1px solid #e2e8f0; margin:1rem 0;">
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; font-size:0.9rem;">
+        <div>
+            <span style="color:#64748b;">Phone:</span>
+            {% if m.phone %}
+                <a href="tel:{{ m.phone }}" style="color:#3b82f6; text-decoration:none;">{{ m.phone }}</a>
+            {% else %}—{% endif %}
+        </div>
+        <div>
+            <span style="color:#64748b;">Email:</span>
+            {% if m.email %}
+                <a href="mailto:{{ m.email }}" style="color:#3b82f6; text-decoration:none;">{{ m.email }}</a>
+            {% else %}—{% endif %}
+        </div>
+        <div>
+            <span style="color:#64748b;">Join Date:</span> {{ m.join_date or '—' }}
+        </div>
+        <div>
+            <span style="color:#64748b;">Salary:</span>
+            {{ '₹' ~ "%.0f"|format(m.salary) if m.salary else '—' }}
+        </div>
+        <div style="grid-column:1/-1;">
+            <span style="color:#64748b;">Subjects:</span>
+            {{ m.subjects|join(', ') if m.subjects else '—' }}
+        </div>
+        <div style="grid-column:1/-1;">
+            <span style="color:#64748b;">Classes:</span>
+            {{ m.classes|join(', ') if m.classes else '—' }}
+        </div>
+        <div style="grid-column:1/-1;">
+            <span style="color:#64748b;">Address:</span> {{ m.address or '—' }}
+        </div>
+        <div>
+            <span style="color:#64748b;">Status:</span>
+            <span style="padding:0.2rem 0.5rem; border-radius:4px; font-size:0.75rem;
+                background:{{ '#d1fae5' if m.status=='active' else '#fee2e2' }};
+                color:{{ '#065f46' if m.status=='active' else '#991b1b' }};">
+                {{ m.status }}
+            </span>
+        </div>
+    </div>
+</div>
+
+{% if m.phone %}
+<div class="card" style="max-width:800px; margin-top:1rem;">
+    <h3 style="font-size:0.95rem; margin-bottom:0.5rem;">Quick Contact</h3>
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <a href="https://wa.me/91{{ m.phone|replace(' ','')|replace('-','') }}"
+           target="_blank"
+           style="background:#25d366; color:white; padding:0.5rem 1rem; border-radius:6px; text-decoration:none; font-size:0.85rem;">
+            📲 WhatsApp
+        </a>
+        <a href="tel:{{ m.phone }}"
+           style="background:#3b82f6; color:white; padding:0.5rem 1rem; border-radius:6px; text-decoration:none; font-size:0.85rem;">
+            📞 Call
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
