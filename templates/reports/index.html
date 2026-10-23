@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block page_title %}Reports{% endblock %}
+
+{% block content %}
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1rem;">
+
+    <a href="{{ url_for('reports.fees') }}" style="text-decoration:none; color:inherit;">
+        <div class="card" style="cursor:pointer; height:100%;">
+            <div style="font-size:1.8rem; margin-bottom:0.5rem;">💰</div>
+            <h3 style="font-size:1rem; margin-bottom:0.25rem;">Fee Collection</h3>
+            <p style="font-size:0.85rem; color:#64748b; line-height:1.5;">
+                Date range + class ke hisaab se payments, mode-wise summary.
+                CSV export supported.
+            </p>
+        </div>
+    </a>
+
+    <a href="{{ url_for('reports.attendance') }}" style="text-decoration:none; color:inherit;">
+        <div class="card" style="cursor:pointer; height:100%;">
+            <div style="font-size:1.8rem; margin-bottom:0.5rem;">📊</div>
+            <h3 style="font-size:1rem; margin-bottom:0.25rem;">Attendance</h3>
+            <p style="font-size:0.85rem; color:#64748b; line-height:1.5;">
+                Monthly per-student attendance. 75% se neeche wale highlight.
+                CSV export.
+            </p>
+        </div>
+    </a>
+
+    <a href="{{ url_for('reports.defaulters') }}" style="text-decoration:none; color:inherit;">
+        <div class="card" style="cursor:pointer; height:100%;">
+            <div style="font-size:1.8rem; margin-bottom:0.5rem;">⚠️</div>
+            <h3 style="font-size:1rem; margin-bottom:0.25rem;">Defaulters</h3>
+            <p style="font-size:0.85rem; color:#64748b; line-height:1.5;">
+                Month ke pending fees waale students. Parent phone ke saath.
+                CSV export for follow-up.
+            </p>
+        </div>
+    </a>
+
+</div>
+{% endblock %}
