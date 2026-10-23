@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Staff{% endblock %}
+{% block page_title %}Staff Directory{% endblock %}
+
+{% block content %}
+<div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem; align-items:center;">
+    <form method="GET" style="display:flex; gap:0.5rem; flex:1; min-width:250px;">
+        <input name="q" value="{{ search }}" placeholder="Search name, phone, email..."
+            style="flex:1; padding:0.55rem 0.85rem; border:1px solid #cbd5e1; border-radius:8px;">
+        <select name="role" style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+            <option value="">All Roles</option>
+            {% for r in roles %}
+            <option value="{{ r }}" {% if r == selected_role %}selected{% endif %}>{{ r|capitalize }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn">Filter</button>
+    </form>
+    <a href="{{ url_for('staff.add') }}" class="btn">+ Add Staff</a>
+</div>
+
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.7rem; text-align:left;">Name</th>
+            <th style="padding:0.7rem; text-align:left;">Role</th>
+            <th style="padding:0.7rem; text-align:left;">Subjects</th>
+            <th style="padding:0.7rem; text-align:left;">Classes</th>
+            <th style="padding:0.7rem; text-align:left;">Phone</th>
+            <th style="padding:0.7rem; text-align:left;">Status</th>
+            <th style="padding:0.7rem; text-align:right;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for m in members %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.65rem;"><strong>{{ m.name }}</strong></td>
+            <td style="padding:0.65rem; text-transform:capitalize;">{{ m.role }}</td>
+            <td style="padding:0.65rem; font-size:0.8rem;">
+                {{ m.subjects|join(', ') if m.subjects else '—' }}
+            </td>
+            <td style="padding:0.65rem; font-size:0.8rem;">
+                {{ m.classes|join(', ') if m.classes else '—' }}
+            </td>
+            <td style="padding:0.65rem; font-family:monospace; font-size:0.8rem;">{{ m.phone or '—' }}</td>
+            <td style="padding:0.65rem;">
+                <span style="padding:0.2rem 0.5rem; border-radius:4px; font-size:0.72rem;
+                    background:{{ '#d1fae5' if m.status=='active' else '#fee2e2' }};
+                    color:{{ '#065f46' if m.status=='active' else '#991b1b' }};">
+                    {{ m.status }}
+                </span>
+            </td>
+            <td style="padding:0.65rem; text-align:right; white-space:nowrap;">
+                <a href="{{ url_for('staff.view', staff_id=m.id) }}"
+                   style="color:#3b82f6; text-decoration:none; margin-right:0.5rem; font-size:0.85rem;">View</a>
+                <a href="{{ url_for('staff.edit', staff_id=m.id) }}"
+                   style="color:#f59e0b; text-decoration:none; font-size:0.85rem;">Edit</a>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="padding:2rem; text-align:center; color:#64748b;">
+            Koi staff member nahi mila. "+ Add Staff" se shuru karo.
+        </td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}
