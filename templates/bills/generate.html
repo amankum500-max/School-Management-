@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Generate Bills{% endblock %}
+{% block page_title %}Generate Monthly Bills{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:600px;">
+
+    <div style="background:#eff6ff; padding:0.75rem 1rem; border-radius:6px;
+        font-size:0.85rem; color:#1e40af; margin-bottom:1rem;">
+        <strong>💡 Kaise kaam karta hai:</strong>
+        <ul style="margin:0.4rem 0 0 1.2rem; line-height:1.7;">
+            <li>Selected class ke <strong>fee_structure</strong> se amounts liye jayenge</li>
+            <li>Har active student ke liye ek bill banega (us month ka)</li>
+            <li>Agar bill already hai → skip (safe, idempotent)</li>
+            <li>Baad mein fee_structure change karne se <strong>purane bills unaffected</strong></li>
+        </ul>
+    </div>
+
+    <form method="POST">
+        <div style="margin-bottom:1rem;">
+            <label style="font-size:0.85rem; color:#334155;">Class *</label>
+            <select name="class_name" required
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="">Select</option>
+                {% for c in classes %}
+                <option value="{{ c }}">{{ c }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+            <div>
+                <label style="font-size:0.85rem; color:#334155;">Month *</label>
+                <input type="month" name="month" value="{{ month }}" required
+                    style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+            <div>
+                <label style="font-size:0.85rem; color:#334155;">Section (optional)</label>
+                <input name="section" placeholder="A / B"
+                    style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+            </div>
+        </div>
+
+        <div style="display:flex; gap:0.75rem;">
+            <button type="submit" class="btn">Generate Bills</button>
+            <a href="{{ url_for('bills.index') }}"
+               style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
