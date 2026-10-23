@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ school.school_name }}{% endblock %}</title>
+    <meta name="theme-color" content="#1e293b">
+<meta name="description" content="{{ school.school_name }} — School Management">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+<link rel="apple-touch-icon" href="/static/icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="{{ school.school_name }}">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
