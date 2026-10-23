@@ -203,6 +203,15 @@
 </div>
 
 {% block extra_js %}{% endblock %}
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(() => console.log('SW registered'))
+                .catch(err => console.log('SW failed:', err));
+        });
+    }
+    </script>
 </body>
 </html>
 <a href="{{ url_for('students.list_students') }}">Students</a>
