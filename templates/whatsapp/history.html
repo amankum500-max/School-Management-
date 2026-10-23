@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}WhatsApp History{% endblock %}
+{% block page_title %}WhatsApp Send History{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:1rem;">
+    <a href="{{ url_for('whatsapp.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back to Reminders</a>
+</div>
+
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.65rem; text-align:left;">Sent At</th>
+            <th style="padding:0.65rem; text-align:left;">Student</th>
+            <th style="padding:0.65rem; text-align:left;">Class</th>
+            <th style="padding:0.65rem; text-align:left;">Phone</th>
+            <th style="padding:0.65rem; text-align:left;">Template</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for l in logs %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.6rem; font-size:0.78rem; color:#64748b;">
+                {{ l.sent_at.strftime('%d %b %Y, %I:%M %p') if l.sent_at else '—' }}
+            </td>
+            <td style="padding:0.6rem;"><strong>{{ l.student_name or '—' }}</strong></td>
+            <td style="padding:0.6rem;">{{ l.class_name or '—' }}</td>
+            <td style="padding:0.6rem; font-family:monospace; font-size:0.8rem;">{{ l.phone }}</td>
+            <td style="padding:0.6rem; font-size:0.8rem;">{{ l.template_name or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="padding:2rem; text-align:center; color:#64748b;">
+            Koi history nahi. Reminders page se pehla message bhejo.
+        </td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}
