@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Backup & Export{% endblock %}
+{% block page_title %}Backup & Data Export{% endblock %}
+
+{% block content %}
+
+<!-- Main backup card -->
+<div class="card" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);
+    color:white; margin-bottom:1rem;">
+    <h3 style="font-size:1.15rem; margin-bottom:0.35rem;">💾 Full Backup</h3>
+    <p style="font-size:0.9rem; opacity:0.9; margin-bottom:1rem;">
+        Saare data ek JSON file mein. Isse safe rakho — weekly ya monthly backup lo.
+    </p>
+    <a href="{{ url_for('backup.download') }}"
+       style="display:inline-block; background:white; color:#3b82f6;
+       padding:0.7rem 1.5rem; border-radius:8px; text-decoration:none;
+       font-weight:700; font-size:0.9rem;">
+        ⬇️ Download Backup (JSON)
+    </a>
+</div>
+
+<!-- Info -->
+<div class="card" style="margin-bottom:1rem; background:#eff6ff;
+    border-left:3px solid #3b82f6; font-size:0.85rem; color:#1e40af;">
+    <strong>💡 Ye backup mein kya hai:</strong>
+    Saare students, fees, attendance, exams, staff, notices, settings — sab kuch.
+    Isse Google Drive ya safe jagah pe save karo.
+</div>
+
+<!-- Per-table export -->
+<h3 style="font-size:1rem; margin-bottom:0.75rem; color:#1e293b;">📋 Individual Tables</h3>
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.65rem; text-align:left;">Table</th>
+            <th style="padding:0.65rem; text-align:right;">Rows</th>
+            <th style="padding:0.65rem; text-align:right;">Download</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for table in tables %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.6rem; font-family:monospace; font-size:0.82rem;">{{ table }}</td>
+            <td style="padding:0.6rem; text-align:right; color:#64748b;">{{ counts[table] }}</td>
+            <td style="padding:0.6rem; text-align:right;">
+                {% if counts[table] and counts[table] != 0 %}
+                <a href="{{ url_for('backup.download_table', table=table) }}"
+                   style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">
+                    CSV ↓
+                </a>
+                {% else %}
+                <span style="color:#94a3b8; font-size:0.82rem;">Empty</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<!-- Restore warning -->
+<div class="card" style="margin-top:1rem; border-left:4px solid #ef4444;">
+    <h3 style="font-size:1rem; margin-bottom:0.35rem; color:#991b1b;">⚠️ Restore (Danger Zone)</h3>
+    <p style="font-size:0.85rem; color:#64748b; margin-bottom:0.75rem;">
+        Backup file se data wapas laao. <strong>⚠️ Ye existing data ko delete nahi karta</strong> —
+        sirf add karta hai. Agar same ID ka row already hai toh skip ho jayega.
+        Best result ke liye <strong>naye khaali database</strong> pe use karo.
+    </p>
+    <a href="{{ url_for('backup.restore') }}"
+       style="display:inline-block; padding:0.55rem 1.2rem;
+       background:#ef4444; color:white; text-decoration:none;
+       border-radius:6px; font-size:0.85rem; font-weight:600;">
+        Restore from Backup →
+    </a>
+</div>
+{% endblock %}
