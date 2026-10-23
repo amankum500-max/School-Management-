@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Collect Fee{% endblock %}
+{% block page_title %}Collect Fee{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:600px;">
+<form method="POST">
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Student *</label>
+        <select name="student_id" required
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">-- Select Student --</option>
+            {% for s in students %}
+            <option value="{{ s.id }}">{{ s.name }} — {{ s.class_name or '?' }}{% if s.section %}-{{ s.section }}{% endif %} (Roll: {{ s.roll or '—' }})</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Fee Type *</label>
+            <input name="fee_type" required placeholder="Tuition / Transport"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Amount (₹) *</label>
+            <input name="amount" type="number" step="0.01" required
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Month *</label>
+            <input name="month" type="month" value="{{ month }}" required
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Payment Mode</label>
+            <select name="mode" style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="cash">Cash</option>
+                <option value="upi">UPI</option>
+                <option value="cheque">Cheque</option>
+                <option value="online">Online</option>
+            </select>
+        </div>
+        <div style="grid-column:1/-1;">
+            <label style="font-size:0.85rem; color:#334155;">Note</label>
+            <input name="note" placeholder="Optional"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+    </div>
+
+    <div style="margin-top:1.25rem; display:flex; gap:0.75rem;">
+        <button type="submit" class="btn">Record Payment</button>
+        <a href="{{ url_for('fees.index') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+    </div>
+</form>
+</div>
+{% endblock %}
