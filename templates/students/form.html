@@ -1,1 +1,93 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Add' if mode=='add' else 'Edit' }} Student{% endblock %}
+{% block page_title %}{{ 'Add' if mode=='add' else 'Edit' }} Student{% endblock %}
 
+{% block content %}
+<div class="card" style="max-width:700px;">
+<form method="POST">
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div style="grid-column:1/-1;">
+            <label style="font-size:0.85rem; color:#334155;">Full Name *</label>
+            <input type="text" name="name" required value="{{ student.name if student else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Roll No</label>
+            <input type="text" name="roll_no" value="{{ student.roll_no if student else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Class</label>
+            <input type="text" name="class_name" value="{{ student.class_name if student else '' }}"
+                placeholder="e.g. 5, 10"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Section</label>
+            <input type="text" name="section" value="{{ student.section if student else '' }}"
+                placeholder="A / B"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Gender</label>
+            <select name="gender" style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="">Select</option>
+                <option value="Male" {% if student and student.gender=='Male' %}selected{% endif %}>Male</option>
+                <option value="Female" {% if student and student.gender=='Female' %}selected{% endif %}>Female</option>
+                <option value="Other" {% if student and student.gender=='Other' %}selected{% endif %}>Other</option>
+            </select>
+        </div>
+
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">DOB</label>
+            <input type="date" name="dob" value="{{ student.dob if student and student.dob else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Admission Date</label>
+            <input type="date" name="admission_date"
+                value="{{ student.admission_date if student and student.admission_date else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Parent Name</label>
+            <input type="text" name="parent_name" value="{{ student.parent_name if student else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Parent Phone</label>
+            <input type="text" name="parent_phone" value="{{ student.parent_phone if student else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+
+        <div style="grid-column:1/-1;">
+            <label style="font-size:0.85rem; color:#334155;">Address</label>
+            <textarea name="address" rows="2"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">{{ student.address if student else '' }}</textarea>
+        </div>
+
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Status</label>
+            <select name="status" style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="active" {% if student and student.status=='active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if student and student.status=='inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+        </div>
+    </div>
+
+    <div style="margin-top:1.5rem; display:flex; gap:0.75rem;">
+        <button type="submit" class="btn">{{ 'Add Student' if mode=='add' else 'Save Changes' }}</button>
+        <a href="{{ url_for('students.list_students') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+    </div>
+</form>
+</div>
+{% endblock %}
