@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Bulk Import Students{% endblock %}
+{% block page_title %}Bulk Import Students{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:700px; margin-bottom:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.5rem;">📋 How it works</h3>
+    <ol style="font-size:0.88rem; color:#475569; padding-left:1.25rem; line-height:1.8;">
+        <li>Template download karo (niche button)</li>
+        <li>Excel ya Google Sheets mein kholo, students ka data bharo</li>
+        <li>CSV format mein save karo (UTF-8)</li>
+        <li>Yahan upload karo → preview dekho → confirm</li>
+    </ol>
+
+    <div style="background:#fef3c7; border-left:3px solid #f59e0b; padding:0.75rem 1rem;
+        border-radius:6px; margin-top:1rem; font-size:0.83rem; color:#92400e;">
+        <strong>⚠️ Important:</strong>
+        <ul style="margin:0.35rem 0 0 1.1rem;">
+            <li><code>name</code> column zaroori hai, baaki optional</li>
+            <li>Dates <code>YYYY-MM-DD</code> format mein (jaise 2014-05-15)</li>
+            <li>Roll No unique hona chahiye — duplicate rows skip ho jayengi</li>
+            <li>Phone 10-15 digits, without country code</li>
+        </ul>
+    </div>
+
+    <div style="margin-top:1rem;">
+        <a href="{{ url_for('bulk.download_template') }}"
+           style="display:inline-block; padding:0.6rem 1.2rem; background:#64748b; color:white;
+           text-decoration:none; border-radius:6px; font-size:0.88rem; font-weight:600;">
+            📥 Download CSV Template
+        </a>
+    </div>
+</div>
+
+<div class="card" style="max-width:700px;">
+    <h3 style="font-size:1rem; margin-bottom:1rem;">📤 Upload CSV</h3>
+    <form method="POST" enctype="multipart/form-data">
+        <div style="margin-bottom:1rem;">
+            <input type="file" name="csv_file" accept=".csv" required
+                style="width:100%; padding:0.75rem; border:2px dashed #cbd5e1;
+                border-radius:8px; font-size:0.9rem; background:#f8fafc; cursor:pointer;">
+        </div>
+        <button type="submit" class="btn" style="background:#8b5cf6;">
+            Preview Import
+        </button>
+        <a href="{{ url_for('students.list_students') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none; margin-left:0.5rem;">
+            Cancel
+        </a>
+    </form>
+</div>
+{% endblock %}
