@@ -56,6 +56,25 @@
         <a href="{{ url_for('attendance.student_attendance', student_id=student.id) }}"
            class="btn" style="padding:0.4rem 0.9rem; font-size:0.85rem;">View Full</a>
     </div>
+    {% if transport %}
+<div class="card" style="max-width:800px; margin-top:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.5rem;">🚌 Transport</h3>
+    <div style="font-size:0.88rem; display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+        <div><span style="color:#64748b;">Route:</span> <strong>{{ transport.route_name }}</strong></div>
+        <div><span style="color:#64748b;">Vehicle:</span> <strong>{{ transport.vehicle_no or '—' }}</strong></div>
+        <div><span style="color:#64748b;">Stop:</span> <strong>{{ transport.stop_name or '—' }}</strong></div>
+        <div>
+            <span style="color:#64748b;">Pickup:</span>
+            <strong>{{ transport.pickup_time or '—' }}</strong>
+        </div>
+        <div style="grid-column:1/-1;">
+            <span style="color:#64748b;">Driver:</span>
+            {{ transport.driver_name or '—' }}
+            {% if transport.driver_phone %} • {{ transport.driver_phone }}{% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
     <div class="card" style="max-width:800px; margin-top:1rem;">
     <h3 style="font-size:1rem; margin-bottom:0.5rem;">Exams</h3>
 </div>
