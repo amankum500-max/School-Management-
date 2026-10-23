@@ -1,0 +1,42 @@
+{% extends "public/base.html" %}
+{% block title %}About — {{ school.school_name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="section-title">About {{ school.school_name }}</h1>
+
+    <div class="pub-card" style="margin-bottom:1rem;">
+        <p style="font-size:0.95rem; color:#334155; line-height:1.8;">
+            {{ school.school_name }} is dedicated to providing quality education
+            that nurtures intellectual, social, and emotional growth in every child.
+            {{ school.tagline or '' }}
+        </p>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1rem;">
+        <div class="pub-card">
+            <div style="font-size:1.5rem; margin-bottom:0.5rem;">🎯</div>
+            <h3 style="font-size:1rem; margin-bottom:0.35rem;">Our Mission</h3>
+            <p style="font-size:0.85rem; color:#64748b;">
+                To empower students with knowledge, skills, and values that prepare
+                them for a rapidly changing world.
+            </p>
+        </div>
+        <div class="pub-card">
+            <div style="font-size:1.5rem; margin-bottom:0.5rem;">👁️</div>
+            <h3 style="font-size:1rem; margin-bottom:0.35rem;">Our Vision</h3>
+            <p style="font-size:0.85rem; color:#64748b;">
+                To be a leading institution known for academic excellence and
+                holistic development of every student.
+            </p>
+        </div>
+        <div class="pub-card">
+            <div style="font-size:1.5rem; margin-bottom:0.5rem;">💡</div>
+            <h3 style="font-size:1rem; margin-bottom:0.35rem;">Our Values</h3>
+            <p style="font-size:0.85rem; color:#64748b;">
+                Integrity, respect, curiosity, and a lifelong love for learning.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
