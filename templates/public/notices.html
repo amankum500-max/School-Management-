@@ -1,0 +1,28 @@
+{% extends "public/base.html" %}
+{% block title %}Notices — {{ school.school_name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="section-title">Notice Board</h1>
+
+    {% for n in notices %}
+    <div class="pub-card" style="margin-bottom:0.75rem; border-left:4px solid
+        {{ '#ef4444' if n.priority == 'urgent' else ('#f59e0b' if n.priority == 'high' else '#3b82f6') }};">
+        <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:0.5rem;">
+            <h3 style="font-size:1.05rem;">{{ n.title }}</h3>
+            <span style="font-size:0.75rem; color:#94a3b8;">
+                {{ n.created_at.strftime('%d %b %Y') if n.created_at else '' }}
+            </span>
+        </div>
+        <div style="font-size:0.75rem; color:#94a3b8; text-transform:capitalize; margin:0.35rem 0;">
+            {{ n.category }}
+        </div>
+        <p style="font-size:0.9rem; color:#475569; white-space:pre-wrap;">{{ n.content }}</p>
+    </div>
+    {% else %}
+    <div class="pub-card" style="text-align:center; color:#94a3b8; padding:2rem;">
+        Abhi koi notice publish nahi hua.
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
