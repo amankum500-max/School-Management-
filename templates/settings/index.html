@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:700px;">
+<form method="POST">
+
+    <h3 style="font-size:1rem; margin-bottom:1rem; color:#1e293b;">🏫 School Info</h3>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">School Name *</label>
+        <input name="school_name" required value="{{ settings.school_name }}"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Tagline</label>
+        <input name="tagline" value="{{ settings.tagline }}"
+            placeholder="e.g. Excellence in Education"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Phone</label>
+            <input name="phone" value="{{ settings.phone }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Email</label>
+            <input name="email" type="email" value="{{ settings.email }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Address</label>
+        <textarea name="address" rows="2"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">{{ settings.address }}</textarea>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Logo URL</label>
+        <input name="logo_url" type="url" value="{{ settings.logo_url }}"
+            placeholder="https://example.com/logo.png"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        <small style="color:#94a3b8; font-size:0.75rem;">
+            Image URL daalo (Supabase Storage, Cloudinary, ya koi bhi public image)
+        </small>
+    </div>
+
+    <button type="submit" class="btn">Save Settings</button>
+</form>
+</div>
+
+<div class="card" style="max-width:700px; margin-top:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.5rem; color:#1e293b;">💡 Tips</h3>
+    <ul style="font-size:0.85rem; color:#475569; padding-left:1.25rem; line-height:1.7;">
+        <li>School name sidebar, receipts, report cards — sab jagah dikhega.</li>
+        <li>Logo URL ke liye <strong>Supabase Storage</strong> (free) ya <strong>imgur</strong> use kar sakte ho.</li>
+        <li>Ye settings sirf admin change kar sakta hai.</li>
+    </ul>
+</div>
+{% endblock %}
