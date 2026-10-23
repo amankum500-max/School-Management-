@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}New Exam{% endblock %}
+{% block page_title %}New Exam{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:600px;">
+<form method="POST">
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Exam Name *</label>
+        <input name="name" required placeholder="e.g. Mid Term"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Class *</label>
+            <select name="class_name" required
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="">Select</option>
+                {% for c in classes %}
+                <option value="{{ c }}">{{ c }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Exam Date</label>
+            <input type="date" name="exam_date"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div style="grid-column:1/-1;">
+            <label style="font-size:0.85rem; color:#334155;">Subjects * <small>(comma separated)</small></label>
+            <input name="subjects" required placeholder="Math, Science, English, Hindi"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Max Marks per Subject</label>
+            <input name="max_marks" type="number" value="100" min="1"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+    </div>
+
+    <div style="margin-top:1.25rem; display:flex; gap:0.75rem;">
+        <button type="submit" class="btn">Create & Enter Marks</button>
+        <a href="{{ url_for('exams.index') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+    </div>
+</form>
+</div>
+{% endblock %}
