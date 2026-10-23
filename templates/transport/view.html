@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}{{ r.name }}{% endblock %}
+{% block page_title %}🚌 {{ r.name }}{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;">
+    <a href="{{ url_for('transport.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem; margin-right:auto;">
+        ← Back
+    </a>
+    <a href="{{ url_for('transport.edit', rid=r.id) }}"
+       class="btn" style="background:#f59e0b;">Edit</a>
+    <form method="POST" action="{{ url_for('transport.remove', rid=r.id) }}"
+          onsubmit="return confirm('Delete route? Stops bhi delete honge, students unassign honge.');">
+        <button class="btn" style="background:#ef4444;">Delete</button>
+    </form>
+</div>
+
+<!-- Route info card -->
+<div class="card" style="margin-bottom:1rem;">
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:0.75rem;
+        font-size:0.88rem;">
+        <div><span style="color:#64748b;">Vehicle:</span> <strong>{{ r.vehicle_no or '—' }}</strong></div>
+        <div><span style="color:#64748b;">Driver:</span> <strong>{{ r.driver_name or '—' }}</strong></div>
+        <div>
+            <span style="color:#64748b;">Phone:</span>
+            {% if r.driver_phone %}
+            <a href="tel:{{ r.driver_phone }}" style="color:#3b82f6; text-decoration:none; font-weight:600;">
+                {{ r.driver_phone }}
+            </a>
+            {% else %}—{% endif %}
+        </div>
+        <div><span style="color:#64748b;">Capacity:</span> <strong>{{ r.capacity }}</strong></div>
+        <div><span style="color:#64748b;">Fee/mo:</span> <strong>₹{{ "%.0f"|format(r.fee_per_month) }}</strong></div>
+        <div>
+            <span style="color:#64748b;">Status:</span>
+            <span style="font-size:0.72rem; padding:0.15rem 0.5rem; border-radius:3px; font-weight:600;
+                background:{{ '#d1fae5' if r.status=='active' else '#fee2e2' }};
+                color:{{ '#065f46' if r.status=='active' else '#991b1b' }};">
+                {{ r.status }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Stops -->
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.75rem;">🛑 Stops ({{ stops|length }})</h3>
+
+    {% if stops %}
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem; margin-bottom:0.75rem;">
+        <thead style="background:#f1f5f9;">
+            <tr>
+                <th style="padding:0.5rem; text-align:left;">Seq</th>
+                <th style="padding:0.5rem; text-align:left;">Stop</th>
+                <th style="padding:0.5rem; text-align:left;">Pickup</th>
+                <th style="padding:0.5rem; text-align:left;">Drop</th>
+                <th style="padding:0.5rem; text-align:right;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in stops %}
+            <tr style="border-top:1px solid #e2e8f0;">
+                <td style="padding:0.5rem; color:#64748b;">{{ s.sequence }}</td>
+                <td style="padding:0.5rem;"><strong>{{ s.name }}</strong></td>
+                <td style="padding:0.5rem;">{{ s.pickup_time or '—' }}</td>
+                <td style="padding:0.5rem;">{{ s.drop_time or '—' }}</td>
+                <td style="padding:0.5rem; text-align:right; white-space:nowrap;">
+                    <button type="button"
+                        onclick="document.getElementById('edit-stop-{{ s.id }}').style.display='table-row';"
+                        style="background:none; border:none; color:#f59e0b; cursor:pointer; font-size:0.8rem;">
+                        Edit
+                    </button>
+                    <form method="POST" action="{{ url_for('transport.remove_stop', sid=s.id) }}"
+                          onsubmit="return confirm('Delete stop?');" style="display:inline;">
+                        <button style="background:none; border:none; color:#ef4444; cursor:pointer;
+                            font-size:0.8rem;">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            <tr id="edit-stop-{{ s.id }}" style="display:none; background:#f8fafc;">
+                <td colspan="5" style="padding:0.5rem;">
+                    <form method="POST" action="{{ url_for('transport.edit_stop', sid=s.id) }}"
+                          style="display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center;">
+                        <input name="sequence" type="number" value="{{ s.sequence }}"
+                            style="width:60px; padding:0.35rem; border:1px solid #cbd5e1; border-radius:4px;">
+                        <input name="name" value="{{ s.name }}" required
+                            style="flex:1; min-width:100px; padding:0.35rem; border:1px solid #cbd5e1; border-radius:4px;">
+                        <input name="pickup_time" value="{{ s.pickup_time or '' }}" placeholder="07:30 AM"
+                            style="width:100px; padding:0.35rem; border:1px solid #cbd5e1; border-radius:4px;">
+                        <input name="drop_time" value="{{ s.drop_time or '' }}" placeholder="02:30 PM"
+                            style="width:100px; padding:0.35rem; border:1px solid #cbd5e1; border-radius:4px;">
+                        <button type="submit" class="btn" style="padding:0.35rem 0.85rem; font-size:0.8rem;">Save</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color:#94a3b8; font-size:0.85rem; margin-bottom:0.75rem;">
+        Abhi koi stop nahi.
+    </p>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('transport.add_stop', rid=r.id) }}"
+          style="display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center;
+          padding-top:0.75rem; border-top:1px dashed #cbd5e1;">
+        <input name="sequence" type="number" placeholder="Seq" value="{{ stops|length + 1 }}" required
+            style="width:60px; padding:0.45rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.85rem;">
+        <input name="name" placeholder="Stop name" required
+            style="flex:1; min-width:120px; padding:0.45rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.85rem;">
+        <input name="pickup_time" placeholder="07:30 AM"
+            style="width:100px; padding:0.45rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.85rem;">
+        <input name="drop_time" placeholder="02:30 PM"
+            style="width:100px; padding:0.45rem; border:1px solid #cbd5e1; border-radius:4px; font-size:0.85rem;">
+        <button type="submit" class="btn" style="background:#0ea5e9;">+ Add Stop</button>
+    </form>
+</div>
+
+<!-- Students on route -->
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
+        <h3 style="font-size:1rem;">🎓 Students ({{ students|length }}/{{ r.capacity }})</h3>
+        <a href="{{ url_for('transport.assign_student', rid=r.id) }}" class="btn"
+           style="background:#8b5cf6; font-size:0.85rem;">+ Assign Student</a>
+    </div>
+
+    {% if students %}
+    <div style="overflow:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:600px;">
+        <thead style="background:#f1f5f9;">
+            <tr>
+                <th style="padding:0.5rem; text-align:left;">Student</th>
+                <th style="padding:0.5rem; text-align:left;">Class</th>
+                <th style="padding:0.5rem; text-align:left;">Stop</th>
+                <th style="padding:0.5rem; text-align:left;">Parent Phone</th>
+                <th style="padding:0.5rem; text-align:right;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in students %}
+            <tr style="border-top:1px solid #e2e8f0;">
+                <td style="padding:0.5rem;">
+                    <strong>{{ s.name }}</strong>
+                    <span style="color:#94a3b8; font-size:0.75rem;">({{ s.roll or '—' }})</span>
+                </td>
+                <td style="padding:0.5rem;">{{ s.class_name or '—' }}{% if s.section %}-{{ s.section }}{% endif %}</td>
+                <td style="padding:0.5rem;">
+                    {% if s.stop_name %}
+                    <strong>{{ s.stop_name }}</strong>
+                    {% if s.pickup_time %}<div style="font-size:0.72rem; color:#64748b;">↑ {{ s.pickup_time }}</div>{% endif %}
+                    {% else %}—{% endif %}
+                </td>
+                <td style="padding:0.5rem; font-family:monospace; font-size:0.8rem;">{{ s.phone or '—' }}</td>
+                <td style="padding:0.5rem; text-align:right;">
+                    <form method="POST" action="{{ url_for('transport.remove_student', student_id=s.student_id) }}"
+                          onsubmit="return confirm('Remove {{ s.name }} from this route?');"
+                          style="display:inline;">
+                        <input type="hidden" name="route_id" value="{{ r.id }}">
+                        <button style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.8rem;">
+                            Remove
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p style="color:#94a3b8; font-size:0.85rem;">
+        Koi student assigned nahi. "+ Assign Student" se add karo.
+    </p>
+    {% endif %}
+</div>
+{% endblock %}
