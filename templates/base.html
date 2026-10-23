@@ -185,6 +185,8 @@
             {% if session.admin_id %}
             <div class="user">
                 {{ session.admin_name }}
+                <a href="{{ url_for('settings.index') }}">Settings</a>
+<a href="{{ url_for('auth.profile') }}">My Profile</a>
                 <a href="{{ url_for('auth.logout') }}">Logout</a>
             </div>
             {% endif %}
