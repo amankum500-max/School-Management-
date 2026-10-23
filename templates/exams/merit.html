@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Merit List — {{ exam.name }}{% endblock %}
+{% block page_title %}Merit List — {{ exam.name }} ({{ exam.class_name }}){% endblock %}
+
+{% block content %}
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:0.75rem; margin-bottom:1rem;">
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.75rem; color:#64748b;">Passed</div>
+        <div style="font-size:1.4rem; font-weight:700; color:#10b981;">{{ stats.passed }}</div>
+    </div>
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.75rem; color:#64748b;">Failed</div>
+        <div style="font-size:1.4rem; font-weight:700; color:#ef4444;">{{ stats.failed }}</div>
+    </div>
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.75rem; color:#64748b;">Average</div>
+        <div style="font-size:1.4rem; font-weight:700;">{{ stats.avg }}</div>
+    </div>
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.75rem; color:#64748b;">Top Score</div>
+        <div style="font-size:1.4rem; font-weight:700; color:#f59e0b;">{{ stats.top }}</div>
+    </div>
+</div>
+
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.7rem; text-align:left;">Rank</th>
+            <th style="padding:0.7rem; text-align:left;">Student</th>
+            <th style="padding:0.7rem; text-align:left;">Roll</th>
+            <th style="padding:0.7rem; text-align:left;">Class</th>
+            <th style="padding:0.7rem; text-align:right;">Total</th>
+            <th style="padding:0.7rem; text-align:right;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for s in students %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.65rem; font-weight:700;
+                color:{{ '#f59e0b' if s.rank == 1 else ('#94a3b8' if s.rank == 2 else ('#b45309' if s.rank == 3 else '#475569')) }};">
+                #{{ s.rank }}
+            </td>
+            <td style="padding:0.65rem;"><strong>{{ s.name }}</strong></td>
+            <td style="padding:0.65rem;">{{ s.roll or '—' }}</td>
+            <td style="padding:0.65rem;">{{ s.section or '—' }}</td>
+            <td style="padding:0.65rem; text-align:right; font-weight:700;">{{ s.total }}</td>
+            <td style="padding:0.65rem; text-align:right;">
+                <a href="{{ url_for('exams.report_card', exam_id=exam.id, student_id=s.id) }}"
+                   style="color:#3b82f6; text-decoration:none;">Report Card</a>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="padding:2rem; text-align:center; color:#64748b;">
+            Koi marks entry nahi hui abhi.
+        </td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}
