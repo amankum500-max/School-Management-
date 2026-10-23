@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Defaulters Report{% endblock %}
+{% block page_title %}Fee Defaulters Report{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:end;">
+    <div>
+        <label style="font-size:0.8rem; color:#64748b; display:block; margin-bottom:0.2rem;">Month</label>
+        <input type="month" name="month" value="{{ month }}"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+    <button type="submit" class="btn">Generate</button>
+    <a href="{{ url_for('reports.defaulters_export', month=month) }}"
+       class="btn" style="background:#10b981; margin-left:auto;">📥 CSV Export</a>
+</form>
+</div>
+
+<div class="card" style="margin-bottom:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+        <div>
+            <div style="font-size:0.75rem; color:#64748b;">Total Pending ({{ month }})</div>
+            <div style="font-size:1.6rem; font-weight:700; color:#ef4444;">
+                ₹{{ "%.0f"|format(total_pending) }}
+            </div>
+        </div>
+        <div>
+            <div style="font-size:0.75rem; color:#64748b;">Defaulters</div>
+            <div style="font-size:1.6rem; font-weight:700;">{{ rows|length }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:600px;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.6rem; text-align:left;">Student</th>
+            <th style="padding:0.6rem; text-align:left;">Class</th>
+            <th style="padding:0.6rem; text-align:left;">Phone</th>
+            <th style="padding:0.6rem; text-align:right;">Due</th>
+            <th style="padding:0.6rem; text-align:right;">Paid</th>
+            <th style="padding:0.6rem; text-align:right;">Pending</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in rows %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.5rem;">
+                <strong>{{ r.name }}</strong>
+                <span style="color:#94a3b8; font-size:0.75rem;">({{ r.roll or '—' }})</span>
+            </td>
+            <td style="padding:0.5rem;">{{ r.class_name or '—' }}{% if r.section %}-{{ r.section }}{% endif %}</td>
+            <td style="padding:0.5rem; font-family:monospace; font-size:0.8rem;">
+                {% if r.phone %}
+                <a href="https://wa.me/91{{ r.phone|replace(' ','')|replace('-','') }}"
+                   target="_blank" style="color:#25d366; text-decoration:none;">
+                    {{ r.phone }} ↗
+                </a>
+                {% else %}—{% endif %}
+            </td>
+            <td style="padding:0.5rem; text-align:right;">₹{{ "%.0f"|format(r.due) }}</td>
+            <td style="padding:0.5rem; text-align:right; color:#10b981;">₹{{ "%.0f"|format(r.paid) }}</td>
+            <td style="padding:0.5rem; text-align:right; font-weight:700; color:#ef4444;">
+                ₹{{ "%.0f"|format(r.pending) }}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="padding:2rem; text-align:center; color:#10b981;">
+            🎉 Sab clear hai! Koi defaulter nahi.
+        </td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}
