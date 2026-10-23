@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bill — {{ b.student_name }} — {{ b.month }}</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: system-ui, sans-serif; padding:1rem; background:#f5f6fa; }
+        .bill {
+            background:white; max-width:600px; margin:0 auto; padding:1.5rem;
+            border:2px solid #1e293b; border-radius:10px;
+        }
+        .head { text-align:center; border-bottom:2px solid #1e293b; padding-bottom:0.75rem; margin-bottom:1rem; }
+        .head h1 { font-size:1.2rem; }
+        .head p { font-size:0.8rem; color:#64748b; margin-top:0.15rem; }
+        .info { display:grid; grid-template-columns:1fr 1fr; gap:0.35rem; font-size:0.88rem; margin-bottom:1rem; }
+        .info span:first-child { color:#64748b; }
+        table { width:100%; border-collapse:collapse; font-size:0.88rem; }
+        th, td { padding:0.5rem; text-align:left; border-bottom:1px solid #e2e8f0; }
+        th { background:#f1f5f9; }
+        td:last-child, th:last-child { text-align:right; }
+        .total-row { border-top:2px solid #1e293b; font-weight:700; }
+        .actions { text-align:center; margin-top:1rem; }
+        .btn { padding:0.6rem 1.2rem; border:none; border-radius:6px; cursor:pointer; font-size:0.9rem; margin:0 0.25rem; }
+        @media print { body { background:white; padding:0; } .actions { display:none; } .bill { border:1px solid #000; } }
+    </style>
+</head>
+<body>
+    <div class="bill">
+        <div class="head">
+            <h1>{{ school.school_name }}</h1>
+            <p>{{ school.address or '' }}{% if school.phone %} • {{ school.phone }}{% endif %}</p>
+            <p style="margin-top:0.35rem; font-weight:600; color:#1e293b;">Fee Bill — {{ b.month }}</p>
+        </div>
+
+        <div class="info">
+            <div><span>Student:</span> <strong>{{ b.student_name }}</strong></div>
+            <div><span>Roll:</span> <strong>{{ b.roll or '—' }}</strong></div>
+            <div><span>Class:</span> <strong>{{ b.class_name or '—' }}{% if b.section %} - {{ b.section }}{% endif %}</strong></div>
+            <div><span>Bill Date:</span> <strong>{{ b.generated_at.strftime('%d %b %Y') if b.generated_at else '—' }}</strong></div>
+            <div><span>Parent:</span> <strong>{{ b.parent_name or '—' }}</strong></div>
+            <div><span>Phone:</span> <strong>{{ b.phone or '—' }}</strong></div>
+        </div>
+
+        <table>
+            <thead>
+                <tr><th>Fee Type</th><th>Amount</th></tr>
+            </thead>
+            <tbody>
+                {% for item in b.items %}
+                <tr>
+                    <td>{{ item.fee_type }}</td>
+                    <td>₹{{ "%.0f"|format(item.amount) }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                    <td>Total</td>
+                    <td>₹{{ "%.0f"|format(b.total) }}</td>
+                </tr>
+                <tr>
+                    <td style="color:#10b981;">Paid</td>
+                    <td style="color:#10b981;">₹{{ "%.0f"|format(b.paid) }}</td>
+                </tr>
+                <tr>
+                    <td style="color:#ef4444; font-weight:700;">Pending</td>
+                    <td style="color:#ef4444; font-weight:700;">₹{{ "%.0f"|format(b.total - b.paid) }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top:1rem; font-size:0.72rem; color:#94a3b8; text-align:center;">
+            Ye computer-generated bill hai.
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn" onclick="window.print()" style="background:#3b82f6; color:white;">🖨️ Print</button>
+    </div>
+</body>
+</html>
