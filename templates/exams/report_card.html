@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Report Card — {{ student.name }}</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: system-ui, sans-serif; padding:1rem; background:#f5f6fa; }
+        .card-paper {
+            background:white; max-width:700px; margin:0 auto; padding:1.5rem;
+            border:2px solid #1e293b; border-radius:10px;
+        }
+        .head { text-align:center; border-bottom:2px solid #1e293b; padding-bottom:0.75rem; margin-bottom:1rem; }
+        .head h1 { font-size:1.3rem; }
+        .head p { font-size:0.85rem; color:#64748b; margin-top:0.25rem; }
+        .info { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.9rem; margin-bottom:1rem; }
+        .info span:first-child { color:#64748b; }
+        table { width:100%; border-collapse:collapse; font-size:0.9rem; }
+        th, td { padding:0.5rem; border-bottom:1px solid #e2e8f0; }
+        th { background:#f1f5f9; text-align:left; }
+        .result-box {
+            margin-top:1rem; padding:1rem; background:#f1f5f9; border-radius:8px;
+            display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; text-align:center;
+        }
+        .result-box .label { font-size:0.75rem; color:#64748b; }
+        .result-box .value { font-size:1.3rem; font-weight:700; }
+        .actions { text-align:center; margin-top:1rem; }
+        .btn { padding:0.6rem 1.2rem; border:none; border-radius:6px; cursor:pointer; font-size:0.9rem; margin:0 0.25rem; }
+        .btn-primary { background:#3b82f6; color:white; }
+        .btn-secondary { background:#64748b; color:white; text-decoration:none; display:inline-block; }
+        @media print {
+            body { background:white; padding:0; }
+            .card-paper { border:1px solid #000; box-shadow:none; }
+            .actions { display:none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="card-paper">
+        <div class="head">
+            <h1>🎓 SCHOOL MANAGEMENT</h1>
+            <p>{{ exam.name }} — Report Card</p>
+        </div>
+
+        <div class="info">
+            <div><span>Name:</span> <strong>{{ student.name }}</strong></div>
+            <div><span>Roll:</span> <strong>{{ student.roll_no or '—' }}</strong></div>
+            <div><span>Class:</span> <strong>{{ student.class_name or '—' }}{% if student.section %} - {{ student.section }}{% endif %}</strong></div>
+            <div><span>Exam Date:</span> <strong>{{ exam.exam_date or '—' }}</strong></div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th style="text-align:right;">Obtained</th>
+                    <th style="text-align:right;">Max</th>
+                    <th style="text-align:right;">%</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for subj in exam.subjects %}
+                {% set ob = marks.get(subj) %}
+                <tr>
+                    <td>{{ subj }}</td>
+                    <td style="text-align:right;">{{ ob if ob is not none else '—' }}</td>
+                    <td style="text-align:right;">{{ exam.max_marks }}</td>
+                    <td style="text-align:right;">
+                        {% if ob is not none %}
+                            {{ ((ob / exam.max_marks) * 100)|round(1) }}%
+                        {% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="result-box">
+            <div>
+                <div class="label">Total</div>
+                <div class="value">{{ total }} / {{ max_total }}</div>
+            </div>
+            <div>
+                <div class="label">Percentage</div>
+                <div class="value">{{ percent }}%</div>
+            </div>
+            <div>
+                <div class="label">Grade</div>
+                <div class="value">{{ grade }}</div>
+            </div>
+        </div>
+
+        <div style="margin-top:1rem; font-size:0.75rem; color:#94a3b8; text-align:center;">
+            Ye computer-generated report card hai.
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn btn-primary" onclick="window.print()">🖨️ Print</button>
+        <a href="{{ url_for('exams.merit', exam_id=exam.id) }}" class="btn btn-secondary">← Merit List</a>
+    </div>
+</body>
+</html>
