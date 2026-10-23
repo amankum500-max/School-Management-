@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}School Management{% endblock %}</title>
+    <title>{% block title %}{{ school.school_name }}{% endblock %}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -164,6 +164,7 @@
 
         <div class="section-label">Admin</div>
         <a href="#">Settings</a>
+        <a href="{{ url_for('settings.index') }}">Settings</a>
     </aside>
 
     <!-- Main -->
