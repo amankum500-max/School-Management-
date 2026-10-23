@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Defaulters{% endblock %}
+{% block page_title %}Fee Defaulters{% endblock %}
+
+{% block content %}
+<div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem; align-items:center;">
+    <form method="GET" style="display:flex; gap:0.5rem;">
+        <input type="month" name="month" value="{{ month }}"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+        <button type="submit" class="btn">View</button>
+    </form>
+    <div class="card" style="margin-left:auto; padding:0.75rem 1.25rem;">
+        <span style="color:#64748b; font-size:0.85rem;">Total Pending:</span>
+        <strong style="color:#ef4444; font-size:1.1rem;">₹{{ "%.0f"|format(total_pending) }}</strong>
+    </div>
+</div>
+
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.7rem; text-align:left;">Roll</th>
+            <th style="padding:0.7rem; text-align:left;">Student</th>
+            <th style="padding:0.7rem; text-align:left;">Class</th>
+            <th style="padding:0.7rem; text-align:left;">Phone</th>
+            <th style="padding:0.7rem; text-align:right;">Due</th>
+            <th style="padding:0.7rem; text-align:right;">Paid</th>
+            <th style="padding:0.7rem; text-align:right;">Pending</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in rows %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.65rem;">{{ r.roll or '—' }}</td>
+            <td style="padding:0.65rem;"><strong>{{ r.name }}</strong></td>
+            <td style="padding:0.65rem;">{{ r.class_name or '—' }}{% if r.section %}-{{ r.section }}{% endif %}</td>
+            <td style="padding:0.65rem;">{{ r.phone or '—' }}</td>
+            <td style="padding:0.65rem; text-align:right;">₹{{ "%.0f"|format(r.due) }}</td>
+            <td style="padding:0.65rem; text-align:right; color:#10b981;">₹{{ "%.0f"|format(r.paid) }}</td>
+            <td style="padding:0.65rem; text-align:right; font-weight:600; color:#ef4444;">
+                ₹{{ "%.0f"|format(r.pending) }}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="padding:2rem; text-align:center; color:#10b981;">
+            🎉 Koi defaulter nahi! Sab fees clear hain.
+        </td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}
