@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Add' if mode=='add' else 'Edit' }} Staff{% endblock %}
+{% block page_title %}{{ 'Add' if mode=='add' else 'Edit' }} Staff Member{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:750px;">
+<form method="POST">
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+
+        <div style="grid-column:1/-1;">
+            <label style="font-size:0.85rem; color:#334155;">Full Name *</label>
+            <input name="name" required value="{{ member.name if member else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Role *</label>
+            <select name="role" required
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                {% for r in roles %}
+                <option value="{{ r }}" {% if member and member.role == r %}selected{% endif %}>{{ r|capitalize }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Status</label>
+            <select name="status"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="active" {% if member and member.status=='active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if member and member.status=='inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+        </div>
+
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Phone</label>
+            <input name="phone" value="{{ member.phone if member else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Email</label>
+            <input name="email" type="email" value="{{ member.email if member else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+
+        <div style="grid-column:1/-1;">
+            <label style="font-size:0.85rem; color:#334155;">Qualification</label>
+            <input name="qualification" value="{{ member.qualification if member else '' }}"
+                placeholder="e.g. B.Ed, M.Sc"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+
+        <div style="grid-column:1/-1;">
+            <label style="font-size:0.85rem; color:#334155;">Subjects <small>(comma separated)</small></label>
+            <input name="subjects_raw" placeholder="Math, Science, English"
+                value="{{ member.subjects|join(', ') if member and member.subjects else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+
+        <div style="grid-column:1/-1;">
+            <label style="font-size:0.85rem; color:#334155;">Classes <small>(comma separated)</small></label>
+            <input name="classes_raw" placeholder="5, 6, 10"
+                value="{{ member.classes|join(', ') if member and member.classes else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Salary (₹ / month)</label>
+            <input name="salary" type="number" step="0.01"
+                value="{{ member.salary if member and member.salary else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Join Date</label>
+            <input name="join_date" type="date"
+                value="{{ member.join_date if member and member.join_date else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+
+        <div style="grid-column:1/-1;">
+            <label style="font-size:0.85rem; color:#334155;">Address</label>
+            <textarea name="address" rows="2"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">{{ member.address if member else '' }}</textarea>
+        </div>
+    </div>
+
+    <div style="margin-top:1.5rem; display:flex; gap:0.75rem;">
+        <button type="submit" class="btn">{{ 'Add Staff' if mode=='add' else 'Save Changes' }}</button>
+        <a href="{{ url_for('staff.index') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+    </div>
+</form>
+</div>
+{% endblock %}
