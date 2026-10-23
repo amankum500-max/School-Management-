@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Homework{% endblock %}
+{% block page_title %}Homework & Assignments{% endblock %}
+
+{% block content %}
+
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:end;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Class</label>
+        <select name="class"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px; min-width:90px;">
+            <option value="">All</option>
+            {% for c in classes %}
+            <option value="{{ c }}" {% if c == selected_class %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Subject</label>
+        <input name="subject" value="{{ subject }}" placeholder="Math..."
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px; width:110px;">
+    </div>
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Search</label>
+        <input name="q" value="{{ search }}" placeholder="title..."
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px; width:140px;">
+    </div>
+    <button type="submit" class="btn">Filter</button>
+    <a href="{{ url_for('homework.add') }}" class="btn"
+       style="background:#8b5cf6; margin-left:auto;">+ New Homework</a>
+</form>
+</div>
+
+{% for h in items %}
+<div class="card" style="margin-bottom:0.75rem; border-left:4px solid
+    {{ '#ef4444' if h.status == 'overdue' else ('#f59e0b' if h.status == 'today' else ('#3b82f6' if h.status == 'upcoming' else '#94a3b8')) }};">
+    <div style="display:flex; justify-content:space-between; align-items:start; gap:0.5rem; flex-wrap:wrap;">
+        <div style="flex:1;">
+            <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.35rem;">
+                <a href="{{ url_for('homework.view', hid=h.id) }}"
+                   style="font-size:1.02rem; font-weight:600; color:#1e293b; text-decoration:none;">
+                    {{ h.title }}
+                </a>
+                <span style="font-size:0.72rem; background:#eff6ff; color:#1e40af;
+                    padding:0.15rem 0.45rem; border-radius:3px; font-weight:600;">
+                    {{ h.subject }}
+                </span>
+                {% if h.status == 'overdue' %}
+                <span style="font-size:0.72rem; background:#fee2e2; color:#991b1b;
+                    padding:0.15rem 0.45rem; border-radius:3px; font-weight:600;">
+                    OVERDUE
+                </span>
+                {% elif h.status == 'today' %}
+                <span style="font-size:0.72rem; background:#fef3c7; color:#92400e;
+                    padding:0.15rem 0.45rem; border-radius:3px; font-weight:600;">
+                    DUE TODAY
+                </span>
+                {% endif %}
+            </div>
+            {% if h.description %}
+            <p style="color:#475569; font-size:0.88rem; margin:0;">
+                {{ h.description[:180] }}{% if h.description|length > 180 %}...{% endif %}
+            </p>
+            {% endif %}
+            <div style="margin-top:0.5rem; font-size:0.75rem; color:#94a3b8;">
+                Class {{ h.class_name }}{% if h.section %}-{{ h.section }}{% endif %}
+                {% if h.due_date %} • Due: <strong style="color:#475569;">{{ h.due_date.strftime('%d %b %Y') }}</strong>{% endif %}
+                • Posted {{ h.created_at.strftime('%d %b') if h.created_at else '' }}
+            </div>
+        </div>
+        <div style="display:flex; gap:0.35rem;">
+            <a href="{{ url_for('homework.edit', hid=h.id) }}"
+               style="color:#f59e0b; text-decoration:none; font-size:0.85rem;">Edit</a>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Koi homework nahi mila. "+ New Homework" se shuru karo.
+</div>
+{% endfor %}
+{% endblock %}
