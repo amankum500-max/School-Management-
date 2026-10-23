@@ -1,0 +1,86 @@
+{% extends "public/base.html" %}
+{% block title %}{{ school.school_name }} — Home{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section style="background: linear-gradient(135deg,#1e293b 0%,#3b82f6 100%); color:white; padding:3.5rem 1rem;">
+    <div style="max-width:1100px; margin:0 auto;">
+        <h1 style="font-size:2rem; font-weight:800; margin-bottom:0.5rem; line-height:1.2;">
+            {{ school.school_name }}
+        </h1>
+        <p style="font-size:1.05rem; opacity:0.9; max-width:600px; margin-bottom:1.5rem;">
+            {{ school.tagline or 'Nurturing young minds for a brighter future.' }}
+        </p>
+        <a href="{{ url_for('public_site.admission') }}"
+           style="display:inline-block; background:white; color:#1e293b;
+           padding:0.75rem 1.5rem; border-radius:8px; text-decoration:none;
+           font-weight:700; font-size:0.95rem;">
+            Apply for Admission →
+        </a>
+    </div>
+</section>
+
+<div class="container">
+
+    <!-- Quick features -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem; margin-top:-2rem; margin-bottom:2rem;">
+        <div class="pub-card" style="text-align:center;">
+            <div style="font-size:2rem; margin-bottom:0.35rem;">📚</div>
+            <h3 style="font-size:1rem; margin-bottom:0.25rem;">Quality Education</h3>
+            <p style="font-size:0.85rem; color:#64748b;">Experienced teachers, modern curriculum.</p>
+        </div>
+        <div class="pub-card" style="text-align:center;">
+            <div style="font-size:2rem; margin-bottom:0.35rem;">🏫</div>
+            <h3 style="font-size:1rem; margin-bottom:0.25rem;">Safe Campus</h3>
+            <p style="font-size:0.85rem; color:#64748b;">Secure environment for every child.</p>
+        </div>
+        <div class="pub-card" style="text-align:center;">
+            <div style="font-size:2rem; margin-bottom:0.35rem;">📱</div>
+            <h3 style="font-size:1rem; margin-bottom:0.25rem;">Parent Portal</h3>
+            <p style="font-size:0.85rem; color:#64748b;">Track fees, attendance, marks online.</p>
+        </div>
+    </div>
+
+    <!-- Latest notices -->
+    {% if notices %}
+    <h2 class="section-title">Latest Notices</h2>
+    <div style="display:grid; gap:0.75rem; margin-bottom:2rem;">
+        {% for n in notices %}
+        <div class="pub-card" style="border-left:4px solid
+            {{ '#ef4444' if n.priority == 'urgent' else ('#f59e0b' if n.priority == 'high' else '#3b82f6') }};">
+            <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:0.5rem;">
+                <h3 style="font-size:1rem;">{{ n.title }}</h3>
+                <span style="font-size:0.72rem; color:#94a3b8;">
+                    {{ n.created_at.strftime('%d %b %Y') if n.created_at else '' }}
+                </span>
+            </div>
+            <p style="font-size:0.85rem; color:#475569; margin-top:0.35rem;">
+                {{ n.content[:160] }}{% if n.content|length > 160 %}...{% endif %}
+            </p>
+        </div>
+        {% endfor %}
+    </div>
+    <div style="text-align:center; margin-bottom:2rem;">
+        <a href="{{ url_for('public_site.notices_list') }}"
+           style="color:#3b82f6; text-decoration:none; font-size:0.9rem; font-weight:600;">
+            View all notices →
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- CTA -->
+    <div class="pub-card" style="text-align:center; background:linear-gradient(135deg,#3b82f6,#8b5cf6); color:white; border:none; padding:2rem 1.25rem;">
+        <h2 style="font-size:1.3rem; margin-bottom:0.5rem;">Admissions Open</h2>
+        <p style="font-size:0.9rem; opacity:0.9; margin-bottom:1rem;">
+            Give your child the best start. Apply today.
+        </p>
+        <a href="{{ url_for('public_site.admission') }}"
+           style="display:inline-block; background:white; color:#3b82f6;
+           padding:0.65rem 1.5rem; border-radius:8px; text-decoration:none;
+           font-weight:700; font-size:0.9rem;">
+            Apply Now
+        </a>
+    </div>
+
+</div>
+{% endblock %}
