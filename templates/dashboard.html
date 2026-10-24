@@ -133,6 +133,32 @@
 </div>
 <!-- Quick links -->
 <div class="card">
+    {% if upcoming_events_list %}
+<div class="card" style="margin-bottom:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.65rem;">
+        <h3 style="font-size:0.95rem; color:#1e293b;">📅 Upcoming Events</h3>
+        <a href="{{ url_for('events.index') }}"
+           style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">View All →</a>
+    </div>
+    {% for ev in upcoming_events_list %}
+    <div style="display:flex; gap:0.5rem; padding:0.5rem 0; border-top:1px solid #f1f5f9; align-items:start;">
+        <div style="background:#eff6ff; color:#1e40af; padding:0.35rem 0.6rem;
+            border-radius:5px; font-size:0.7rem; font-weight:600; min-width:60px; text-align:center;">
+            {{ ev.start_date.strftime('%d %b') }}
+        </div>
+        <div style="flex:1;">
+            <div style="font-size:0.88rem; color:#1e293b; font-weight:500;">{{ ev.title }}</div>
+            {% if ev.venue or ev.start_time %}
+            <div style="font-size:0.72rem; color:#94a3b8; margin-top:0.1rem;">
+                {% if ev.start_time %}{{ ev.start_time }}{% endif %}
+                {% if ev.venue %} • {{ ev.venue }}{% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
     <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:#1e293b;">⚡ Quick Actions</h3>
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
         <a href="{{ url_for('students.add_student') }}" class="btn" style="font-size:0.85rem;">+ Student</a>
