@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Teacher Logins{% endblock %}
+{% block page_title %}Teacher Logins{% endblock %}
+
+{% block content %}
+
+<div class="card" style="margin-bottom:1rem; background:#eff6ff;
+    border-left:3px solid #3b82f6; font-size:0.85rem; color:#1e40af;">
+    <strong>ℹ️ Info:</strong> Teachers yahan se apna login banate hain —
+    phir wo <code>/teacher/login</code> pe login karke attendance, homework, marks manage kar sakte hain.
+    Unki access sirf timetable mein assigned classes tak limited hai.
+</div>
+
+<!-- Create new login -->
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#1e293b;">➕ Create Teacher Login</h3>
+    {% if staff_without_login %}
+    <form method="POST" action="{{ url_for('teachers_admin.add') }}"
+          style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;">
+        <div style="flex:1; min-width:180px;">
+            <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Staff Member</label>
+            <select name="staff_id" required
+                style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="">Select staff</option>
+                {% for s in staff_without_login %}
+                <option value="{{ s.id }}">{{ s.name }} ({{ s.role }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="flex:1; min-width:140px;">
+            <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Username</label>
+            <input name="username" required placeholder="e.g. rahul.sharma"
+                style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div style="flex:1; min-width:140px;">
+            <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Password</label>
+            <input name="password" type="password" required minlength="6"
+                placeholder="min 6 chars"
+                style="width:100%; padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <button type="submit" class="btn">Create</button>
+    </form>
+    {% else %}
+    <p style="color:#94a3b8; font-size:0.85rem;">
+        Sab active staff ke logins ban chuke hain.
+        Naye staff add karne ke liye <a href="{{ url_for('staff.add') }}" style="color:#3b82f6;">Staff page</a> pe jao.
+    </p>
+    {% endif %}
+</div>
+
+<!-- Existing teachers -->
+{% if teachers %}
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.6rem; text-align:left;">Staff</th>
+            <th style="padding:0.6rem; text-align:left;">Role</th>
+            <th style="padding:0.6rem; text-align:left;">Username</th>
+            <th style="padding:0.6rem; text-align:left;">Last Login</th>
+            <th style="padding:0.6rem; text-align:right;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for t in teachers %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.55rem;"><strong>{{ t.name }}</strong></td>
+            <td style="padding:0.55rem; text-transform:capitalize;">{{ t.role }}</td>
+            <td style="padding:0.55rem; font-family:monospace; font-size:0.82rem;">{{ t.username }}</td>
+            <td style="padding:0.55rem; font-size:0.8rem; color:#64748b;">
+                {{ t.last_login.strftime('%d %b, %I:%M %p') if t.last_login else 'Never' }}
+            </td>
+            <td style="padding:0.55rem; text-align:right; white-space:nowrap;">
+                <form method="POST" action="{{ url_for('teachers_admin.reset', tid=t.id) }}"
+                      style="display:inline-flex; gap:0.3rem; align-items:center; margin-right:0.4rem;"
+                      onsubmit="return confirm('Password reset for {{ t.name }}?');">
+                    <input name="new_password" type="password" minlength="6" required
+                        placeholder="new pass"
+                        style="width:100px; padding:0.3rem; border:1px solid #cbd5e1;
+                        border-radius:4px; font-size:0.75rem;">
+                    <button style="background:#f59e0b; color:white; border:none;
+                        padding:0.35rem 0.65rem; border-radius:4px; cursor:pointer; font-size:0.75rem;">
+                        Reset
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('teachers_admin.remove', tid=t.id) }}"
+                      onsubmit="return confirm('Delete login for {{ t.name }}?');"
+                      style="display:inline;">
+                    <button style="background:none; border:none; color:#ef4444;
+                        cursor:pointer; font-size:0.78rem;">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Koi teacher login nahi. Upar se banao.
+</div>
+{% endif %}
+{% endblock %}
