@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Medical Records{% endblock %}
+{% block page_title %}Medical Records{% endblock %}
+
+{% block content %}
+
+<!-- Stats -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:0.75rem; margin-bottom:1rem;">
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.75rem; color:#64748b;">Records on File</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#10b981;">
+            {{ stats.with_records }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.75rem; color:#64748b;">Missing Records</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#f59e0b;">
+            {{ stats.missing }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.75rem; color:#64748b;">With Allergies</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#ef4444;">
+            {{ stats.allergies }}
+        </div>
+    </div>
+</div>
+
+<!-- Allergy Watch -->
+{% if allergies %}
+<div class="card" style="margin-bottom:1rem; border-left:4px solid #ef4444;">
+    <h3 style="font-size:1rem; margin-bottom:0.5rem; color:#991b1b;">
+        ⚠️ Allergy Alert
+    </h3>
+    <p style="font-size:0.8rem; color:#64748b; margin-bottom:0.5rem;">
+        In students ko allergies hain — medical room ko alert rakho.
+    </p>
+    <div style="overflow:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+        <thead style="background:#fef2f2;">
+            <tr>
+                <th style="padding:0.5rem; text-align:left;">Student</th>
+                <th style="padding:0.5rem; text-align:left;">Class</th>
+                <th style="padding:0.5rem; text-align:left;">Blood</th>
+                <th style="padding:0.5rem; text-align:left;">Allergies</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in allergies %}
+            <tr style="border-top:1px solid #fee2e2;">
+                <td style="padding:0.5rem;">
+                    <a href="{{ url_for('medical.record', student_id=s.id) }}"
+                       style="color:#1e293b; text-decoration:none; font-weight:500;">
+                        {{ s.name }}
+                    </a>
+                </td>
+                <td style="padding:0.5rem;">{{ s.class_name or '—' }}{% if s.section %}-{{ s.section }}{% endif %}</td>
+                <td style="padding:0.5rem;">
+                    {% if s.blood_group %}
+                    <span style="background:#fee2e2; color:#991b1b; padding:0.15rem 0.5rem;
+                        border-radius:3px; font-weight:700; font-size:0.75rem;">
+                        {{ s.blood_group }}
+                    </span>
+                    {% else %}—{% endif %}
+                </td>
+                <td style="padding:0.5rem; color:#991b1b;">{{ s.allergies }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Missing Records -->
+{% if missing %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+        <h3 style="font-size:1rem; color:#1e293b;">📋 Missing Records</h3>
+        <span style="font-size:0.75rem; color:#94a3b8;">
+            {{ stats.missing }} total missing
+        </span>
+    </div>
+    <p style="font-size:0.8rem; color:#64748b; margin-bottom:0.5rem;">
+        In students ka medical record nahi hai — add karo.
+    </p>
+    <div style="overflow:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+        <thead style="background:#f1f5f9;">
+            <tr>
+                <th style="padding:0.5rem; text-align:left;">Student</th>
+                <th style="padding:0.5rem; text-align:left;">Roll</th>
+                <th style="padding:0.5rem; text-align:left;">Class</th>
+                <th style="padding:0.5rem; text-align:right;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in missing %}
+            <tr style="border-top:1px solid #e2e8f0;">
+                <td style="padding:0.5rem;"><strong>{{ s.name }}</strong></td>
+                <td style="padding:0.5rem; color:#64748b;">{{ s.roll or '—' }}</td>
+                <td style="padding:0.5rem;">{{ s.class_name or '—' }}{% if s.section %}-{{ s.section }}{% endif %}</td>
+                <td style="padding:0.5rem; text-align:right;">
+                    <a href="{{ url_for('medical.record', student_id=s.id) }}"
+                       style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">
+                        Add Record →
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:1.5rem; color:#10b981;">
+    🎉 Sab students ke medical records complete hain!
+</div>
+{% endif %}
+{% endblock %}
