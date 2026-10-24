@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{{ b.title }}{% endblock %}
+{% block page_title %}Book Details{% endblock %}
+
+{% block content %}
+<div style="max-width:800px;">
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+    <a href="{{ url_for('library.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+    <div style="display:flex; gap:0.5rem;">
+        {% if b.available_copies > 0 %}
+        <a href="{{ url_for('library.issue', book_id=b.id) }}" class="btn"
+           style="background:#f59e0b;">Issue</a>
+        {% endif %}
+        <a href="{{ url_for('library.book_edit', bid=b.id) }}" class="btn"
+           style="background:#3b82f6;">Edit</a>
+        <form method="POST" action="{{ url_for('library.book_remove', bid=b.id) }}"
+              onsubmit="return confirm('Delete book? Active issues nahi hone chahiye.');"
+              style="display:inline;">
+            <button class="btn" style="background:#ef4444;">Delete</button>
+        </form>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom:1rem;">
+    <h1 style="font-size:1.35rem; color:#1e293b; margin-bottom:0.35rem;">{{ b.title }}</h1>
+    <p style="color:#64748b; font-size:0.9rem;">{{ b.author or 'Unknown Author' }}</p>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+        gap:0.75rem; margin-top:1rem; font-size:0.88rem;">
+        <div><span style="color:#64748b;">Category:</span> {{ b.category or '—' }}</div>
+        <div><span style="color:#64748b;">ISBN:</span> {{ b.isbn or '—' }}</div>
+        <div><span style="color:#64748b;">Publisher:</span> {{ b.publisher or '—' }}</div>
+        <div><span style="color:#64748b;">Shelf:</span> {{ b.shelf_no or '—' }}</div>
+        <div>
+            <span style="color:#64748b;">Available:</span>
+            <strong style="color:{{ '#10b981' if b.available_copies > 0 else '#ef4444' }};">
+                {{ b.available_copies }} / {{ b.total_copies }}
+            </strong>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#1e293b;">
+        📤 Currently Issued ({{ issues|length }})
+    </h3>
+    {% if issues %}
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+        <thead style="background:#f1f5f9;">
+            <tr>
+                <th style="padding:0.5rem; text-align:left;">Student</th>
+                <th style="padding:0.5rem; text-align:left;">Class</th>
+                <th style="padding:0.5rem; text-align:left;">Issue Date</th>
+                <th style="padding:0.5rem; text-align:left;">Due Date</th>
+                <th style="padding:0.5rem; text-align:center;">Status</th>
+                <th style="padding:0.5rem; text-align:right;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in issues %}
+            <tr style="border-top:1px solid #e2e8f0;">
+                <td style="padding:0.5rem;"><strong>{{ i.student_name }}</strong></td>
+                <td style="padding:0.5rem;">{{ i.class_name or '—' }}{% if i.section %}-{{ i.section }}{% endif %}</td>
+                <td style="padding:0.5rem;">{{ i.issue_date.strftime('%d %b') }}</td>
+                <td style="padding:0.5rem; color:{{ '#ef4444' if i.days_overdue > 0 else '#475569' }};">
+                    {{ i.due_date.strftime('%d %b') }}
+                </td>
+                <td style="padding:0.5rem; text-align:center;">
+                    {% if i.days_overdue > 0 %}
+                    <span style="font-size:0.72rem; background:#fee2e2; color:#991b1b;
+                        padding:0.15rem 0.45rem; border-radius:3px; font-weight:600;">
+                        {{ i.days_overdue }}d overdue
+                    </span>
+                    {% else %}
+                    <span style="font-size:0.72rem; background:#d1fae5; color:#065f46;
+                        padding:0.15rem 0.45rem; border-radius:3px;">active</span>
+                    {% endif %}
+                </td>
+                <td style="padding:0.5rem; text-align:right;">
+                    <form method="POST" action="{{ url_for('library.return_book', iid=i.id) }}"
+                          style="display:inline;"
+                          onsubmit="return confirm('Return book?{% if i.fine_est > 0 %} Fine: ₹{{ i.fine_est }}{% endif %}');">
+                        <button style="background:#10b981; color:white; border:none;
+                            padding:0.35rem 0.8rem; border-radius:4px; cursor:pointer; font-size:0.8rem;">
+                            Return
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color:#94a3b8; font-size:0.85rem;">Koi active issue nahi. Sab copies available hain.</p>
+    {% endif %}
+</div>
+
+</div>
+{% endblock %}
