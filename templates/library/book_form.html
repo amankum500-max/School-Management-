@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Add' if mode=='add' else 'Edit' }} Book{% endblock %}
+{% block page_title %}{{ 'New' if mode=='add' else 'Edit' }} Book{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:650px;">
+<form method="POST">
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Title *</label>
+        <input name="title" required value="{{ book.title if book else '' }}"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Author</label>
+            <input name="author" value="{{ book.author if book else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">ISBN</label>
+            <input name="isbn" value="{{ book.isbn if book else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Category</label>
+            <select name="category"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="">Select</option>
+                {% for c in categories %}
+                <option value="{{ c }}" {% if book and book.category == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Publisher</label>
+            <input name="publisher" value="{{ book.publisher if book else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Total Copies *</label>
+            <input name="total_copies" type="number" min="1" required
+                value="{{ book.total_copies if book else 1 }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Shelf No</label>
+            <input name="shelf_no" value="{{ book.shelf_no if book else '' }}"
+                placeholder="A-12"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+    </div>
+
+    {% if mode == 'edit' %}
+    <div style="background:#eff6ff; padding:0.65rem 0.9rem; border-radius:6px;
+        font-size:0.82rem; color:#1e40af; margin-bottom:1rem;">
+        <strong>ℹ️ Note:</strong> Total copies badhane ya ghatane se available copies
+        auto-adjust ho jayengi (issued count preserve hota hai).
+    </div>
+    {% endif %}
+
+    <div style="display:flex; gap:0.75rem;">
+        <button type="submit" class="btn">{{ 'Add' if mode=='add' else 'Save' }}</button>
+        <a href="{{ url_for('library.index') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+    </div>
+</form>
+</div>
+{% endblock %}
