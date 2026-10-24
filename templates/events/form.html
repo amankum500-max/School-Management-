@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Add' if mode=='add' else 'Edit' }} Event{% endblock %}
+{% block page_title %}{{ 'New' if mode=='add' else 'Edit' }} Event{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:700px;">
+<form method="POST">
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Title *</label>
+        <input name="title" required value="{{ event.title if event else '' }}"
+            placeholder="e.g. Annual Sports Day"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Type</label>
+            <select name="event_type"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                {% for t in event_types %}
+                <option value="{{ t }}" {% if event and event.event_type == t %}selected{% endif %}>
+                    {{ t|capitalize }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Venue</label>
+            <input name="venue" value="{{ event.venue if event else '' }}"
+                placeholder="School Ground"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Start Date *</label>
+            <input name="start_date" type="date" required
+                value="{{ event.start_date if event else today }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">End Date <small>(optional)</small></label>
+            <input name="end_date" type="date"
+                value="{{ event.end_date if event else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Start Time</label>
+            <input name="start_time" value="{{ event.start_time if event else '' }}"
+                placeholder="09:00 AM"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">End Time</label>
+            <input name="end_time" value="{{ event.end_time if event else '' }}"
+                placeholder="02:00 PM"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Target Class</label>
+            <select name="target_class"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="">All classes</option>
+                {% for c in classes %}
+                <option value="{{ c }}" {% if event and event.target_class == c %}selected{% endif %}>
+                    Class {{ c }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Visibility</label>
+            <div style="padding:0.6rem 0;">
+                <label style="font-size:0.85rem; color:#334155;">
+                    <input type="checkbox" name="is_public"
+                        {% if not event or event.is_public %}checked{% endif %}>
+                    Public (parents + public site pe dikhega)
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Description</label>
+        <textarea name="description" rows="4"
+            placeholder="Event details..."
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">{{ event.description if event else '' }}</textarea>
+    </div>
+
+    <div style="display:flex; gap:0.75rem;">
+        <button type="submit" class="btn">{{ 'Create' if mode=='add' else 'Save' }}</button>
+        <a href="{{ url_for('events.index') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+    </div>
+</form>
+</div>
+{% endblock %}
