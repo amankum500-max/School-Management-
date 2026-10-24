@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Student Promotion{% endblock %}
+{% block page_title %}Year-End Student Promotion{% endblock %}
+
+{% block content %}
+
+<div class="card" style="background:#eff6ff; border-left:3px solid #3b82f6;
+    font-size:0.85rem; color:#1e40af; margin-bottom:1rem;">
+    <strong>ℹ️ Kaise kaam karta hai:</strong>
+    <ol style="margin:0.5rem 0 0 1.2rem; line-height:1.7;">
+        <li>Class select karo → preview dekho (har student ka status choose karo)</li>
+        <li><strong>Promote</strong> — next class mein jayega</li>
+        <li><strong>Repeat</strong> — same class mein rahega (fail case)</li>
+        <li><strong>Archive</strong> — inactive ho jayega (school chhod diya)</li>
+        <li>Confirm karo → bulk update</li>
+    </ol>
+    <div style="margin-top:0.5rem; font-size:0.78rem;">
+        ⚠️ <strong>Irreversible hai.</strong> Backup lo pehle: <a href="{{ url_for('backup.index') }}" style="color:#1e40af; text-decoration:underline;">Backup →</a>
+    </div>
+</div>
+
+<!-- Class selection grid -->
+<h3 style="font-size:1rem; margin-bottom:0.75rem; color:#1e293b;">Select Class to Promote</h3>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+    gap:0.5rem; margin-bottom:1.5rem;">
+    {% for c in classes %}
+    {% set info = summary|selectattr('class_name', 'equalto', c)|list %}
+    {% set active = info[0].active if info else 0 %}
+    <a href="{{ url_for('promotion.preview', **{'class': c}) }}"
+       style="text-decoration:none; color:inherit;
+       {{ 'opacity:0.4; pointer-events:none;' if active == 0 else '' }}">
+        <div class="card" style="padding:0.75rem; text-align:center;
+            border-left:3px solid {{ '#3b82f6' if active > 0 else '#cbd5e1' }};">
+            <div style="font-size:0.95rem; font-weight:700; color:#1e293b;">
+                {{ c }}
+            </div>
+            <div style="font-size:0.72rem; color:#64748b; margin-top:0.15rem;">
+                {{ active }} student{{ 's' if active != 1 else '' }}
+            </div>
+            {% if active > 0 %}
+            <div style="font-size:0.7rem; color:#3b82f6; margin-top:0.35rem; font-weight:600;">
+                → Promote
+            </div>
+            {% endif %}
+        </div>
+    </a>
+    {% endfor %}
+</div>
+
+<!-- Recent logs -->
+{% if logs %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+        <h3 style="font-size:1rem; color:#1e293b;">📜 Recent Promotions</h3>
+        <a href="{{ url_for('promotion.logs') }}"
+           style="color:#3b82f6; text-decoration:none; font-size:0.85rem;">View All →</a>
+    </div>
+    <div style="overflow:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+        <thead style="background:#f1f5f9;">
+            <tr>
+                <th style="padding:0.5rem; text-align:left;">From → To</th>
+                <th style="padding:0.5rem; text-align:left;">Year</th>
+                <th style="padding:0.5rem; text-align:center;">Promoted</th>
+                <th style="padding:0.5rem; text-align:center;">Repeated</th>
+                <th style="padding:0.5rem; text-align:center;">Archived</th>
+                <th style="padding:0.5rem; text-align:left;">When</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for l in logs %}
+            <tr style="border-top:1px solid #e2e8f0;">
+                <td style="padding:0.5rem; font-weight:600;">
+                    {{ l.from_class }} → {{ l.to_class }}
+                </td>
+                <td style="padding:0.5rem; font-size:0.82rem;">{{ l.academic_year or '—' }}</td>
+                <td style="padding:0.5rem; text-align:center; color:#10b981; font-weight:600;">{{ l.promoted }}</td>
+                <td style="padding:0.5rem; text-align:center; color:#f59e0b; font-weight:600;">{{ l.repeated }}</td>
+                <td style="padding:0.5rem; text-align:center; color:#94a3b8; font-weight:600;">{{ l.archived }}</td>
+                <td style="padding:0.5rem; font-size:0.78rem; color:#64748b;">
+                    {{ l.created_at.strftime('%d %b %Y') if l.created_at else '—' }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
