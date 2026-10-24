@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Promotion Logs{% endblock %}
+{% block page_title %}Promotion History{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:1rem;">
+    <a href="{{ url_for('promotion.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back to Promotion</a>
+</div>
+
+{% if not logs %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Abhi tak koi promotion nahi hui.
+</div>
+{% else %}
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.6rem; text-align:left;">#</th>
+            <th style="padding:0.6rem; text-align:left;">From → To</th>
+            <th style="padding:0.6rem; text-align:left;">Academic Year</th>
+            <th style="padding:0.6rem; text-align:center;">Total</th>
+            <th style="padding:0.6rem; text-align:center;">Promoted</th>
+            <th style="padding:0.6rem; text-align:center;">Repeated</th>
+            <th style="padding:0.6rem; text-align:center;">Archived</th>
+            <th style="padding:0.6rem; text-align:left;">When</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for l in logs %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.55rem; color:#94a3b8; font-size:0.78rem;">#{{ l.id }}</td>
+            <td style="padding:0.55rem; font-weight:600;">
+                {{ l.from_class }} → {{ l.to_class }}
+            </td>
+            <td style="padding:0.55rem;">{{ l.academic_year or '—' }}</td>
+            <td style="padding:0.55rem; text-align:center;">{{ l.total }}</td>
+            <td style="padding:0.55rem; text-align:center; color:#10b981; font-weight:600;">
+                {{ l.promoted }}
+            </td>
+            <td style="padding:0.55rem; text-align:center; color:#f59e0b; font-weight:600;">
+                {{ l.repeated }}
+            </td>
+            <td style="padding:0.55rem; text-align:center; color:#94a3b8; font-weight:600;">
+                {{ l.archived }}
+            </td>
+            <td style="padding:0.55rem; font-size:0.78rem; color:#64748b;">
+                {{ l.created_at.strftime('%d %b %Y, %I:%M %p') if l.created_at else '—' }}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}
