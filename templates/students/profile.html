@@ -77,6 +77,40 @@
     </div>
 </div>
 {% endif %}
+    {% if books %}
+<div class="card" style="max-width:800px; margin-top:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.5rem;">📚 Library Books ({{ books|length }})</h3>
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+        <thead style="background:#f1f5f9;">
+            <tr>
+                <th style="padding:0.5rem; text-align:left;">Title</th>
+                <th style="padding:0.5rem; text-align:left;">Due</th>
+                <th style="padding:0.5rem; text-align:center;">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for b in books %}
+            <tr style="border-top:1px solid #e2e8f0;">
+                <td style="padding:0.5rem;">{{ b.title }}{% if b.author %}
+                    <span style="color:#94a3b8; font-size:0.72rem;">— {{ b.author }}</span>
+                {% endif %}</td>
+                <td style="padding:0.5rem; font-size:0.82rem;
+                    color:{{ '#ef4444' if b.status == 'overdue' else '#475569' }};">
+                    {{ b.due_date.strftime('%d %b %Y') if b.due_date else '—' }}
+                </td>
+                <td style="padding:0.5rem; text-align:center;">
+                    <span style="font-size:0.72rem; padding:0.15rem 0.45rem; border-radius:3px;
+                        background:{{ '#fee2e2' if b.status == 'overdue' else ('#fef3c7' if b.status == 'lost' else '#dbeafe') }};
+                        color:{{ '#991b1b' if b.status == 'overdue' else ('#92400e' if b.status == 'lost' else '#1e40af') }};">
+                        {{ b.status }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
     <div class="card" style="max-width:800px; margin-top:1rem;">
     <h3 style="font-size:1rem; margin-bottom:0.5rem;">Exams</h3>
 </div>
