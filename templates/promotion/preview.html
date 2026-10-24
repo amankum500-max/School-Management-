@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Promote {{ class_name }}{% endblock %}
+{% block page_title %}Promote Class {{ class_name }}{% if section %} - {{ section }}{% endif %}{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+    <a href="{{ url_for('promotion.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+    {% if students %}
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <button type="button" onclick="setAllActions('promote')"
+            style="padding:0.4rem 0.85rem; background:#10b981; color:white;
+            border:none; border-radius:5px; cursor:pointer; font-size:0.82rem;">
+            All Promote
+        </button>
+        <button type="button" onclick="setAllActions('repeat')"
+            style="padding:0.4rem 0.85rem; background:#f59e0b; color:white;
+            border:none; border-radius:5px; cursor:pointer; font-size:0.82rem;">
+            All Repeat
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+{% if not students %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Is class mein koi active student nahi.
+</div>
+{% else %}
+
+<div class="card" style="background:{{ '#fef3c7' if is_last_class else '#eff6ff' }};
+    border-left:3px solid {{ '#f59e0b' if is_last_class else '#3b82f6' }};
+    margin-bottom:1rem; font-size:0.88rem;">
+    {% if is_last_class %}
+    <strong style="color:#92400e;">⚠️ Last Class Notice</strong>
+    <p style="margin-top:0.35rem; color:#92400e;">
+        Class {{ class_name }} ka last class hai. Promote karne wale students
+        <strong>ALUMNI</strong> ban jayenge (inactive ho jayenge).
+    </p>
+    {% else %}
+    <strong style="color:#1e40af;">Promote Target: Class {{ next_class }}</strong>
+    <p style="margin-top:0.35rem; color:#1e40af; font-size:0.82rem;">
+        Selected students Class {{ next_class }} mein chale jayenge.
+        Section ({{ section or '—' }}) same rahega.
+    </p>
+    {% endif %}
+    <p style="margin-top:0.35rem; font-size:0.78rem; color:#94a3b8;">
+        Total: <strong>{{ students|length }} students</strong>
+        • AY: {{ current_ay }}
+    </p>
+</div>
+
+<form method="POST" action="{{ url_for('promotion.execute') }}" id="promoForm">
+    <input type="hidden" name="class_name" value="{{ class_name }}">
+    <input type="hidden" name="section" value="{{ section }}">
+
+    <div class="card" style="padding:0; overflow:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:650px;">
+        <thead style="background:#f1f5f9;">
+            <tr>
+                <th style="padding:0.6rem; text-align:left;">Student</th>
+                <th style="padding:0.6rem; text-align:left;">Roll</th>
+                <th style="padding:0.6rem; text-align:left;">Section</th>
+                <th style="padding:0.6rem; text-align:center; width:280px;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in students %}
+            <tr style="border-top:1px solid #e2e8f0;">
+                <td style="padding:0.55rem;">
+                    <strong>{{ s.name }}</strong>
+                </td>
+                <td style="padding:0.55rem; color:#64748b;">{{ s.roll or '—' }}</td>
+                <td style="padding:0.55rem;">{{ s.section or '—' }}</td>
+                <td style="padding:0.55rem; text-align:center;">
+                    <input type="hidden" name="action_{{ s.id }}" value="promote"
+                        id="action_input_{{ s.id }}">
+                    <div style="display:flex; gap:0.3rem; justify-content:center; flex-wrap:wrap;">
+                        <button type="button"
+                            class="action-btn"
+                            data-student="{{ s.id }}"
+                            data-action="promote"
+                            onclick="setAction({{ s.id }}, 'promote')"
+                            style="padding:0.3rem 0.65rem; border-radius:4px; cursor:pointer;
+                            font-size:0.75rem; font-weight:600; border:1px solid #cbd5e1;
+                            background:#d1fae5; color:#065f46;">
+                            Promote
+                        </button>
+                        <button type="button"
+                            class="action-btn"
+                            data-student="{{ s.id }}"
+                            data-action="repeat"
+                            onclick="setAction({{ s.id }}, 'repeat')"
+                            style="padding:0.3rem 0.65rem; border-radius:4px; cursor:pointer;
+                            font-size:0.75rem; font-weight:600; border:1px solid #cbd5e1;
+                            background:white; color:#64748b;">
+                            Repeat
+                        </button>
+                        <button type="button"
+                            class="action-btn"
+                            data-student="{{ s.id }}"
+                            data-action="archive"
+                            onclick="setAction({{ s.id }}, 'archive')"
+                            style="padding:0.3rem 0.65rem; border-radius:4px; cursor:pointer;
+                            font-size:0.75rem; font-weight:600; border:1px solid #cbd5e1;
+                            background:white; color:#64748b;">
+                            Archive
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+
+    <div class="card" style="margin-top:1rem; display:flex; gap:0.75rem; flex-wrap:wrap;">
+        <button type="submit" class="btn" style="background:#10b981;"
+            onclick="return confirmPromotion();">
+            ✓ Execute Promotion
+        </button>
+        <a href="{{ url_for('promotion.index') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+    </div>
+</form>
+
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const actionColors = {
+        promote: { bg: '#d1fae5', fg: '#065f46' },
+        repeat:  { bg: '#fef3c7', fg: '#92400e' },
+        archive: { bg: '#fee2e2', fg: '#991b1b' }
+    };
+
+    function setAction(studentId, action) {
+        document.getElementById('action_input_' + studentId).value = action;
+        document.querySelectorAll(`.action-btn[data-student="${studentId}"]`).forEach(btn => {
+            const isActive = btn.dataset.action === action;
+            btn.style.background = isActive ? actionColors[action].bg : 'white';
+            btn.style.color = isActive ? actionColors[action].fg : '#64748b';
+            btn.style.fontWeight = isActive ? '700' : '600';
+        });
+    }
+
+    function setAllActions(action) {
+        document.querySelectorAll('.action-btn').forEach(btn => {
+            const sid = btn.dataset.student;
+            if (sid) setAction(sid, action);
+        });
+    }
+
+    function confirmPromotion() {
+        const promoteCount = document.querySelectorAll('#promoForm input[value="promote"]').length;
+        const repeatCount = document.querySelectorAll('#promoForm input[value="repeat"]').length;
+        const archiveCount = document.querySelectorAll('#promoForm input[value="archive"]').length;
+        return confirm(
+            `Confirm? ⚠️ Ye irreversible hai.\n\n` +
+            `Promote: ${promoteCount}\n` +
+            `Repeat: ${repeatCount}\n` +
+            `Archive: ${archiveCount}`
+        );
+    }
+</script>
+{% endblock %}
