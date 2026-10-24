@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Calendar — {{ month_name }} {{ year }}{% endblock %}
+{% block page_title %}📅 Event Calendar{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+    <div style="display:flex; gap:0.5rem; align-items:center;">
+        <a href="{{ url_for('events.calendar_view', month=prev_str) }}"
+           style="padding:0.5rem 0.9rem; background:#f1f5f9; border-radius:6px;
+           text-decoration:none; color:#334155; font-weight:600;">←</a>
+        <h2 style="font-size:1.2rem; color:#1e293b;">{{ month_name }} {{ year }}</h2>
+        <a href="{{ url_for('events.calendar_view', month=next_str) }}"
+           style="padding:0.5rem 0.9rem; background:#f1f5f9; border-radius:6px;
+           text-decoration:none; color:#334155; font-weight:600;">→</a>
+    </div>
+    <div style="display:flex; gap:0.5rem;">
+        <a href="{{ url_for('events.index') }}" class="btn"
+           style="background:#64748b;">📋 List View</a>
+        <a href="{{ url_for('events.add') }}" class="btn"
+           style="background:#ec4899;">+ Add Event</a>
+    </div>
+</div>
+
+<div class="card" style="padding:0; overflow:hidden;">
+    <!-- Day headers -->
+    <div style="display:grid; grid-template-columns:repeat(7,1fr); background:#1e293b; color:white;">
+        {% for dname in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}
+        <div style="padding:0.6rem; text-align:center; font-size:0.78rem; font-weight:600;">
+            {{ dname }}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Weeks -->
+    {% for week in weeks %}
+    <div style="display:grid; grid-template-columns:repeat(7,1fr);
+        border-top:1px solid #e2e8f0;">
+        {% for day in week %}
+            {% set in_month = (day.month == month) %}
+            {% set is_today = (day == today) %}
+            {% set day_events = grid.get(day, []) %}
+            <div style="min-height:90px; padding:0.4rem;
+                background:{{ '#f8fafc' if not in_month else ('#eff6ff' if is_today else 'white') }};
+                border-right:1px solid #e2e8f0; position:relative;
+                {{ 'opacity:0.4;' if not in_month }};">
+                <div style="font-size:0.78rem; font-weight:{{ '700' if is_today else '500' }};
+                    color:{{ '#1e40af' if is_today else '#475569' }}; margin-bottom:0.25rem;">
+                    {{ day.day }}
+                </div>
+                {% for ev in day_events[:3] %}
+                {% set colors = {
+                    'holiday': '#10b981',
+                    'exam': '#ef4444',
+                    'meeting': '#3b82f6',
+                    'sports': '#f59e0b',
+                    'cultural': '#8b5cf6',
+                    'other': '#64748b'
+                } %}
+                <div style="font-size:0.7rem; padding:0.15rem 0.35rem; margin-bottom:0.15rem;
+                    background:{{ colors.get(ev.type, '#64748b') }}; color:white;
+                    border-radius:3px; white-space:nowrap; overflow:hidden;
+                    text-overflow:ellipsis; cursor:pointer;"
+                    title="{{ ev.title }}{% if ev.start_time %} • {{ ev.start_time }}{% endif %}{% if ev.venue %} • {{ ev.venue }}{% endif %}"
+                    onclick="window.location.href='{{ url_for('events.view', eid=ev.id) }}'">
+                    {% if ev.start_time %}<span style="opacity:0.85; font-size:0.65rem;">{{ ev.start_time|truncate(5, true, '') }}</span> {% endif %}{{ ev.title }}
+                </div>
+                {% endfor %}
+                {% if day_events|length > 3 %}
+                <div style="font-size:0.68rem; color:#94a3b8; margin-top:0.1rem;">
+                    +{{ day_events|length - 3 }} more
+                </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Legend -->
+<div class="card" style="margin-top:1rem;">
+    <div style="display:flex; gap:1rem; flex-wrap:wrap; font-size:0.78rem; color:#475569;">
+        <span><span style="display:inline-block; width:10px; height:10px; background:#10b981; border-radius:2px; vertical-align:middle;"></span> Holiday</span>
+        <span><span style="display:inline-block; width:10px; height:10px; background:#ef4444; border-radius:2px; vertical-align:middle;"></span> Exam</span>
+        <span><span style="display:inline-block; width:10px; height:10px; background:#3b82f6; border-radius:2px; vertical-align:middle;"></span> Meeting</span>
+        <span><span style="display:inline-block; width:10px; height:10px; background:#f59e0b; border-radius:2px; vertical-align:middle;"></span> Sports</span>
+        <span><span style="display:inline-block; width:10px; height:10px; background:#8b5cf6; border-radius:2px; vertical-align:middle;"></span> Cultural</span>
+        <span><span style="display:inline-block; width:10px; height:10px; background:#64748b; border-radius:2px; vertical-align:middle;"></span> Other</span>
+    </div>
+</div>
+{% endblock %}
