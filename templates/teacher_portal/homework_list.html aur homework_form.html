@@ -1,0 +1,99 @@
+{% extends "teacher_portal/base.html" %}
+{% block title %}Homework{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+    <h2 style="font-size:1.1rem; color:#1e293b;">My Homework</h2>
+    <a href="{{ url_for('teacher_portal.homework_add') }}" class="btn"
+       style="background:#f59e0b;">+ Post Homework</a>
+</div>
+
+{% for h in items %}
+<div class="card" style="border-left:4px solid
+    {{ '#ef4444' if h.status == 'overdue' else ('#f59e0b' if h.status == 'today' else '#3b82f6') }};">
+    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.35rem;">
+        <h3 style="font-size:1rem; color:#1e293b;">{{ h.title }}</h3>
+        <span style="font-size:0.72rem; background:#eff6ff; color:#1e40af;
+            padding:0.15rem 0.45rem; border-radius:3px;">{{ h.subject }}</span>
+        <span style="font-size:0.72rem; background:#f1f5f9; color:#475569;
+            padding:0.15rem 0.45rem; border-radius:3px;">
+            Class {{ h.class_name }}{% if h.section %}-{{ h.section }}{% endif %}
+        </span>
+    </div>
+    <div style="font-size:0.78rem; color:#94a3b8;">
+        {% if h.due_date %}Due: {{ h.due_date.strftime('%d %b %Y') }}{% endif %}
+        • Posted {{ h.created_at.strftime('%d %b') if h.created_at else '' }}
+    </div>
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Koi homework nahi. "+ Post Homework" se shuru karo.
+</div>
+{% endfor %}
+{% endblock %}
+{% extends "teacher_portal/base.html" %}
+{% block title %}Post Homework{% endblock %}
+
+{% block content %}
+
+<div class="card" style="max-width:700px;">
+<form method="POST">
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Title *</label>
+        <input name="title" required
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; margin-bottom:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Class *</label>
+            <select name="class_name" required
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="">Select</option>
+                {% for c in classes %}
+                <option value="{{ c.class_name }}" data-sec="{{ c.section or '' }}">
+                    {{ c.class_name }}{% if c.section %}-{{ c.section }}{% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Section</label>
+            <input name="section" placeholder="A / empty"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Subject *</label>
+            <input name="subject" required placeholder="Math"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Description</label>
+        <textarea name="description" rows="5"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;"></textarea>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Due Date</label>
+            <input name="due_date" type="date"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Attachment URL</label>
+            <input name="attachment_url" type="url"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+    </div>
+
+    <div style="display:flex; gap:0.75rem;">
+        <button type="submit" class="btn" style="background:#f59e0b;">Post Homework</button>
+        <a href="{{ url_for('teacher_portal.homework_list') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+    </div>
+</form>
+</div>
+{% endblock %}
