@@ -67,6 +67,43 @@
         </a>
     </div>
     {% endif %}
+    {% if events %}
+<h2 class="section-title">Upcoming Events</h2>
+<div style="display:grid; gap:0.65rem; margin-bottom:2rem;">
+    {% for ev in events %}
+    {% set colors = {
+        'holiday': '#10b981',
+        'exam': '#ef4444',
+        'meeting': '#3b82f6',
+        'sports': '#f59e0b',
+        'cultural': '#8b5cf6',
+        'other': '#64748b'
+    } %}
+    <div class="pub-card" style="border-left:4px solid {{ colors.get(ev.event_type, '#64748b') }};">
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+            <div style="background:#f1f5f9; color:#475569; padding:0.35rem 0.65rem;
+                border-radius:6px; text-align:center; min-width:55px;">
+                <div style="font-size:0.95rem; font-weight:700; line-height:1;">
+                    {{ ev.start_date.strftime('%d') }}
+                </div>
+                <div style="font-size:0.65rem; text-transform:uppercase;">
+                    {{ ev.start_date.strftime('%b') }}
+                </div>
+            </div>
+            <div style="flex:1;">
+                <div style="font-size:0.95rem; font-weight:600; color:#1e293b;">{{ ev.title }}</div>
+                {% if ev.start_time or ev.venue %}
+                <div style="font-size:0.78rem; color:#94a3b8; margin-top:0.15rem;">
+                    {% if ev.start_time %}{{ ev.start_time }}{% endif %}
+                    {% if ev.venue %} • {{ ev.venue }}{% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 
     <!-- CTA -->
     <div class="pub-card" style="text-align:center; background:linear-gradient(135deg,#3b82f6,#8b5cf6); color:white; border:none; padding:2rem 1.25rem;">
