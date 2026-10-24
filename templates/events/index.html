@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Events{% endblock %}
+{% block page_title %}School Events{% endblock %}
+
+{% block content %}
+
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:end;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">View</label>
+        <select name="view" onchange="this.form.submit()"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="upcoming" {% if view=='upcoming' %}selected{% endif %}>Upcoming</option>
+            <option value="month" {% if view=='month' %}selected{% endif %}>By Month</option>
+            <option value="all" {% if view=='all' %}selected{% endif %}>All Events</option>
+        </select>
+    </div>
+    {% if view == 'month' %}
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Month</label>
+        <input type="month" name="month" value="{{ month }}"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+    {% endif %}
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Type</label>
+        <select name="type"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">All</option>
+            {% for t in event_types %}
+            <option value="{{ t }}" {% if t == selected_type %}selected{% endif %}>{{ t|capitalize }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn">Filter</button>
+    <a href="{{ url_for('events.calendar_view') }}" class="btn"
+       style="background:#64748b;">📅 Calendar View</a>
+    <a href="{{ url_for('events.add') }}" class="btn"
+       style="background:#ec4899; margin-left:auto;">+ Add Event</a>
+</form>
+</div>
+
+{% set type_colors = {
+    'holiday': ('#10b981', '#d1fae5', '#065f46'),
+    'exam': ('#ef4444', '#fee2e2', '#991b1b'),
+    'meeting': ('#3b82f6', '#dbeafe', '#1e40af'),
+    'sports': ('#f59e0b', '#fef3c7', '#92400e'),
+    'cultural': ('#8b5cf6', '#ede9fe', '#5b21b6'),
+    'other': ('#64748b', '#f1f5f9', '#475569')
+} %}
+
+{% for e in items %}
+{% set col = type_colors.get(e.event_type, type_colors['other']) %}
+<div class="card" style="margin-bottom:0.65rem; border-left:4px solid {{ col[0] }};">
+    <div style="display:flex; justify-content:space-between; align-items:start; gap:0.5rem; flex-wrap:wrap;">
+        <div style="flex:1;">
+            <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.35rem;">
+                <a href="{{ url_for('events.view', eid=e.id) }}"
+                   style="font-size:1.02rem; font-weight:600; color:#1e293b; text-decoration:none;">
+                    {{ e.title }}
+                </a>
+                <span style="font-size:0.7rem; background:{{ col[1] }}; color:{{ col[2] }};
+                    padding:0.15rem 0.45rem; border-radius:3px; font-weight:600; text-transform:capitalize;">
+                    {{ e.event_type }}
+                </span>
+                {% if not e.is_public %}
+                <span style="font-size:0.7rem; background:#fef3c7; color:#92400e;
+                    padding:0.15rem 0.45rem; border-radius:3px;">PRIVATE</span>
+                {% endif %}
+            </div>
+            {% if e.description %}
+            <p style="color:#475569; font-size:0.88rem; margin:0;">
+                {{ e.description[:180] }}{% if e.description|length > 180 %}...{% endif %}
+            </p>
+            {% endif %}
+            <div style="margin-top:0.5rem; font-size:0.75rem; color:#94a3b8;
+                display:flex; gap:0.75rem; flex-wrap:wrap;">
+                <span>📅
+                    <strong style="color:#475569;">{{ e.start_date.strftime('%d %b %Y') }}</strong>
+                    {% if e.end_date and e.end_date != e.start_date %}
+                    – {{ e.end_date.strftime('%d %b %Y') }}
+                    {% endif %}
+                </span>
+                {% if e.start_time %}<span>⏰ {{ e.start_time }}{% if e.end_time %} – {{ e.end_time }}{% endif %}</span>{% endif %}
+                {% if e.venue %}<span>📍 {{ e.venue }}</span>{% endif %}
+                {% if e.target_class %}<span>🎓 Class {{ e.target_class }}</span>{% endif %}
+            </div>
+        </div>
+        <div style="display:flex; gap:0.4rem;">
+            <a href="{{ url_for('events.edit', eid=e.id) }}"
+               style="color:#f59e0b; text-decoration:none; font-size:0.85rem;">Edit</a>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Koi event nahi mila. "+ Add Event" se shuru karo.
+</div>
+{% endfor %}
+{% endblock %}
