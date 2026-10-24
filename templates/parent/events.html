@@ -1,0 +1,67 @@
+{% extends "parent/base.html" %}
+{% block title %}Events{% endblock %}
+
+{% block content %}
+
+{% if children|length > 1 %}
+<div style="margin-bottom:0.75rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+    {% for c in children %}
+    <a href="{{ url_for('parent.events', child_id=c.id) }}"
+       style="padding:0.5rem 1rem; border-radius:6px; text-decoration:none;
+       font-size:0.85rem; font-weight:600;
+       background:{{ '#f59e0b' if selected and c.id == selected.id else 'white' }};
+       color:{{ 'white' if selected and c.id == selected.id else '#475569' }};
+       border:1px solid {{ '#f59e0b' if selected and c.id == selected.id else '#cbd5e1' }};">
+        {{ c.name }}
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% set type_colors = {
+    'holiday': ('#10b981','#d1fae5','#065f46'),
+    'exam': ('#ef4444','#fee2e2','#991b1b'),
+    'meeting': ('#3b82f6','#dbeafe','#1e40af'),
+    'sports': ('#f59e0b','#fef3c7','#92400e'),
+    'cultural': ('#8b5cf6','#ede9fe','#5b21b6'),
+    'other': ('#64748b','#f1f5f9','#475569')
+} %}
+
+{% for ev in events %}
+{% set col = type_colors.get(ev.event_type, type_colors['other']) %}
+<div class="card" style="border-left:4px solid {{ col[0] }};">
+    <div style="display:flex; gap:0.5rem; align-items:start;">
+        <div style="background:{{ col[1] }}; color:{{ col[2] }}; padding:0.4rem 0.6rem;
+            border-radius:6px; text-align:center; min-width:60px;">
+            <div style="font-size:1.1rem; font-weight:700; line-height:1;">
+                {{ ev.start_date.strftime('%d') }}
+            </div>
+            <div style="font-size:0.7rem; text-transform:uppercase; font-weight:600;">
+                {{ ev.start_date.strftime('%b') }}
+            </div>
+        </div>
+        <div style="flex:1;">
+            <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;">
+                <h3 style="font-size:0.98rem; color:#1e293b;">{{ ev.title }}</h3>
+                <span style="font-size:0.68rem; background:{{ col[1] }}; color:{{ col[2] }};
+                    padding:0.1rem 0.4rem; border-radius:3px; font-weight:600; text-transform:capitalize;">
+                    {{ ev.event_type }}
+                </span>
+            </div>
+            <div style="font-size:0.75rem; color:#64748b; margin-top:0.35rem;
+                display:flex; gap:0.75rem; flex-wrap:wrap;">
+                {% if ev.end_date and ev.end_date != ev.start_date %}
+                <span>until {{ ev.end_date.strftime('%d %b') }}</span>
+                {% endif %}
+                {% if ev.start_time %}<span>⏰ {{ ev.start_time }}</span>{% endif %}
+                {% if ev.venue %}<span>📍 {{ ev.venue }}</span>{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Abhi koi upcoming event nahi.
+</div>
+{% endfor %}
+{% endblock %}
