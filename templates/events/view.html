@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}{{ e.title }}{% endblock %}
+{% block page_title %}Event Details{% endblock %}
+
+{% block content %}
+<div style="max-width:700px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+        <a href="{{ url_for('events.index') }}"
+           style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+        <div style="display:flex; gap:0.5rem;">
+            <a href="{{ url_for('events.edit', eid=e.id) }}" class="btn"
+               style="background:#f59e0b;">Edit</a>
+            <form method="POST" action="{{ url_for('events.remove', eid=e.id) }}"
+                  onsubmit="return confirm('Delete event?');" style="display:inline;">
+                <button class="btn" style="background:#ef4444;">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        {% set type_colors = {
+            'holiday': ('#10b981','#d1fae5','#065f46'),
+            'exam': ('#ef4444','#fee2e2','#991b1b'),
+            'meeting': ('#3b82f6','#dbeafe','#1e40af'),
+            'sports': ('#f59e0b','#fef3c7','#92400e'),
+            'cultural': ('#8b5cf6','#ede9fe','#5b21b6'),
+            'other': ('#64748b','#f1f5f9','#475569')
+        } %}
+        {% set col = type_colors.get(e.event_type, type_colors['other']) %}
+
+        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.5rem;">
+            <span style="font-size:0.72rem; background:{{ col[1] }}; color:{{ col[2] }};
+                padding:0.2rem 0.55rem; border-radius:3px; font-weight:600; text-transform:capitalize;">
+                {{ e.event_type }}
+            </span>
+            {% if not e.is_public %}
+            <span style="font-size:0.72rem; background:#fef3c7; color:#92400e;
+                padding:0.2rem 0.55rem; border-radius:3px;">PRIVATE</span>
+            {% endif %}
+        </div>
+
+        <h1 style="font-size:1.4rem; margin-bottom:0.75rem; color:#1e293b;">{{ e.title }}</h1>
+
+        {% if e.description %}
+        <p style="white-space:pre-wrap; color:#334155; font-size:0.92rem; line-height:1.7;
+            padding:0.75rem 0; border-top:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0;">{{ e.description }}</p>
+        {% endif %}
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;
+            font-size:0.88rem; margin-top:0.75rem;">
+            <div>
+                <span style="color:#64748b;">📅 Date:</span>
+                <strong>{{ e.start_date.strftime('%d %b %Y') }}</strong>
+                {% if e.end_date and e.end_date != e.start_date %}
+                <span style="color:#64748b;">to</span>
+                <strong>{{ e.end_date.strftime('%d %b %Y') }}</strong>
+                {% endif %}
+            </div>
+            {% if e.start_time %}
+            <div>
+                <span style="color:#64748b;">⏰ Time:</span>
+                <strong>{{ e.start_time }}{% if e.end_time %} – {{ e.end_time }}{% endif %}</strong>
+            </div>
+            {% endif %}
+            {% if e.venue %}
+            <div>
+                <span style="color:#64748b;">📍 Venue:</span>
+                <strong>{{ e.venue }}</strong>
+            </div>
+            {% endif %}
+            {% if e.target_class %}
+            <div>
+                <span style="color:#64748b;">🎓 For:</span>
+                <strong>Class {{ e.target_class }}</strong>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
