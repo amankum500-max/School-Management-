@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Issue Book{% endblock %}
+{% block page_title %}Issue Book{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:600px;">
+<form method="POST">
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Book *</label>
+        <select name="book_id" required
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">Select book</option>
+            {% for b in books %}
+            <option value="{{ b.id }}"
+                {% if preselect_book == b.id %}selected{% endif %}>
+                {{ b.title }}{% if b.author %} — {{ b.author }}{% endif %}
+                ({{ b.available_copies }} available)
+            </option>
+            {% endfor %}
+        </select>
+        {% if not books %}
+        <small style="color:#ef4444; font-size:0.75rem;">
+            Koi available book nahi. Pehle add karo ya koi book return karo.
+        </small>
+        {% endif %}
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Student *</label>
+        <select name="student_id" required
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">Select student</option>
+            {% for s in students %}
+            <option value="{{ s.id }}">
+                {{ s.name }} (Roll: {{ s.roll or '—' }} • Class {{ s.class_name or '?' }}{% if s.section %}-{{ s.section }}{% endif %})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Due Date *</label>
+            <input name="due_date" type="date" required value="{{ default_due }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <small style="color:#94a3b8; font-size:0.7rem;">Default: 14 days</small>
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Note</label>
+            <input name="note" placeholder="Optional"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+    </div>
+
+    <div style="background:#eff6ff; padding:0.65rem 0.9rem; border-radius:6px;
+        font-size:0.82rem; color:#1e40af; margin-bottom:1rem;">
+        <strong>ℹ️ Fine:</strong> ₹2/day after due date.
+        Book issue hone pe available copies 1 se kam ho jayengi.
+    </div>
+
+    <div style="display:flex; gap:0.75rem;">
+        <button type="submit" class="btn" style="background:#f59e0b;">Issue Book</button>
+        <a href="{{ url_for('library.index') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+    </div>
+</form>
+</div>
+{% endblock %}
