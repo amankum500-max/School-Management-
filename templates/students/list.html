@@ -16,8 +16,15 @@
         <button type="submit" class="btn">Filter</button>
         <select name="class" style="...">
     <option value="">All Classes</option>
-    ...
-        </select>
+    {% for c in classes %}
+    <option value="{{ c }}" {% if c == selected_class %}selected{% endif %}>{{ c }}</option>
+    {% endfor %}
+</select>
+<select name="status" style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+    <option value="active" {% if request.args.get('status', 'active') == 'active' %}selected{% endif %}>Active</option>
+    <option value="inactive" {% if request.args.get('status') == 'inactive' %}selected{% endif %}>Inactive</option>
+    <option value="all" {% if request.args.get('status') == 'all' %}selected{% endif %}>All</option>
+</select>
     </form>
     <a href="{{ url_for('id_card.bulk') }}"
    style="padding:0.6rem 1.1rem; border-radius:6px; background:#f59e0b; color:white; text-decoration:none; font-size:0.9rem;">
