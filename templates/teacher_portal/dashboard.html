@@ -1,0 +1,102 @@
+{% extends "teacher_portal/base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="card" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); color:white;">
+    <h2 style="font-size:1.15rem; margin-bottom:0.25rem;">Welcome, {{ session.teacher_name }} 👋</h2>
+    <p style="font-size:0.85rem; opacity:0.9;">
+        {{ today.strftime('%A, %d %B %Y') }} • {{ classes|length }} assigned classes
+    </p>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1rem;">
+
+    <!-- Today's schedule -->
+    <div class="card">
+        <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:#1e293b;">
+            🕐 Today's Schedule ({{ weekday_name }})
+        </h3>
+        {% if schedule %}
+        <div style="display:flex; flex-direction:column; gap:0.4rem;">
+            {% for p in schedule %}
+            <div style="display:flex; gap:0.5rem; padding:0.5rem;
+                background:#f8fafc; border-radius:6px; align-items:center;">
+                <div style="background:#3b82f6; color:white; padding:0.25rem 0.5rem;
+                    border-radius:4px; font-size:0.75rem; font-weight:700; min-width:32px; text-align:center;">
+                    P{{ p.period_no }}
+                </div>
+                <div style="flex:1;">
+                    <div style="font-size:0.85rem; font-weight:600; color:#1e293b;">
+                        {{ p.subject or '—' }}
+                    </div>
+                    <div style="font-size:0.72rem; color:#64748b;">
+                        Class {{ p.class_name }}{% if p.section %}-{{ p.section }}{% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color:#94a3b8; font-size:0.85rem;">
+            Aaj koi class nahi hai.
+        </p>
+        {% endif %}
+    </div>
+
+    <!-- Assigned classes -->
+    <div class="card">
+        <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:#1e293b;">
+            🎓 My Classes
+        </h3>
+        {% if classes %}
+        <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">
+            {% for c in classes %}
+            <a href="{{ url_for('teacher_portal.attendance', **{'class': c.class_name, 'section': c.section}) }}"
+               style="padding:0.5rem 0.9rem; background:#eff6ff; color:#1e40af;
+               border-radius:6px; text-decoration:none; font-size:0.85rem; font-weight:600;">
+                {{ c.class_name }}{% if c.section %}-{{ c.section }}{% endif %}
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color:#94a3b8; font-size:0.85rem;">
+            Koi class assign nahi. Admin se timetable mein assign karwao.
+        </p>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Quick actions -->
+<div class="card" style="margin-top:1rem;">
+    <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:#1e293b;">⚡ Quick Actions</h3>
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <a href="{{ url_for('teacher_portal.attendance') }}" class="btn"
+           style="background:#10b981;">✓ Mark Attendance</a>
+        <a href="{{ url_for('teacher_portal.homework_add') }}" class="btn"
+           style="background:#f59e0b;">📝 Post Homework</a>
+        <a href="{{ url_for('teacher_portal.marks_list') }}" class="btn"
+           style="background:#8b5cf6;">📊 Enter Marks</a>
+    </div>
+</div>
+
+{% if homework %}
+<div class="card" style="margin-top:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+        <h3 style="font-size:0.95rem; color:#1e293b;">📚 Recent Homework</h3>
+        <a href="{{ url_for('teacher_portal.homework_list') }}"
+           style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">View All →</a>
+    </div>
+    {% for h in homework %}
+    <div style="padding:0.5rem 0; border-top:1px solid #f1f5f9;">
+        <div style="font-size:0.88rem; font-weight:500; color:#1e293b;">{{ h.title }}</div>
+        <div style="font-size:0.75rem; color:#94a3b8; margin-top:0.15rem;">
+            {{ h.subject }} • Class {{ h.class_name }}{% if h.section %}-{{ h.section }}{% endif %}
+            {% if h.due_date %}• Due: {{ h.due_date.strftime('%d %b') }}{% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
