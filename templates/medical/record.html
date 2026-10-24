@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}{{ student.name }} — Medical{% endblock %}
+{% block page_title %}Medical Record — {{ student.name }}{% endblock %}
+
+{% block content %}
+<div style="max-width:850px;">
+
+<div style="margin-bottom:1rem;">
+    <a href="{{ url_for('medical.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+</div>
+
+<!-- Student card -->
+<div class="card" style="margin-bottom:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+        <div>
+            <h2 style="font-size:1.15rem; color:#1e293b;">{{ student.name }}</h2>
+            <p style="color:#64748b; font-size:0.85rem; margin-top:0.15rem;">
+                {{ student.class_name or '—' }}{% if student.section %}-{{ student.section }}{% endif %}
+                • Roll: {{ student.roll_no or '—' }}
+                • Age: {{ (student.dob and ((today if false else none) or '')) or '—' }}
+            </p>
+        </div>
+        <a href="{{ url_for('students.view_student', student_id=student.id) }}"
+           style="color:#3b82f6; text-decoration:none; font-size:0.85rem;">
+            View Full Profile →
+        </a>
+    </div>
+</div>
+
+<!-- Medical Form -->
+<form method="POST">
+<input type="hidden" name="action" value="save">
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#1e293b;">
+        🩺 Medical Info
+    </h3>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Blood Group</label>
+            <select name="blood_group"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="">Unknown</option>
+                {% for bg in blood_groups %}
+                <option value="{{ bg }}" {% if mr and mr.blood_group == bg %}selected{% endif %}>
+                    {{ bg }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Insurance Info</label>
+            <input name="insurance_info" value="{{ mr.insurance_info if mr else '' }}"
+                placeholder="Policy no, provider"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div style="grid-column:1/-1;">
+            <label style="font-size:0.85rem; color:#334155;">
+                Allergies <span style="color:#ef4444;">⚠️</span>
+            </label>
+            <textarea name="allergies" rows="2"
+                placeholder="e.g. Peanuts, Penicillin"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">{{ mr.allergies if mr else '' }}</textarea>
+        </div>
+        <div style="grid-column:1/-1;">
+            <label style="font-size:0.85rem; color:#334155;">Chronic Conditions</label>
+            <textarea name="chronic_conditions" rows="2"
+                placeholder="e.g. Asthma, Diabetes"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">{{ mr.chronic_conditions if mr else '' }}</textarea>
+        </div>
+        <div style="grid-column:1/-1;">
+            <label style="font-size:0.85rem; color:#334155;">Regular Medications</label>
+            <textarea name="medications" rows="2"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">{{ mr.medications if mr else '' }}</textarea>
+        </div>
+    </div>
+
+    <hr style="border:none; border-top:1px dashed #cbd5e1; margin:1rem 0;">
+
+    <h4 style="font-size:0.9rem; margin-bottom:0.65rem; color:#1e293b;">
+        🚑 Emergency & Doctor
+    </h4>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Emergency Contact Name</label>
+            <input name="emergency_contact_name" value="{{ mr.emergency_contact_name if mr else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Emergency Phone</label>
+            <input name="emergency_contact_phone" value="{{ mr.emergency_contact_phone if mr else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Family Doctor</label>
+            <input name="doctor_name" value="{{ mr.doctor_name if mr else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Doctor Phone</label>
+            <input name="doctor_phone" value="{{ mr.doctor_phone if mr else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div style="grid-column:1/-1;">
+            <label style="font-size:0.85rem; color:#334155;">Additional Notes</label>
+            <textarea name="notes" rows="2"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">{{ mr.notes if mr else '' }}</textarea>
+        </div>
+    </div>
+
+    {% if mr and mr.last_updated %}
+    <p style="font-size:0.75rem; color:#94a3b8; margin-top:0.75rem;">
+        Last updated: {{ mr.last_updated.strftime('%d %b %Y, %I:%M %p') }}
+    </p>
+    {% endif %}
+
+    <div style="display:flex; gap:0.75rem; margin-top:1rem;">
+        <button type="submit" class="btn">
+            {{ 'Update Record' if mr else 'Save Record' }}
+        </button>
+    </div>
+</div>
+</form>
+
+<!-- Vaccinations -->
+<div class="card">
+    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#1e293b;">
+        💉 Vaccinations ({{ vaxes|length }})
+    </h3>
+
+    {% if vaxes %}
+    <div style="overflow:auto; margin-bottom:1rem;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+        <thead style="background:#f1f5f9;">
+            <tr>
+                <th style="padding:0.5rem; text-align:left;">Vaccine</th>
+                <th style="padding:0.5rem; text-align:left;">Date</th>
+                <th style="padding:0.5rem; text-align:left;">Dose</th>
+                <th style="padding:0.5rem; text-align:left;">Notes</th>
+                <th style="padding:0.5rem; text-align:right;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for v in vaxes %}
+            <tr style="border-top:1px solid #e2e8f0;">
+                <td style="padding:0.5rem;"><strong>{{ v.vaccine_name }}</strong></td>
+                <td style="padding:0.5rem;">{{ v.date_given.strftime('%d %b %Y') }}</td>
+                <td style="padding:0.5rem;">{{ v.dose_no or '—' }}</td>
+                <td style="padding:0.5rem; font-size:0.8rem; color:#64748b;">{{ v.notes or '—' }}</td>
+                <td style="padding:0.5rem; text-align:right;">
+                    <form method="POST" action="{{ url_for('medical.delete_vax', vid=v.id) }}"
+                          onsubmit="return confirm('Delete vaccination?');"
+                          style="display:inline;">
+                        <input type="hidden" name="student_id" value="{{ student.id }}">
+                        <button style="background:none; border:none; color:#ef4444;
+                            cursor:pointer; font-size:0.78rem;">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p style="color:#94a3b8; font-size:0.85rem; margin-bottom:1rem;">
+        Koi vaccination record nahi.
+    </p>
+    {% endif %}
+
+    <!-- Add vaccination form -->
+    <form method="POST" style="background:#f8fafc; padding:0.75rem; border-radius:6px;">
+        <input type="hidden" name="action" value="add_vax">
+        <div style="display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:0.5rem; align-items:end;">
+            <div>
+                <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">
+                    Vaccine Name *
+                </label>
+                <input name="vaccine_name" required placeholder="Polio, BCG..."
+                    style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                    border-radius:4px; font-size:0.85rem;">
+            </div>
+            <div>
+                <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">
+                    Date *
+                </label>
+                <input name="date_given" type="date" required
+                    style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                    border-radius:4px; font-size:0.85rem;">
+            </div>
+            <div>
+                <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">
+                    Dose
+                </label>
+                <input name="dose_no" placeholder="1st, 2nd"
+                    style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                    border-radius:4px; font-size:0.85rem;">
+            </div>
+            <button type="submit" class="btn"
+                style="padding:0.5rem 0.9rem; font-size:0.85rem; white-space:nowrap;">
+                + Add
+            </button>
+        </div>
+        <div style="margin-top:0.5rem;">
+            <input name="vax_notes" placeholder="Notes (optional)"
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:4px; font-size:0.85rem;">
+        </div>
+    </form>
+</div>
+
+</div>
+{% endblock %}
