@@ -1,0 +1,83 @@
+{% extends "teacher_portal/base.html" %}
+{% block title %}Marks{% endblock %}
+
+{% block content %}
+
+<h2 style="font-size:1.1rem; margin-bottom:1rem; color:#1e293b;">Exams in My Classes</h2>
+
+{% for e in exams %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+        <div>
+            <h3 style="font-size:1rem; color:#1e293b;">{{ e[1] }}</h3>
+            <p style="font-size:0.8rem; color:#64748b;">
+                Class {{ e[2] }} • {{ e[5] }} marks/subject
+                {% if e[3] %}• {{ e[3] }}{% endif %}
+            </p>
+        </div>
+        <a href="{{ url_for('teacher_portal.marks_entry', exam_id=e[0]) }}"
+           class="btn">Enter Marks →</a>
+    </div>
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Aapki classes ka koi exam nahi. Admin se exam create karwao.
+</div>
+{% endfor %}
+{% endblock %}
+{% extends "teacher_portal/base.html" %}
+{% block title %}{{ exam.name }} — Marks{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:1rem;">
+    <a href="{{ url_for('teacher_portal.marks_list') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+    <h2 style="font-size:1.05rem; margin-top:0.5rem; color:#1e293b;">
+        {{ exam.name }} — {{ exam.class_name }} — Marks Entry
+    </h2>
+</div>
+
+{% if not students %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Is class mein koi student nahi.
+</div>
+{% else %}
+<form method="POST">
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:500px;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.6rem; text-align:left; position:sticky; left:0; background:#f1f5f9;">Student</th>
+            {% for subj in exam.subjects %}
+            <th style="padding:0.6rem; text-align:center;">{{ subj }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for s in students %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.5rem; position:sticky; left:0; background:white;">
+                <strong>{{ s.name }}</strong>
+                <div style="font-size:0.72rem; color:#94a3b8;">Roll: {{ s.roll or '—' }}</div>
+            </td>
+            {% for subj in exam.subjects %}
+            <td style="padding:0.4rem; text-align:center;">
+                <input type="number" name="mark_{{ s.id }}_{{ subj }}"
+                    value="{{ marks.get(s.id, {}).get(subj) if marks.get(s.id, {}).get(subj) is not none else '' }}"
+                    min="0" max="{{ exam.max_marks }}"
+                    style="width:60px; padding:0.35rem; border:1px solid #cbd5e1;
+                    border-radius:4px; text-align:center;">
+            </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+<div style="margin-top:1rem;">
+    <button type="submit" class="btn">💾 Save All Marks</button>
+</div>
+</form>
+{% endif %}
+{% endblock %}
