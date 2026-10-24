@@ -1,0 +1,112 @@
+{% extends "teacher_portal/base.html" %}
+{% block title %}Attendance{% endblock %}
+
+{% block content %}
+
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Class</label>
+        <select name="class" onchange="document.getElementById('sec-input').value=this.options[this.selectedIndex].dataset.sec; this.form.submit();"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">Select class</option>
+            {% for c in classes %}
+            <option value="{{ c.class_name }}" data-sec="{{ c.section or '' }}"
+                {% if selected and selected.class_name == c.class_name and selected.section == c.section %}selected{% endif %}>
+                {{ c.class_name }}{% if c.section %}-{{ c.section }}{% endif %}
+            </option>
+            {% endfor %}
+        </select>
+        <input type="hidden" name="section" id="sec-input" value="{{ selected.section if selected else '' }}">
+    </div>
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Date</label>
+        <input type="date" name="date" value="{{ date }}"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+    <button type="submit" class="btn">Load</button>
+</form>
+</div>
+
+{% if not selected %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Class select karo.
+</div>
+
+{% elif not students %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Is class mein koi active student nahi.
+</div>
+
+{% else %}
+
+<!-- Summary -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); gap:0.5rem; margin-bottom:1rem;">
+    <div class="card" style="padding:0.6rem;">
+        <div style="font-size:0.7rem; color:#64748b;">Present</div>
+        <div style="font-size:1.3rem; font-weight:700; color:#10b981;">{{ summary.present }}</div>
+    </div>
+    <div class="card" style="padding:0.6rem;">
+        <div style="font-size:0.7rem; color:#64748b;">Absent</div>
+        <div style="font-size:1.3rem; font-weight:700; color:#ef4444;">{{ summary.absent }}</div>
+    </div>
+    <div class="card" style="padding:0.6rem;">
+        <div style="font-size:0.7rem; color:#64748b;">Unmarked</div>
+        <div style="font-size:1.3rem; font-weight:700; color:#94a3b8;">{{ summary.unmarked }}</div>
+    </div>
+</div>
+
+<!-- Bulk actions -->
+<div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;">
+    <form method="POST" action="{{ url_for('teacher_portal.attendance_mark_all') }}"
+          onsubmit="return confirm('All Present mark karein?');" style="display:inline;">
+        <input type="hidden" name="class" value="{{ selected.class_name }}">
+        <input type="hidden" name="section" value="{{ selected.section }}">
+        <input type="hidden" name="date" value="{{ date }}">
+        <input type="hidden" name="status" value="present">
+        <button class="btn" style="background:#10b981;">✓ All Present</button>
+    </form>
+    <form method="POST" action="{{ url_for('teacher_portal.attendance_mark_all') }}"
+          onsubmit="return confirm('All Absent mark karein?');" style="display:inline;">
+        <input type="hidden" name="class" value="{{ selected.class_name }}">
+        <input type="hidden" name="section" value="{{ selected.section }}">
+        <input type="hidden" name="date" value="{{ date }}">
+        <input type="hidden" name="status" value="absent">
+        <button class="btn" style="background:#ef4444;">✗ All Absent</button>
+    </form>
+</div>
+
+<!-- Student list -->
+<div class="card" style="padding:0;">
+{% for s in students %}
+<div style="display:flex; align-items:center; justify-content:space-between;
+    padding:0.65rem 1rem; border-bottom:1px solid #e2e8f0; flex-wrap:wrap; gap:0.5rem;">
+    <div>
+        <strong>{{ s.name }}</strong>
+        <span style="color:#64748b; font-size:0.82rem; margin-left:0.4rem;">
+            Roll: {{ s.roll or '—' }}
+        </span>
+    </div>
+    <div style="display:flex; gap:0.3rem;">
+        {% for st, color in [('present','#10b981'),('absent','#ef4444'),('late','#f59e0b'),('leave','#3b82f6')] %}
+        <form method="POST" action="{{ url_for('teacher_portal.attendance_mark') }}" style="display:inline;">
+            <input type="hidden" name="student_id" value="{{ s.id }}">
+            <input type="hidden" name="date" value="{{ date }}">
+            <input type="hidden" name="status" value="{{ st }}">
+            <input type="hidden" name="class" value="{{ selected.class_name }}">
+            <input type="hidden" name="section" value="{{ selected.section }}">
+            <button type="submit"
+                style="padding:0.35rem 0.7rem; border:none; border-radius:4px;
+                cursor:pointer; font-size:0.78rem; font-weight:600;
+                background:{{ color if s.status == st else '#f1f5f9' }};
+                color:{{ 'white' if s.status == st else '#475569' }};">
+                {{ st[0].upper() }}
+            </button>
+        </form>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+</div>
+{% endif %}
+{% endblock %}
