@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Online Payments{% endblock %}
+{% block page_title %}💳 Online Payments{% endblock %}
+
+{% block content %}
+
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.5rem; align-items:end;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Month</label>
+        <input type="month" name="month" value="{{ month }}"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+    <button type="submit" class="btn">View</button>
+</form>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:0.75rem; margin-bottom:1rem;">
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Payments ({{ month }})</div>
+        <div style="font-size:1.5rem; font-weight:700;">{{ summary.count }}</div>
+    </div>
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Total Collected</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#10b981;">
+            ₹{{ "%.0f"|format(summary.total) }}
+        </div>
+    </div>
+</div>
+
+{% if payments %}
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:600px;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.6rem; text-align:left;">Student</th>
+            <th style="padding:0.6rem; text-align:left;">Class</th>
+            <th style="padding:0.6rem; text-align:left;">Payment ID</th>
+            <th style="padding:0.6rem; text-align:right;">Amount</th>
+            <th style="padding:0.6rem; text-align:left;">Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in payments %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.55rem;"><strong>{{ p.student_name }}</strong></td>
+            <td style="padding:0.55rem;">{{ p.class_name or '—' }}{% if p.section %}-{{ p.section }}{% endif %}</td>
+            <td style="padding:0.55rem; font-family:monospace; font-size:0.72rem;">
+                {{ p.payment_id[:18] if p.payment_id else '—' }}...
+            </td>
+            <td style="padding:0.55rem; text-align:right; font-weight:600; color:#10b981;">
+                ₹{{ "%.0f"|format(p.amount) }}
+            </td>
+            <td style="padding:0.55rem; font-size:0.78rem; color:#64748b;">
+                {{ p.paid_at.strftime('%d %b %Y, %I:%M %p') if p.paid_at else '—' }}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Is month koi online payment nahi aayi.
+</div>
+{% endif %}
+
+<div class="card" style="margin-top:1rem; background:#f8fafc; font-size:0.82rem; color:#64748b;">
+    <strong>ℹ️ Note:</strong>
+    Ye Razorpay ke through aayi payments hain. Har successful payment automatically
+    <a href="{{ url_for('fees.index', month=month) }}" style="color:#3b82f6;">Fees</a>
+    module mein entry ho jati hai with receipt number.
+</div>
+{% endblock %}
