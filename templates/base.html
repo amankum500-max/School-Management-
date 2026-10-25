@@ -223,6 +223,17 @@
         <a href="#">Settings</a>
         <a href="{{ url_for('settings.index') }}">Settings</a>
         <a href="{{ url_for('backup.index') }}">Backup & Export</a>
+        <!-- Command palette trigger -->
+<button onclick="openCommandPalette()"
+    style="display:flex; align-items:center; gap:0.4rem; padding:0.4rem 0.85rem;
+    margin:0.75rem 1rem; background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.15); border-radius:6px;
+    color:#cbd5e1; cursor:pointer; font-size:0.75rem; width:calc(100% - 2rem);">
+    <span>🔍</span>
+    <span style="flex:1; text-align:left;">Quick search...</span>
+    <kbd style="background:rgba(255,255,255,0.15); padding:0.1rem 0.35rem;
+        border-radius:3px; font-size:0.65rem;">⌘K</kbd>
+</button>
     </aside>
 
     <!-- Main -->
