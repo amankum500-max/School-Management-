@@ -53,10 +53,24 @@
                     <td>₹{{ "%.0f"|format(item.amount) }}</td>
                 </tr>
                 {% endfor %}
-                <tr class="total-row">
-                    <td>Total</td>
-                    <td>₹{{ "%.0f"|format(b.total) }}</td>
-                </tr>
+                {% if b.discount_amount > 0 %}
+<tr>
+    <td style="color:#8b5cf6;">Discount</td>
+    <td style="color:#8b5cf6;">− ₹{{ "%.0f"|format(b.discount_amount) }}</td>
+</tr>
+{% for d in b.discount_items %}
+<tr>
+    <td style="padding-left:1rem; font-size:0.78rem; color:#64748b;">
+        ↳ {{ d.name }}
+    </td>
+    <td style="font-size:0.78rem; color:#64748b;">− ₹{{ "%.0f"|format(d.amount) }}</td>
+</tr>
+{% endfor %}
+{% endif %}
+<tr class="total-row">
+    <td>Total</td>
+    <td>₹{{ "%.0f"|format(b.total) }}</td>
+</tr>
                 <tr>
                     <td style="color:#10b981;">Paid</td>
                     <td style="color:#10b981;">₹{{ "%.0f"|format(b.paid) }}</td>
