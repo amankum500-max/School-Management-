@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Add' if mode=='add' else 'Edit' }} Hostel{% endblock %}
+{% block page_title %}{{ 'New' if mode=='add' else 'Edit' }} Hostel{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:600px;">
+<form method="POST">
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Hostel Name *</label>
+        <input name="name" required value="{{ h.name if h else '' }}"
+            placeholder="e.g. Boys Hostel A"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Warden Name</label>
+            <input name="warden_name" value="{{ h.warden_name if h else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Warden Phone</label>
+            <input name="warden_phone" value="{{ h.warden_phone if h else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Address</label>
+        <textarea name="address" rows="2"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">{{ h.address if h else '' }}</textarea>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Notes</label>
+        <textarea name="notes" rows="2"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">{{ h.notes if h else '' }}</textarea>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Status</label>
+        <select name="status"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="active" {% if h and h.status=='active' %}selected{% endif %}>Active</option>
+            <option value="inactive" {% if h and h.status=='inactive' %}selected{% endif %}>Inactive</option>
+        </select>
+    </div>
+
+    <div style="display:flex; gap:0.75rem;">
+        <button type="submit" class="btn">{{ 'Create' if mode=='add' else 'Save' }}</button>
+        <a href="{{ url_for('hostel.index') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+    </div>
+</form>
+</div>
+{% endblock %}
