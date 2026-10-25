@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}SMS Templates{% endblock %}
+{% block page_title %}⚙️ SMS Templates{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:1rem; display:flex; justify-content:space-between;
+    align-items:center; flex-wrap:wrap; gap:0.5rem;">
+    <a href="{{ url_for('sms.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+</div>
+
+<div class="card" style="background:#eff6ff; border-left:3px solid #3b82f6;
+    font-size:0.82rem; color:#1e40af; margin-bottom:1rem;">
+    <strong>ℹ️ Important:</strong>
+    MSG91 ke saath SMS bhejne ke liye har template ka <strong>DLT-approved template ID</strong>
+    chahiye. DLT portal pe register karo → approval ke baad ID yahan paste karo.
+    Bina ID ke plain-text mode use hoga (sirf test number pe kaam karega).
+</div>
+
+{% for t in templates %}
+<div class="card" style="margin-bottom:0.75rem;">
+    <div style="display:flex; justify-content:space-between; align-items:start;
+        gap:0.5rem; flex-wrap:wrap; margin-bottom:0.5rem;">
+        <div>
+            <h3 style="font-size:0.95rem; margin-bottom:0.15rem; color:#1e293b;">
+                {{ t.name }}
+            </h3>
+            <span style="font-size:0.7rem; background:#f1f5f9; color:#475569;
+                padding:0.15rem 0.45rem; border-radius:3px;
+                text-transform:capitalize;">{{ t.category }}</span>
+            {% if t.msg91_template_id %}
+            <span style="font-size:0.7rem; background:#d1fae5; color:#065f46;
+                padding:0.15rem 0.45rem; border-radius:3px; margin-left:0.25rem;">
+                ✓ DLT Ready
+            </span>
+            {% else %}
+            <span style="font-size:0.7rem; background:#fee2e2; color:#991b1b;
+                padding:0.15rem 0.45rem; border-radius:3px; margin-left:0.25rem;">
+                ⚠️ No Template ID
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div style="background:#f8fafc; padding:0.65rem; border-radius:6px;
+        font-size:0.82rem; color:#334155; font-family:monospace;
+        margin-bottom:0.5rem; white-space:pre-wrap;">{{ t.body }}</div>
+
+    {% if t.variables %}
+    <div style="font-size:0.72rem; color:#64748b; margin-bottom:0.5rem;">
+        Variables: <code>{{ t.variables }}</code>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('sms.template_update_id', tid=t.id) }}"
+          style="display:flex; gap:0.5rem; align-items:end;">
+        <div style="flex:1;">
+            <label style="font-size:0.7rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">MSG91 Template ID</label>
+            <input name="msg91_template_id" value="{{ t.msg91_template_id or '' }}"
+                placeholder="e.g. 64a1b2c3d4e5f6g7h8i9j0k1"
+                style="width:100%; padding:0.4rem; border:1px solid #cbd5e1;
+                border-radius:4px; font-size:0.8rem; font-family:monospace;">
+        </div>
+        <button type="submit" class="btn"
+            style="padding:0.4rem 0.9rem; font-size:0.8rem;">Save ID</button>
+    </form>
+</div>
+{% endfor %}
+
+{% endblock %}
