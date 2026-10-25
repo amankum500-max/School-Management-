@@ -1,1 +1,61 @@
+{% extends "parent/base.html" %}
+{% block title %}New Message{% endblock %}
 
+{% block content %}
+
+<div style="max-width:600px; margin:0 auto;">
+
+<div style="margin-bottom:1rem;">
+    <a href="{{ url_for('parent.messages_list') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Messages</a>
+</div>
+
+<div class="card">
+<form method="POST">
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Regarding Child (optional)</label>
+        <select name="student_id"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px;">
+            <option value="">— General question —</option>
+            {% for c in children %}
+            <option value="{{ c.id }}">
+                {{ c.name }} ({{ c.class_name or '?' }}{% if c.section %}-{{ c.section }}{% endif %})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Subject</label>
+        <input name="subject" placeholder="e.g. Fee query, Leave request..."
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px;">
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Message *</label>
+        <textarea name="body" rows="6" required
+            placeholder="Apna sawaal ya concern likhein..."
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px;"></textarea>
+    </div>
+
+    <div style="background:#eff6ff; padding:0.65rem 0.9rem; border-radius:6px;
+        font-size:0.82rem; color:#1e40af; margin-bottom:1rem;">
+        <strong>ℹ️</strong> School staff aapko yahan reply karega. Email ya phone
+        notification nahi milega — Messages section mein check karte rahein.
+    </div>
+
+    <div style="display:flex; gap:0.75rem;">
+        <button type="submit" class="btn">Send Message</button>
+        <a href="{{ url_for('parent.messages_list') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">
+            Cancel
+        </a>
+    </div>
+</form>
+</div>
+
+</div>
+{% endblock %}
