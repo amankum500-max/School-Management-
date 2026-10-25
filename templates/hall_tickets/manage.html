@@ -1,1 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Seating — {{ exam.name }}{% endblock %}
+{% block page_title %}🎫 {{ exam.name }} — Seating{% endblock %}
 
+{% block content %}
+
+<div style="margin-bottom:1rem; display:flex; justify-content:space-between;
+    align-items:center; flex-wrap:wrap; gap:0.5rem;">
+    <a href="{{ url_for('hall_tickets.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <a href="{{ url_for('hall_tickets.preview', exam_id=exam.id) }}"
+           target="_blank" class="btn"
+           style="background:#3b82f6; font-size:0.85rem;">🖨️ Print All Tickets</a>
+    </div>
+</div>
+
+<!-- Exam info -->
+<div class="card" style="margin-bottom:1rem;">
+    <h2 style="font-size:1.1rem; color:#1e293b; margin-bottom:0.15rem;">
+        {{ exam.name }} — Class {{ exam.class_name }}
+    </h2>
+    <div style="font-size:0.85rem; color:#64748b;">
+        {% if exam.exam_date %}Date: <strong>{{ exam.exam_date }}</strong>{% endif %}
+        • Subjects: {{ exam.subjects|join(', ') }}
+        • Max Marks: {{ exam.max_marks }}/subject
+    </div>
+</div>
+
+<!-- Auto-seat + clear -->
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.65rem; color:#1e293b;">
+        ⚡ Auto-Assign Seating
+    </h3>
+
+    {% if total_set > 0 %}
+    <div style="background:#d1fae5; padding:0.65rem; border-radius:6px;
+        margin-bottom:0.75rem; font-size:0.85rem; color:#065f46;">
+        ✅ {{ total_set }} students ke seats already assigned hain.
+        {% if seating_summary %}
+        Rooms: {% for r in seating_summary %}{{ r.room_no }}({{ r.count }}){% if not loop.last %}, {% endif %}{% endfor %}
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('hall_tickets.auto_seat', exam_id=exam.id) }}"
+          style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;"
+          onsubmit="return confirm('Auto-assign karega {{ students|length }} students ke seats. Existing overwrite ho jayenge. OK?');">
+        <div>
+            <label style="font-size:0.72rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Starting Room</label>
+            <input name="room_start" value="101"
+                style="padding:0.5rem; border:1px solid #cbd5e1; border-radius:5px;
+                font-size:0.85rem; width:80px;">
+        </div>
+        <div>
+            <label style="font-size:0.72rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Students per Room</label>
+            <input name="per_room" type="number" value="30" min="1"
+                style="padding:0.5rem; border:1px solid #cbd5e1; border-radius:5px;
+                font-size:0.85rem; width:90px;">
+        </div>
+        <button type="submit" class="btn" style="background:#8b5cf6;">
+            ⚡ Auto-Assign
+        </button>
+        {% if total_set > 0 %}
+        <button type="button" onclick="clearSeating()"
+            style="padding:0.5rem 1rem; background:#ef4444; color:white;
+            border:none; border-radius:6px; font-size:0.85rem; font-weight:600;
+            cursor:pointer; margin-left:auto;">🗑️ Clear All</button>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Students table -->
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem;
+    min-width:600px;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.6rem; text-align:left;">Roll</th>
+            <th style="padding:0.6rem; text-align:left;">Student</th>
+            <th style="padding:0.6rem; text-align:left;">Class</th>
+            <th style="padding:0.6rem; text-align:center;">Room</th>
+            <th style="padding:0.6rem; text-align:center;">Seat</th>
+            <th style="padding:0.6rem; text-align:right;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for s in students %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.55rem; color:#64748b;">{{ s.roll or '—' }}</td>
+            <td style="padding:0.55rem;"><strong>{{ s.name }}</strong></td>
+            <td style="padding:0.55rem;">{{ s.class_name or '—' }}{% if s.section %}-{{ s.section }}{% endif %}</td>
+            <td style="padding:0.55rem; text-align:center;">
+                {% if s.room_no %}
+                <span style="background:#dbeafe; color:#1e40af; padding:0.15rem 0.5rem;
+                    border-radius:3px; font-weight:600; font-size:0.78rem;">
+                    {{ s.room_no }}
+                </span>
+                {% else %}—{% endif %}
+            </td>
+            <td style="padding:0.55rem; text-align:center;">
+                {% if s.seat_no %}
+                <span style="background:#ede9fe; color:#5b21b6; padding:0.15rem 0.5rem;
+                    border-radius:3px; font-weight:600; font-size:0.78rem;
+                    font-family:monospace;">
+                    {{ s.seat_no }}
+                </span>
+                {% else %}—{% endif %}
+            </td>
+            <td style="padding:0.55rem; text-align:right; white-space:nowrap;">
+                <form method="POST" action="{{ url_for('hall_tickets.set_seat', exam_id=exam.id) }}"
+                      style="display:inline-flex; gap:0.3rem; align-items:center;">
+                    <input type="hidden" name="student_id" value="{{ s.id }}">
+                    <input name="room_no" value="{{ s.room_no or '' }}" placeholder="Room"
+                        style="width:55px; padding:0.25rem; border:1px solid #cbd5e1;
+                        border-radius:3px; font-size:0.75rem;">
+                    <input name="seat_no" value="{{ s.seat_no or '' }}" placeholder="Seat"
+                        style="width:55px; padding:0.25rem; border:1px solid #cbd5e1;
+                        border-radius:3px; font-size:0.75rem;">
+                    <button type="submit"
+                        style="background:#3b82f6; color:white; border:none;
+                        padding:0.25rem 0.55rem; border-radius:3px; cursor:pointer;
+                        font-size:0.75rem; font-weight:600;">✓</button>
+                </form>
+                <a href="{{ url_for('hall_tickets.preview', exam_id=exam.id, student_id=s.id) }}"
+                   target="_blank"
+                   style="color:#8b5cf6; text-decoration:none; font-size:0.78rem;
+                   margin-left:0.4rem;">Ticket</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<!-- Hidden clear form -->
+<form method="POST" action="{{ url_for('hall_tickets.clear_seating', exam_id=exam.id) }}"
+      id="clearForm" style="display:none;"></form>
+<script>
+    function clearSeating() {
+        if (confirm('Saare seating records delete kar dein? Ye undo nahi hoga.')) {
+            document.getElementById('clearForm').submit();
+        }
+    }
+</script>
+{% endblock %}
