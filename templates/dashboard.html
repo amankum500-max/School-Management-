@@ -627,6 +627,52 @@
 
 <!-- Class attendance bars -->
 {% if class_att_bars %}
+    <!-- Staff attendance today -->
+{% if staff_att_today %}
+<div class="card" style="margin-bottom:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center;
+        margin-bottom:0.5rem;">
+        <h3 style="font-size:0.95rem; color:#1e293b;">
+            👨‍🏫 Staff Attendance Today
+        </h3>
+        <a href="{{ url_for('staff_attendance.index') }}"
+           style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">
+            Mark →
+        </a>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr));
+        gap:0.5rem;">
+        <div style="background:#d1fae5; padding:0.5rem; border-radius:6px;
+            text-align:center;">
+            <div style="font-size:0.7rem; color:#065f46;">Present</div>
+            <div style="font-size:1.3rem; font-weight:700; color:#065f46;">
+                {{ staff_att_today.present }}
+            </div>
+        </div>
+        <div style="background:#fee2e2; padding:0.5rem; border-radius:6px;
+            text-align:center;">
+            <div style="font-size:0.7rem; color:#991b1b;">Absent</div>
+            <div style="font-size:1.3rem; font-weight:700; color:#991b1b;">
+                {{ staff_att_today.absent }}
+            </div>
+        </div>
+        <div style="background:#dbeafe; padding:0.5rem; border-radius:6px;
+            text-align:center;">
+            <div style="font-size:0.7rem; color:#1e40af;">Leave</div>
+            <div style="font-size:1.3rem; font-weight:700; color:#1e40af;">
+                {{ staff_att_today.leave }}
+            </div>
+        </div>
+        <div style="background:#f1f5f9; padding:0.5rem; border-radius:6px;
+            text-align:center;">
+            <div style="font-size:0.7rem; color:#475569;">Unmarked</div>
+            <div style="font-size:1.3rem; font-weight:700; color:#475569;">
+                {{ staff_att_today.unmarked }}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 <div class="card" style="margin-bottom:1rem;">
     <h3 style="font-size:0.95rem; margin-bottom:0.65rem; color:#1e293b;">
         📊 Class-wise Attendance Today
