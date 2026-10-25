@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify OTP</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:system-ui,sans-serif; min-height:100vh;
+            background:linear-gradient(135deg,#1e293b,#3b82f6);
+            display:flex; align-items:center; justify-content:center; padding:1rem; }
+        .card { background:white; padding:2rem; border-radius:14px;
+            width:100%; max-width:400px; box-shadow:0 20px 50px rgba(0,0,0,0.2); }
+        h1 { font-size:1.4rem; margin-bottom:0.25rem; color:#1e293b; }
+        p.sub { color:#64748b; font-size:0.88rem; margin-bottom:1.5rem; }
+        label { display:block; font-size:0.85rem; color:#334155;
+            margin-bottom:0.35rem; font-weight:500; }
+        input { width:100%; padding:0.85rem; border:2px solid #cbd5e1;
+            border-radius:8px; font-size:1.4rem; text-align:center;
+            font-family:monospace; letter-spacing:0.5rem; margin-bottom:1rem; }
+        input:focus { outline:none; border-color:#3b82f6; }
+        button { width:100%; padding:0.75rem; background:#3b82f6; color:white;
+            border:none; border-radius:8px; font-size:0.95rem; font-weight:600;
+            cursor:pointer; }
+        .flash { padding:0.65rem; border-radius:6px; font-size:0.85rem;
+            margin-bottom:1rem; }
+        .flash.success { background:#d1fae5; color:#065f46; }
+        .flash.error { background:#fee2e2; color:#991b1b; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>📱 Enter OTP</h1>
+        <p class="sub">6-digit code aapke phone pe bheja gaya hai</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for cat, msg in messages %}
+            <div class="flash {{ cat }}">{{ msg }}</div>
+            {% endfor %}
+        {% endwith %}
+
+        <form method="POST">
+            <label>OTP</label>
+            <input name="otp" required maxlength="6" pattern="[0-9]{6}"
+                inputmode="numeric" autofocus>
+
+            <button type="submit">Verify OTP</button>
+        </form>
+    </div>
+</body>
+</html>
