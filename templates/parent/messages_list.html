@@ -1,1 +1,67 @@
+{% extends "parent/base.html" %}
+{% block title %}Messages{% endblock %}
 
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:1rem;">
+    <h2 style="font-size:1.15rem; color:#1e293b;">💬 Messages</h2>
+    <a href="{{ url_for('parent.messages_new') }}"
+       style="padding:0.5rem 1rem; background:#f59e0b; color:white;
+       border-radius:6px; text-decoration:none; font-size:0.85rem;
+       font-weight:600;">
+        + New Message
+    </a>
+</div>
+
+{% if not threads %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Abhi tak koi message nahi. School se sampark karne ke liye "+ New Message" dabao.
+</div>
+{% else %}
+{% for t in threads %}
+<a href="{{ url_for('parent.messages_thread', thread_id=t.id) }}"
+   style="text-decoration:none; color:inherit;">
+    <div class="card" style="border-left:4px solid
+        {{ '#ef4444' if t.unread_by_parent > 0 else ('#f59e0b' if t.status=='open' else '#94a3b8') }};
+        {{ 'background:#fef2f2' if t.unread_by_parent > 0 }};">
+        <div style="display:flex; justify-content:space-between; align-items:start;
+            gap:0.5rem; flex-wrap:wrap;">
+            <div style="flex:1;">
+                <div style="display:flex; gap:0.5rem; align-items:center;
+                    flex-wrap:wrap; margin-bottom:0.15rem;">
+                    <strong style="font-size:0.95rem; color:#1e293b;">
+                        {{ t.subject or 'Conversation' }}
+                    </strong>
+                    {% if t.unread_by_parent > 0 %}
+                    <span style="background:#ef4444; color:white;
+                        font-size:0.7rem; padding:0.1rem 0.45rem;
+                        border-radius:10px; font-weight:700;">
+                        {{ t.unread_by_parent }} new
+                    </span>
+                    {% endif %}
+                </div>
+                {% if t.student_name %}
+                <div style="font-size:0.78rem; color:#64748b;">
+                    Re: {{ t.student_name }} ({{ t.class_name or '' }}{% if t.section %}-{{ t.section }}{% endif %})
+                </div>
+                {% endif %}
+                <div style="font-size:0.82rem; color:#64748b; margin-top:0.35rem;
+                    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                    {% if t.last_message_by == 'parent' %}
+                    <span style="color:#f59e0b;">You:</span>
+                    {% else %}
+                    <span style="color:#3b82f6;">School:</span>
+                    {% endif %}
+                    {{ t.last_msg }}
+                </div>
+            </div>
+            <div style="font-size:0.7rem; color:#94a3b8; text-align:right;">
+                {{ t.last_message_at.strftime('%d %b, %H:%M') if t.last_message_at else '' }}
+            </div>
+        </div>
+    </div>
+</a>
+{% endfor %}
+{% endif %}
+{% endblock %}
