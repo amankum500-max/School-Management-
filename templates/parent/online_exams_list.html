@@ -1,1 +1,76 @@
+{% extends "parent/base.html" %}
+{% block title %}Online Exams{% endblock %}
 
+{% block content %}
+
+{% if children|length > 1 %}
+<div style="margin-bottom:0.75rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+    {% for c in children %}
+    <a href="{{ url_for('parent.online_exams_list', child_id=c.id) }}"
+       style="padding:0.5rem 1rem; border-radius:6px; text-decoration:none;
+       font-size:0.85rem; font-weight:600;
+       background:{{ '#f59e0b' if selected and c.id == selected.id else 'white' }};
+       color:{{ 'white' if selected and c.id == selected.id else '#475569' }};
+       border:1px solid {{ '#f59e0b' if selected and c.id == selected.id else '#cbd5e1' }};">
+        {{ c.name }}
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if selected %}
+<h2 style="font-size:1.05rem; margin-bottom:0.75rem; color:#1e293b;">
+    Online Exams — {{ selected.name }} ({{ selected.class_name or '?' }})
+</h2>
+{% endif %}
+
+{% if not exams %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Abhi koi published online exam nahi hai.
+</div>
+{% else %}
+{% for e in exams %}
+{% set done = e.attempt_status == 'submitted' %}
+<div class="card" style="border-left:4px solid
+    {{ '#10b981' if done else '#f59e0b' }};">
+    <div style="display:flex; justify-content:space-between; align-items:start;
+        flex-wrap:wrap; gap:0.5rem;">
+        <div style="flex:1;">
+            <h3 style="font-size:1rem; color:#1e293b; margin-bottom:0.15rem;">
+                {{ e.title }}
+            </h3>
+            <div style="font-size:0.82rem; color:#64748b;">
+                {% if e.subject %}{{ e.subject }} • {% endif %}
+                {{ e.q_count }} Qs • {{ e.total_marks }} marks • {{ e.duration }} min
+            </div>
+            {% if done %}
+            <div style="margin-top:0.35rem; font-size:0.82rem; color:#065f46;
+                background:#d1fae5; padding:0.35rem 0.65rem; border-radius:5px;
+                display:inline-block;">
+                ✓ Submitted — Score: {{ e.score }}/{{ e.total_marks }}
+            </div>
+            {% endif %}
+        </div>
+        <div style="display:flex; gap:0.5rem;">
+            {% if done %}
+            <a href="{{ url_for('parent.online_exam_result', attempt_id=e.attempt_id) }}"
+               style="padding:0.5rem 1rem; background:#10b981; color:white;
+               border-radius:6px; text-decoration:none; font-size:0.82rem;
+               font-weight:600;">View Result</a>
+            {% elif e.attempt_status == 'in_progress' %}
+            <a href="{{ url_for('parent.online_exam_take', attempt_id=e.attempt_id) }}"
+               style="padding:0.5rem 1rem; background:#f59e0b; color:white;
+               border-radius:6px; text-decoration:none; font-size:0.82rem;
+               font-weight:600;">Continue →</a>
+            {% else %}
+            <a href="{{ url_for('parent.online_exam_start', exam_id=e.exam_id, child_id=selected.id) }}"
+               style="padding:0.5rem 1rem; background:#3b82f6; color:white;
+               border-radius:6px; text-decoration:none; font-size:0.82rem;
+               font-weight:600;">Start Exam</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}
