@@ -103,7 +103,65 @@
         <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem;">{{ recent_notices or 0 }}</div>
     </div>
 </div>
+<!-- Alerts -->
+{% if computed_alerts or custom_alerts %}
+<div class="card" style="margin-bottom:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.65rem;">
+        <h3 style="font-size:0.95rem; color:#1e293b;">🔔 Alerts & Reminders</h3>
+        <a href="{{ url_for('alerts.index') }}"
+           style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">View All →</a>
+    </div>
 
+    {% set type_colors = {
+        'danger': ('#fee2e2', '#991b1b', '#ef4444'),
+        'warning': ('#fef3c7', '#92400e', '#f59e0b'),
+        'success': ('#d1fae5', '#065f46', '#10b981'),
+        'info': ('#dbeafe', '#1e40af', '#3b82f6')
+    } %}
+
+    {% if custom_alerts %}
+        {% for a in custom_alerts %}
+        {% set c = type_colors.get(a.alert_type, type_colors['info']) %}
+        <a href="{{ url_for('alerts.index') }}" style="text-decoration:none; color:inherit;">
+            <div style="display:flex; gap:0.6rem; padding:0.6rem;
+                background:{{ c[0] }}; border-radius:6px; margin-bottom:0.4rem;
+                border-left:3px solid {{ c[2] }};">
+                <div style="flex:1;">
+                    <div style="font-size:0.88rem; font-weight:600; color:{{ c[1] }};">
+                        📢 {{ a.title }}
+                    </div>
+                    {% if a.message %}
+                    <div style="font-size:0.78rem; color:{{ c[1] }}; margin-top:0.1rem; opacity:0.85;">
+                        {{ a.message }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    {% endif %}
+
+    {% for a in computed_alerts %}
+    {% set c = type_colors.get(a.type, type_colors['info']) %}
+    <a href="{{ a.link }}" style="text-decoration:none; color:inherit;">
+        <div style="display:flex; gap:0.6rem; padding:0.6rem; align-items:center;
+            background:{{ c[0] }}; border-radius:6px; margin-bottom:0.4rem;
+            border-left:3px solid {{ c[2] }};">
+            <div style="font-size:1.2rem;">{{ a.icon }}</div>
+            <div style="flex:1;">
+                <div style="font-size:0.88rem; font-weight:600; color:{{ c[1] }};">
+                    {{ a.title }}
+                </div>
+                <div style="font-size:0.75rem; color:{{ c[1] }}; opacity:0.85; margin-top:0.1rem;">
+                    {{ a.message }}
+                </div>
+            </div>
+            <div style="font-size:1.2rem; color:{{ c[2] }};">→</div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
 <!-- Charts Row -->
 <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1rem; margin-bottom:1rem;">
     <div class="card">
