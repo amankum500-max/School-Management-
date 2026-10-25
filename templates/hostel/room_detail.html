@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Room {{ room.room_no }}{% endblock %}
+{% block page_title %}Room {{ room.room_no }}{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:1rem;">
+    <a href="{{ url_for('hostel.view', hid=room.hostel_id) }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back to Hostel</a>
+</div>
+
+<div class="card" style="margin-bottom:1rem;">
+    <h2 style="font-size:1.15rem; color:#1e293b;">Room {{ room.room_no }}</h2>
+    <div style="margin-top:0.5rem; display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:0.5rem;
+        font-size:0.88rem;">
+        <div><span style="color:#64748b;">Type:</span>
+            <strong style="text-transform:capitalize;">{{ room.room_type }}</strong></div>
+        {% if room.floor %}
+        <div><span style="color:#64748b;">Floor:</span>
+            <strong>{{ room.floor }}</strong></div>
+        {% endif %}
+        <div><span style="color:#64748b;">Capacity:</span>
+            <strong>{{ room.capacity }}</strong></div>
+        <div><span style="color:#64748b;">Monthly Fee:</span>
+            <strong>₹{{ "%.0f"|format(room.monthly_fee) }}</strong></div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="font-size:1rem; margin-bottom:0.65rem; color:#1e293b;">
+        🎓 Inmates ({{ inmates|length }}/{{ room.capacity }})
+    </h3>
+    {% if inmates %}
+    {% for i in inmates %}
+    <div style="padding:0.6rem 0; border-top:1px solid #f1f5f9;
+        display:flex; justify-content:space-between; align-items:center;">
+        <div>
+            <strong>{{ i.name }}</strong>
+            <div style="font-size:0.75rem; color:#94a3b8;">
+                Roll: {{ i.roll or '—' }} • {{ i.class_name or '—' }}{% if i.section %}-{{ i.section }}{% endif %}
+                • Since {{ i.check_in.strftime('%d %b') if i.check_in else '—' }}
+            </div>
+        </div>
+        {% if i.phone %}
+        <a href="tel:{{ i.phone }}"
+           style="color:#3b82f6; text-decoration:none; font-size:0.8rem;">📞</a>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <p style="color:#94a3b8; font-size:0.85rem;">Koi inmate nahi.</p>
+    {% endif %}
+</div>
+{% endblock %}
