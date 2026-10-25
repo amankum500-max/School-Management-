@@ -1,1 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Currently In{% endblock %}
+{% block page_title %}🚪 Visitors Currently In{% endblock %}
 
+{% block content %}
+
+<div style="margin-bottom:1rem;">
+    <a href="{{ url_for('visitors.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← All Visitors</a>
+</div>
+
+{% if not visitors %}
+<div class="card" style="text-align:center; padding:2rem; color:#10b981;">
+    ✅ Campus empty hai — koi visitor andar nahi.
+</div>
+{% else %}
+<div style="margin-bottom:1rem; color:#64748b; font-size:0.85rem;">
+    <strong>{{ visitors|length }}</strong> visitor{{ 's' if visitors|length > 1 }} campus mein hain.
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+    gap:0.75rem;">
+    {% for v in visitors %}
+    <div class="card" style="border-left:4px solid #3b82f6; padding:0.85rem;">
+        <div style="display:flex; justify-content:space-between; align-items:start;
+            margin-bottom:0.35rem; gap:0.5rem;">
+            <div style="flex:1;">
+                <a href="{{ url_for('visitors.view', visitor_id=v.id) }}"
+                   style="color:#1e293b; text-decoration:none; font-weight:600;
+                   font-size:0.95rem;">
+                    {{ v.name }}
+                </a>
+                {% if v.phone %}
+                <div style="font-size:0.72rem; color:#94a3b8;
+                    font-family:monospace;">{{ v.phone }}</div>
+                {% endif %}
+            </div>
+            <span style="font-family:monospace; font-size:0.72rem;
+                background:#f1f5f9; padding:0.1rem 0.4rem;
+                border-radius:3px;">{{ v.badge_no }}</span>
+        </div>
+        <div style="font-size:0.78rem; color:#64748b; margin-bottom:0.35rem;">
+            <span style="text-transform:capitalize;">{{ v.purpose }}</span>
+            {% if v.student_name %}• {{ v.student_name }}{% elif v.staff_name %}• {{ v.staff_name }}{% endif %}
+        </div>
+        <div style="font-size:0.75rem; color:#10b981; margin-bottom:0.5rem;">
+            Since {{ v.in_time.strftime('%I:%M %p') if v.in_time else '' }}
+        </div>
+        <div style="display:flex; gap:0.4rem;">
+            <a href="{{ url_for('visitors.badge', visitor_id=v.id) }}"
+               target="_blank"
+               style="padding:0.35rem 0.7rem; background:#3b82f6; color:white;
+               border-radius:4px; text-decoration:none; font-size:0.75rem;
+               font-weight:600; text-align:center; flex:1;">Badge</a>
+            <form method="POST"
+                  action="{{ url_for('visitors.checkout', visitor_id=v.id) }}"
+                  onsubmit="return confirm('Check out {{ v.name }}?');"
+                  style="flex:1;">
+                <button style="width:100%; padding:0.35rem 0.7rem;
+                    background:#ef4444; color:white; border:none;
+                    border-radius:4px; cursor:pointer; font-size:0.75rem;
+                    font-weight:600;">Check Out</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
