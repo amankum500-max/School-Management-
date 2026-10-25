@@ -281,7 +281,14 @@
 
         <!-- Body -->
         <div class="id-body">
-            <div class="id-photo">{{ initial }}</div>
+            <div class="id-photo" style="overflow:hidden; padding:0;">
+    {% if s.photo_url %}
+    <img src="{{ s.photo_url }}" alt="{{ s.name }}"
+        style="width:100%; height:100%; object-fit:cover; display:block;">
+    {% else %}
+    {{ initial }}
+    {% endif %}
+            </div>
 
             <div class="id-info">
                 <div class="id-name" title="{{ s.name }}">{{ s.name }}</div>
