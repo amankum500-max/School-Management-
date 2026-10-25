@@ -1,1 +1,239 @@
+{% extends "base.html" %}
+{% block title %}{{ r.student.name }} — Report Card{% endblock %}
+{% block page_title %}📋 Report Card — {{ r.student.name }}{% endblock %}
 
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+    <a href="{{ url_for('report_cards.index', **{'class': r.student.class_name, 'ay': r.academic_year}) }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+    <div style="display:flex; gap:0.5rem;">
+        <a href="{{ url_for('report_cards.print_view', student_id=r.student.id, ay=r.academic_year) }}"
+           target="_blank" class="btn"
+           style="background:#8b5cf6; font-size:0.85rem;">🖨️ Print</a>
+    </div>
+</div>
+
+<!-- Summary card -->
+<div class="card" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);
+    color:white; margin-bottom:1rem;">
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+        gap:0.75rem; text-align:center;">
+        <div>
+            <div style="font-size:0.7rem; opacity:0.85;">Overall %</div>
+            <div style="font-size:1.7rem; font-weight:700;">
+                {{ r.overall_percent }}%
+            </div>
+        </div>
+        <div>
+            <div style="font-size:0.7rem; opacity:0.85;">Grade</div>
+            <div style="font-size:1.7rem; font-weight:700;">{{ r.overall_grade }}</div>
+        </div>
+        <div>
+            <div style="font-size:0.7rem; opacity:0.85;">Rank</div>
+            <div style="font-size:1.7rem; font-weight:700;">
+                {{ r.class_rank or '—' }}/{{ r.class_total }}
+            </div>
+        </div>
+        <div>
+            <div style="font-size:0.7rem; opacity:0.85;">Attendance</div>
+            <div style="font-size:1.7rem; font-weight:700;">{{ r.attendance.percent }}%</div>
+        </div>
+    </div>
+</div>
+
+<!-- Exam-wise marks -->
+<div class="card" style="margin-bottom:1rem; padding:0; overflow:auto;">
+    <div style="padding:0.65rem 1rem; background:#f1f5f9;
+        border-bottom:1px solid #e2e8f0;">
+        <strong style="font-size:0.95rem; color:#1e293b;">
+            📝 Exam-wise Results ({{ r.exams|length }})
+        </strong>
+    </div>
+    {% if r.exams %}
+    <table style="width:100%; border-collapse:collapse; font-size:0.82rem;
+        min-width:600px;">
+        <thead>
+            <tr style="background:#f8fafc;">
+                <th style="padding:0.5rem; text-align:left;">Exam</th>
+                {% for subj in r.all_subjects %}
+                <th style="padding:0.5rem; text-align:center;">{{ subj }}</th>
+                {% endfor %}
+                <th style="padding:0.5rem; text-align:right;">Total</th>
+                <th style="padding:0.5rem; text-align:center;">%</th>
+                <th style="padding:0.5rem; text-align:center;">Grade</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in r.exams %}
+            <tr style="border-top:1px solid #e2e8f0;">
+                <td style="padding:0.5rem; font-weight:600;">
+                    {{ e.name }}
+                    {% if e.date %}
+                    <div style="font-size:0.7rem; color:#94a3b8;">
+                        {{ e.date.strftime('%b %Y') if e.date.strftime else e.date }}
+                    </div>
+                    {% endif %}
+                </td>
+                {% for subj in r.all_subjects %}
+                <td style="padding:0.5rem; text-align:center;
+                    {{ 'color:#cbd5e1;' if subj not in e.marks }}">
+                    {{ e.marks.get(subj, '—') if e.marks.get(subj) is not none else '—' }}
+                </td>
+                {% endfor %}
+                <td style="padding:0.5rem; text-align:right; font-weight:600;">
+                    {{ "%.0f"|format(e.obtained) }}/{{ e.max }}
+                </td>
+                <td style="padding:0.5rem; text-align:center; font-weight:600;
+                    color:{{ '#10b981' if e.percent >= 75 else ('#f59e0b' if e.percent >= 40 else '#ef4444') }};">
+                    {{ e.percent }}%
+                </td>
+                <td style="padding:0.5rem; text-align:center; font-weight:700;">
+                    {{ e.grade }}
+                </td>
+            </tr>
+            {% endfor %}
+            <!-- Subject averages row -->
+            <tr style="border-top:2px solid #1e293b; background:#f8fafc;">
+                <td style="padding:0.5rem; font-weight:700;">Average %</td>
+                {% for subj in r.all_subjects %}
+                {% set avg = r.subject_averages.get(subj) %}
+                <td style="padding:0.5rem; text-align:center; font-weight:600;
+                    color:{{ '#10b981' if avg and avg >= 75 else ('#f59e0b' if avg and avg >= 40 else ('#ef4444' if avg else '#cbd5e1')) }};">
+                    {{ avg if avg is not none else '—' }}
+                </td>
+                {% endfor %}
+                <td style="padding:0.5rem; text-align:right; font-weight:700;">
+                    {{ "%.0f"|format(r.total_obtained) }}/{{ r.total_max }}
+                </td>
+                <td style="padding:0.5rem; text-align:center; font-weight:700;">
+                    {{ r.overall_percent }}%
+                </td>
+                <td style="padding:0.5rem; text-align:center; font-weight:700;">
+                    {{ r.overall_grade }}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    {% else %}
+    <div style="padding:2rem; text-align:center; color:#64748b;">
+        Is academic year mein koi exam marks enter nahi hue.
+    </div>
+    {% endif %}
+</div>
+
+<!-- Attendance + Fee -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:1rem; margin-bottom:1rem;">
+
+    <div class="card">
+        <h3 style="font-size:0.95rem; margin-bottom:0.65rem; color:#1e293b;">
+            📊 Attendance Summary
+        </h3>
+        <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:0.5rem;
+            font-size:0.85rem;">
+            <div style="padding:0.4rem 0.6rem; background:#d1fae5; border-radius:5px;">
+                <div style="color:#065f46; font-size:0.7rem;">Present</div>
+                <div style="font-weight:700; color:#065f46;">{{ r.attendance.present }}</div>
+            </div>
+            <div style="padding:0.4rem 0.6rem; background:#fee2e2; border-radius:5px;">
+                <div style="color:#991b1b; font-size:0.7rem;">Absent</div>
+                <div style="font-weight:700; color:#991b1b;">{{ r.attendance.absent }}</div>
+            </div>
+            <div style="padding:0.4rem 0.6rem; background:#fef3c7; border-radius:5px;">
+                <div style="color:#92400e; font-size:0.7rem;">Late</div>
+                <div style="font-weight:700; color:#92400e;">{{ r.attendance.late }}</div>
+            </div>
+            <div style="padding:0.4rem 0.6rem; background:#dbeafe; border-radius:5px;">
+                <div style="color:#1e40af; font-size:0.7rem;">Leave</div>
+                <div style="font-weight:700; color:#1e40af;">{{ r.attendance.leave }}</div>
+            </div>
+        </div>
+        <div style="margin-top:0.5rem; font-size:0.8rem; color:#64748b;
+            text-align:center;">
+            Overall: <strong>{{ r.attendance.percent }}%</strong>
+            ({{ r.attendance.total }} days marked)
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 style="font-size:0.95rem; margin-bottom:0.65rem; color:#1e293b;">
+            💰 Fee Status
+        </h3>
+        <div style="font-size:0.85rem; display:flex; flex-direction:column;
+            gap:0.35rem;">
+            <div style="display:flex; justify-content:space-between;">
+                <span style="color:#64748b;">Total Billed</span>
+                <strong>₹{{ "%.0f"|format(r.fee_status.billed) }}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+                <span style="color:#64748b;">Paid</span>
+                <strong style="color:#10b981;">₹{{ "%.0f"|format(r.fee_status.paid) }}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between;
+                padding-top:0.35rem; border-top:1px solid #e2e8f0;">
+                <span style="color:#64748b;">Pending</span>
+                <strong style="color:{{ '#ef4444' if r.fee_status.pending > 0 else '#10b981' }};">
+                    ₹{{ "%.0f"|format(r.fee_status.pending) }}
+                </strong>
+            </div>
+            <div style="margin-top:0.5rem; padding:0.4rem 0.6rem;
+                background:{{ '#d1fae5' if r.fee_status.cleared else '#fee2e2' }};
+                border-radius:5px; text-align:center; font-size:0.82rem;
+                color:{{ '#065f46' if r.fee_status.cleared else '#991b1b' }};
+                font-weight:600;">
+                {{ '✅ Fees Cleared' if r.fee_status.cleared else '⚠️ Pending Fees' }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Remarks editor -->
+<div class="card">
+    <h3 style="font-size:0.95rem; margin-bottom:0.65rem; color:#1e293b;">
+        ✏️ Remarks & Conduct
+    </h3>
+    <form method="POST"
+          action="{{ url_for('report_cards.save_remarks', student_id=r.student.id) }}">
+        <input type="hidden" name="academic_year" value="{{ r.academic_year }}">
+
+        <div style="margin-bottom:0.75rem;">
+            <label style="font-size:0.8rem; color:#334155;">
+                Conduct
+            </label>
+            <select name="conduct"
+                style="width:100%; padding:0.55rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+                {% for c in conduct_options %}
+                <option value="{{ c }}" {% if r.remarks.conduct == c %}selected{% endif %}>
+                    {{ c }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="margin-bottom:0.75rem;">
+            <label style="font-size:0.8rem; color:#334155;">
+                Class Teacher's Remarks
+            </label>
+            <textarea name="teacher_remark" rows="2"
+                placeholder="e.g. Excellent progress in Mathematics..."
+                style="width:100%; padding:0.55rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">{{ r.remarks.teacher_remark }}</textarea>
+        </div>
+
+        <div style="margin-bottom:0.75rem;">
+            <label style="font-size:0.8rem; color:#334155;">
+                Principal's Remarks
+            </label>
+            <textarea name="principal_remark" rows="2"
+                placeholder="e.g. Keep up the good work..."
+                style="width:100%; padding:0.55rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">{{ r.remarks.principal_remark }}</textarea>
+        </div>
+
+        <button type="submit" class="btn">Save Remarks</button>
+    </form>
+</div>
+{% endblock %}
