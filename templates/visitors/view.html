@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Visitor — {{ v.name }}{% endblock %}
+{% block page_title %}🚶 Visitor Detail{% endblock %}
+
+{% block content %}
+<div style="max-width:700px;">
+
+<div style="margin-bottom:1rem; display:flex; justify-content:space-between;
+    align-items:center; flex-wrap:wrap; gap:0.5rem;">
+    <a href="{{ url_for('visitors.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+    <div style="display:flex; gap:0.5rem;">
+        <a href="{{ url_for('visitors.badge', visitor_id=v.id) }}"
+           target="_blank" class="btn"
+           style="background:#3b82f6; font-size:0.85rem;">🖨️ Badge</a>
+        {% if v.status == 'in' %}
+        <form method="POST"
+              action="{{ url_for('visitors.checkout', visitor_id=v.id) }}"
+              onsubmit="return confirm('Check out?');" style="display:inline;">
+            <button class="btn" style="background:#ef4444; font-size:0.85rem;">
+                Check Out
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card" style="border-left:4px solid
+    {{ '#3b82f6' if v.status == 'in' else '#94a3b8' }};">
+    <div style="display:flex; justify-content:space-between; align-items:start;
+        flex-wrap:wrap; gap:0.5rem;">
+        <div>
+            <h2 style="font-size:1.2rem; color:#1e293b;">{{ v.name }}</h2>
+            <p style="font-size:0.85rem; color:#64748b; margin-top:0.15rem;">
+                {{ v.phone or '—' }}
+            </p>
+        </div>
+        <div style="text-align:right;">
+            <span style="font-family:monospace; font-size:0.8rem;
+                background:#f1f5f9; padding:0.25rem 0.6rem;
+                border-radius:4px;">
+                {{ v.badge_no }}
+            </span>
+            <div style="margin-top:0.35rem;">
+                <span style="font-size:0.7rem; padding:0.15rem 0.45rem;
+                    border-radius:3px; font-weight:600; text-transform:uppercase;
+                    background:{{ '#dbeafe' if v.status == 'in' else '#f1f5f9' }};
+                    color:{{ '#1e40af' if v.status == 'in' else '#64748b' }};">
+                    {{ v.status }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <hr style="border:none; border-top:1px solid #e2e8f0; margin:1rem 0;">
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;
+        font-size:0.88rem;">
+        <div>
+            <span style="color:#64748b;">Purpose:</span>
+            <strong style="text-transform:capitalize;">{{ v.purpose }}</strong>
+        </div>
+        <div>
+            <span style="color:#64748b;">To Meet:</span>
+            <strong>{{ v.student_name or v.staff_name or v.to_meet or '—' }}</strong>
+        </div>
+        {% if v.class_name %}
+        <div>
+            <span style="color:#64748b;">Class:</span>
+            {{ v.class_name }}{% if v.section %}-{{ v.section }}{% endif %}
+        </div>
+        {% endif %}
+        {% if v.id_proof_type %}
+        <div>
+            <span style="color:#64748b;">ID Proof:</span>
+            {{ v.id_proof_type|upper }} {{ v.id_proof_number or '' }}
+        </div>
+        {% endif %}
+        {% if v.vehicle_no %}
+        <div>
+            <span style="color:#64748b;">Vehicle:</span>
+            <strong>{{ v.vehicle_no }}</strong>
+        </div>
+        {% endif %}
+        <div>
+            <span style="color:#64748b;">In Time:</span>
+            <strong style="color:#10b981;">
+                {{ v.in_time.strftime('%d %b %Y, %I:%M %p') if v.in_time else '—' }}
+            </strong>
+        </div>
+        <div>
+            <span style="color:#64748b;">Out Time:</span>
+            <strong style="color:#ef4444;">
+                {{ v.out_time.strftime('%d %b %Y, %I:%M %p') if v.out_time else 'Still inside' }}
+            </strong>
+        </div>
+        {% if v.note %}
+        <div style="grid-column:1/-1;">
+            <span style="color:#64748b;">Note:</span>
+            {{ v.note }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+</div>
+{% endblock %}
