@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Site Content{% endblock %}
+{% block page_title %}🌐 Public Site Content{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
+    <a href="/site" target="_blank" class="btn"
+       style="background:#3b82f6;">🌐 View Live Site ↗</a>
+</div>
+
+<!-- Testimonials -->
+<div class="card" style="margin-bottom:1.5rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#1e293b;">
+        💬 Testimonials ({{ testimonials|length }})
+    </h3>
+
+    <form method="POST" action="{{ url_for('public_content.testimonial_add') }}"
+          style="background:#f8fafc; padding:0.75rem; border-radius:6px;
+          margin-bottom:1rem; display:grid;
+          grid-template-columns:1fr 1fr 100px auto; gap:0.5rem; align-items:end;">
+        <div>
+            <label style="font-size:0.72rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Name *</label>
+            <input name="name" required placeholder="Parent name"
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+        </div>
+        <div>
+            <label style="font-size:0.72rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Role</label>
+            <select name="role"
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+                <option value="Parent">Parent</option>
+                <option value="Alumni">Alumni</option>
+                <option value="Student">Student</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.72rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Rating</label>
+            <select name="rating"
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+                {% for i in range(5, 0, -1) %}
+                <option value="{{ i }}">⭐ {{ i }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn"
+            style="padding:0.5rem 1rem; font-size:0.85rem;">Add</button>
+        <div style="grid-column:1/-1;">
+            <label style="font-size:0.72rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Message *</label>
+            <textarea name="message" required rows="2" placeholder="What they said..."
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;"></textarea>
+        </div>
+    </form>
+
+    {% if testimonials %}
+    <div style="display:flex; flex-direction:column; gap:0.5rem;">
+        {% for t in testimonials %}
+        <div style="padding:0.65rem; background:#f8fafc; border-radius:6px;
+            {{ 'opacity:0.5;' if not t.is_public }}">
+            <div style="display:flex; justify-content:space-between;
+                align-items:start; gap:0.5rem; flex-wrap:wrap;">
+                <div style="flex:1;">
+                    <div style="display:flex; gap:0.5rem; align-items:center;
+                        margin-bottom:0.35rem; flex-wrap:wrap;">
+                        <strong style="color:#1e293b;">{{ t.name }}</strong>
+                        <span style="font-size:0.72rem; background:#eff6ff;
+                            color:#1e40af; padding:0.1rem 0.4rem;
+                            border-radius:3px;">{{ t.role }}</span>
+                        <span style="color:#f59e0b; font-size:0.75rem;">
+                            {{ '⭐' * t.rating }}
+                        </span>
+                        {% if not t.is_public %}
+                        <span style="font-size:0.7rem; background:#fee2e2;
+                            color:#991b1b; padding:0.1rem 0.4rem;
+                            border-radius:3px;">HIDDEN</span>
+                        {% endif %}
+                    </div>
+                    <p style="font-size:0.85rem; color:#475569; margin:0;">
+                        "{{ t.message }}"
+                    </p>
+                </div>
+                <div style="display:flex; gap:0.3rem;">
+                    <form method="POST"
+                          action="{{ url_for('public_content.testimonial_toggle', tid=t.id) }}"
+                          style="display:inline;">
+                        <input type="hidden" name="is_public"
+                            value="{{ '0' if t.is_public else '1' }}">
+                        <button style="background:none; border:1px solid #cbd5e1;
+                            color:#475569; padding:0.3rem 0.6rem;
+                            border-radius:4px; cursor:pointer; font-size:0.75rem;">
+                            {{ 'Hide' if t.is_public else 'Show' }}
+                        </button>
+                    </form>
+                    <form method="POST"
+                          action="{{ url_for('public_content.testimonial_delete', tid=t.id) }}"
+                          onsubmit="return confirm('Delete testimonial?');"
+                          style="display:inline;">
+                        <button style="background:none; border:none; color:#ef4444;
+                            cursor:pointer; font-size:0.78rem;">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="color:#94a3b8; font-size:0.85rem;">Koi testimonial nahi.</p>
+    {% endif %}
+</div>
+
+<!-- Gallery -->
+<div class="card">
+    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#1e293b;">
+        📸 Photo Gallery ({{ gallery|length }})
+    </h3>
+
+    <div style="background:#eff6ff; border-left:3px solid #3b82f6;
+        padding:0.65rem 0.9rem; border-radius:6px; margin-bottom:0.75rem;
+        font-size:0.8rem; color:#1e40af;">
+        <strong>💡 Tip:</strong>
+        Images ko <strong>Supabase Storage</strong> (free), <strong>Cloudinary</strong>,
+        ya <strong>Imgur</strong> pe upload karo, phir public URL yahan paste karo.
+    </div>
+
+    <form method="POST" action="{{ url_for('public_content.gallery_add') }}"
+          style="background:#f8fafc; padding:0.75rem; border-radius:6px;
+          margin-bottom:1rem; display:grid;
+          grid-template-columns:2fr 2fr 1fr 80px auto; gap:0.5rem; align-items:end;">
+        <div>
+            <label style="font-size:0.72rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Title</label>
+            <input name="title" placeholder="Annual Day 2024"
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+        </div>
+        <div>
+            <label style="font-size:0.72rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Image URL *</label>
+            <input name="image_url" type="url" required placeholder="https://..."
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+        </div>
+        <div>
+            <label style="font-size:0.72rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Category</label>
+            <select name="category"
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+                <option value="general">General</option>
+                <option value="campus">Campus</option>
+                <option value="event">Event</option>
+                <option value="sports">Sports</option>
+                <option value="cultural">Cultural</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.72rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Order</label>
+            <input name="display_order" type="number" value="100"
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+        </div>
+        <button type="submit" class="btn"
+            style="padding:0.5rem 1rem; font-size:0.85rem;">Add</button>
+    </form>
+
+    {% if gallery %}
+    <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+        gap:0.5rem;">
+        {% for g in gallery %}
+        <div style="background:#f8fafc; border-radius:6px; overflow:hidden;
+            position:relative;">
+            <img src="{{ g.image_url }}" alt="{{ g.title or '' }}"
+                 style="width:100%; aspect-ratio:1; object-fit:cover; display:block;">
+            <div style="padding:0.4rem 0.5rem; font-size:0.72rem; color:#475569;
+                white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                {{ g.title or 'Untitled' }}
+            </div>
+            <span style="position:absolute; top:4px; right:4px; font-size:0.65rem;
+                background:rgba(0,0,0,0.7); color:white; padding:0.1rem 0.35rem;
+                border-radius:3px; text-transform:uppercase;">
+                {{ g.category }}
+            </span>
+            <form method="POST"
+                  action="{{ url_for('public_content.gallery_delete', gid=g.id) }}"
+                  onsubmit="return confirm('Delete photo?');"
+                  style="position:absolute; top:4px; left:4px;">
+                <button style="background:rgba(239,68,68,0.9); color:white;
+                    border:none; width:22px; height:22px; border-radius:50%;
+                    cursor:pointer; font-size:0.7rem; line-height:1;">×</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="color:#94a3b8; font-size:0.85rem;">Koi photo nahi.</p>
+    {% endif %}
+</div>
+{% endblock %}
