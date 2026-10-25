@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}{{ m.name }} — Attendance{% endblock %}
+{% block page_title %}👨‍🏫 {{ m.name }} — Attendance{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:1rem;">
+    <a href="{{ url_for('staff_attendance.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+</div>
+
+<div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;
+    align-items:center;">
+    <a href="{{ url_for('staff.view', staff_id=m.id) }}" class="btn"
+       style="background:#64748b; font-size:0.85rem;">Staff Profile</a>
+    <form method="GET" style="margin-left:auto; display:flex; gap:0.5rem;">
+        <input type="month" name="month" value="{{ month }}"
+            style="padding:0.5rem; border:1px solid #cbd5e1; border-radius:6px;">
+        <button type="submit" class="btn">Go</button>
+    </form>
+</div>
+
+<!-- Summary cards -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
+    gap:0.65rem; margin-bottom:1rem;">
+    <div class="card" style="padding:0.65rem; text-align:center;">
+        <div style="font-size:0.7rem; color:#64748b;">Present</div>
+        <div style="font-size:1.3rem; font-weight:700; color:#10b981;">
+            {{ summary.present }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.65rem; text-align:center;">
+        <div style="font-size:0.7rem; color:#64748b;">Absent</div>
+        <div style="font-size:1.3rem; font-weight:700; color:#ef4444;">
+            {{ summary.absent }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.65rem; text-align:center;">
+        <div style="font-size:0.7rem; color:#64748b;">Half Day</div>
+        <div style="font-size:1.3rem; font-weight:700; color:#f59e0b;">
+            {{ summary.half_day }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.65rem; text-align:center;">
+        <div style="font-size:0.7rem; color:#64748b;">Leave</div>
+        <div style="font-size:1.3rem; font-weight:700; color:#3b82f6;">
+            {{ summary.leave }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.65rem; text-align:center;">
+        <div style="font-size:0.7rem; color:#64748b;">Attendance %</div>
+        <div style="font-size:1.3rem; font-weight:700;
+            color:{{ '#10b981' if summary.percent >= 75 else ('#f59e0b' if summary.percent >= 50 else '#ef4444') }};">
+            {{ summary.percent }}%
+        </div>
+    </div>
+</div>
+
+<!-- Salary deduction info -->
+{% if deduction.total_deduction_days > 0 %}
+<div class="card" style="background:#fef3c7; border-left:3px solid #f59e0b;
+    font-size:0.85rem; color:#92400e; margin-bottom:1rem;">
+    <strong>💰 Salary Deduction Impact:</strong>
+    {{ deduction.absent_days }} absent days
+    {% if deduction.half_days %} + {{ deduction.half_days }} half days{% endif %}
+    {% if deduction.unpaid_leave %} + {{ deduction.unpaid_leave }} leave{% endif %}
+    = <strong>{{ deduction.total_deduction_days }} days deductible</strong>
+    {% if m.salary %}
+    <div style="margin-top:0.35rem; font-size:0.82rem;">
+        Estimated deduction: ₹{{ "%.0f"|format((m.salary / 30) * deduction.total_deduction_days) }}
+        (approx, ₹{{ "%.0f"|format(m.salary / 30) }}/day)
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Daily records -->
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.5rem; text-align:left;">Date</th>
+            <th style="padding:0.5rem; text-align:center;">Status</th>
+            <th style="padding:0.5rem; text-align:left;">Check-in</th>
+            <th style="padding:0.5rem; text-align:left;">Check-out</th>
+            <th style="padding:0.5rem; text-align:left;">Note</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% set status_colors = {
+            'present': ('#d1fae5', '#065f46'),
+            'absent': ('#fee2e2', '#991b1b'),
+            'half_day': ('#fef3c7', '#92400e'),
+            'leave': ('#dbeafe', '#1e40af'),
+            'holiday': ('#f1f5f9', '#475569')
+        } %}
+        {% for r in records %}
+        {% set c = status_colors.get(r.status, ('#f1f5f9', '#475569')) %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.5rem;">
+                {{ r.date.strftime('%d %b (%a)') if r.date else '—' }}
+            </td>
+            <td style="padding:0.5rem; text-align:center;">
+                <span style="font-size:0.72rem; padding:0.15rem 0.5rem;
+                    border-radius:3px; font-weight:600;
+                    background:{{ c[0] }}; color:{{ c[1] }};
+                    text-transform:capitalize;">
+                    {{ r.status.replace('_', ' ') }}
+                </span>
+            </td>
+            <td style="padding:0.5rem; font-family:monospace; font-size:0.8rem;
+                color:#64748b;">
+                {{ r.check_in.strftime('%H:%M') if r.check_in and r.check_in.strftime else (r.check_in or '—') }}
+            </td>
+            <td style="padding:0.5rem; font-family:monospace; font-size:0.8rem;
+                color:#64748b;">
+                {{ r.check_out.strftime('%H:%M') if r.check_out and r.check_out.strftime else (r.check_out or '—') }}
+            </td>
+            <td style="padding:0.5rem; font-size:0.78rem; color:#64748b;">
+                {{ r.note or '—' }}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="padding:2rem; text-align:center;
+            color:#64748b;">Is month koi record nahi.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}
