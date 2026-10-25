@@ -45,4 +45,19 @@
         </div>
     </form>
 </div>
+{% if deduction_info and deduction_info.total_deduction_days > 0 %}
+<div style="background:#fef3c7; padding:0.65rem; border-radius:6px;
+    margin-bottom:0.75rem; font-size:0.82rem; color:#92400e;">
+    <strong>💡 Attendance suggestion:</strong>
+    {{ deduction_info.absent_days }} absent + {{ deduction_info.half_days }} half days
+    = {{ deduction_info.total_deduction_days }} days.
+    Deduction ≈ ₹{{ "%.0f"|format((rec.base / 30) * deduction_info.total_deduction_days) }}
+    <button type="button" onclick="document.querySelector('input[name=deductions]').value='{{ ((rec.base / 30) * deduction_info.total_deduction_days)|round(0) }}'"
+        style="margin-left:0.4rem; padding:0.25rem 0.65rem; background:#f59e0b;
+        color:white; border:none; border-radius:4px; font-size:0.75rem;
+        cursor:pointer; font-weight:600;">
+        Apply
+    </button>
+</div>
+{% endif %}
 {% endblock %}
