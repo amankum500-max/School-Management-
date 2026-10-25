@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}{{ h.name }}{% endblock %}
+{% block page_title %}🏠 {{ h.name }}{% endblock %}
+
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+    <a href="{{ url_for('hostel.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+    <div style="display:flex; gap:0.5rem;">
+        <a href="{{ url_for('hostel.allocate', hid=h.id) }}"
+           class="btn" style="background:#8b5cf6;">+ Allocate Student</a>
+        <a href="{{ url_for('hostel.edit', hid=h.id) }}"
+           class="btn" style="background:#f59e0b;">Edit</a>
+        <form method="POST" action="{{ url_for('hostel.remove', hid=h.id) }}"
+              onsubmit="return confirm('Delete hostel? Rooms bhi delete honge.');"
+              style="display:inline;">
+            <button class="btn" style="background:#ef4444;">Delete</button>
+        </form>
+    </div>
+</div>
+
+<!-- Info -->
+<div class="card" style="margin-bottom:1rem;">
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+        gap:0.75rem; font-size:0.88rem;">
+        {% if h.warden_name %}
+        <div><span style="color:#64748b;">Warden:</span>
+            <strong>{{ h.warden_name }}</strong></div>
+        {% endif %}
+        {% if h.warden_phone %}
+        <div><span style="color:#64748b;">Phone:</span>
+            <a href="tel:{{ h.warden_phone }}" style="color:#3b82f6;
+                text-decoration:none; font-weight:600;">{{ h.warden_phone }}</a></div>
+        {% endif %}
+        {% if h.address %}
+        <div style="grid-column:1/-1;">
+            <span style="color:#64748b;">Address:</span> {{ h.address }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add room form -->
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.65rem; color:#1e293b;">
+        ➕ Add Room
+    </h3>
+    <form method="POST" action="{{ url_for('hostel.add_room', hid=h.id) }}"
+          style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr auto;
+          gap:0.4rem; align-items:end;">
+        <div>
+            <label style="font-size:0.7rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Room #*</label>
+            <input name="room_no" required placeholder="101"
+                style="width:100%; padding:0.45rem; border:1px solid #cbd5e1;
+                border-radius:4px; font-size:0.82rem;">
+        </div>
+        <div>
+            <label style="font-size:0.7rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Floor</label>
+            <input name="floor" placeholder="1st"
+                style="width:100%; padding:0.45rem; border:1px solid #cbd5e1;
+                border-radius:4px; font-size:0.82rem;">
+        </div>
+        <div>
+            <label style="font-size:0.7rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Type</label>
+            <select name="room_type"
+                style="width:100%; padding:0.45rem; border:1px solid #cbd5e1;
+                border-radius:4px; font-size:0.82rem;">
+                {% for rt in ['single','double','triple','shared','dormitory'] %}
+                <option value="{{ rt }}">{{ rt|capitalize }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.7rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Capacity</label>
+            <input name="capacity" type="number" value="4" min="1"
+                style="width:100%; padding:0.45rem; border:1px solid #cbd5e1;
+                border-radius:4px; font-size:0.82rem;">
+        </div>
+        <div>
+            <label style="font-size:0.7rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Fee/mo</label>
+            <input name="monthly_fee" type="number" step="0.01" value="0"
+                style="width:100%; padding:0.45rem; border:1px solid #cbd5e1;
+                border-radius:4px; font-size:0.82rem;">
+        </div>
+        <button type="submit" class="btn" style="padding:0.45rem 0.9rem;
+            font-size:0.82rem;">Add</button>
+    </form>
+</div>
+
+<!-- Rooms grid -->
+<h3 style="font-size:1rem; margin-bottom:0.65rem; color:#1e293b;">
+    🚪 Rooms ({{ rooms|length }})
+</h3>
+
+{% if rooms %}
+<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+    gap:0.5rem; margin-bottom:1.5rem;">
+    {% for r in rooms %}
+    {% set pct = (r.occupied * 100 / r.capacity) if r.capacity > 0 else 0 %}
+    <div class="card" style="padding:0.75rem; border-left:3px solid
+        {{ '#ef4444' if r.available == 0 else ('#f59e0b' if r.available < r.capacity/2 else '#10b981') }};">
+        <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:0.35rem;">
+            <a href="{{ url_for('hostel.room_detail', rid=r.id) }}"
+               style="font-size:1rem; font-weight:700; color:#1e293b; text-decoration:none;">
+                Room {{ r.room_no }}
+            </a>
+            <form method="POST" action="{{ url_for('hostel.delete_room', rid=r.id) }}"
+                  onsubmit="return confirm('Delete room {{ r.room_no }}?');"
+                  style="display:inline;">
+                <button style="background:none; border:none; color:#ef4444;
+                    cursor:pointer; font-size:0.75rem;">×</button>
+            </form>
+        </div>
+        <div style="font-size:0.72rem; color:#64748b; margin-bottom:0.4rem;
+            text-transform:capitalize;">
+            {{ r.room_type }}{% if r.floor %} • {{ r.floor }} floor{% endif %}
+        </div>
+        <div style="font-size:0.78rem; margin-bottom:0.4rem;">
+            <strong>{{ r.occupied }}/{{ r.capacity }}</strong> beds
+            {% if r.monthly_fee %} • ₹{{ "%.0f"|format(r.monthly_fee) }}/mo{% endif %}
+        </div>
+        <div style="width:100%; height:5px; background:#f1f5f9;
+            border-radius:3px; overflow:hidden;">
+            <div style="width:{{ pct }}%; height:100%;
+                background:{{ '#ef4444' if pct >= 100 else ('#f59e0b' if pct >= 50 else '#10b981') }};"></div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:1.5rem; color:#64748b;
+    margin-bottom:1.5rem;">
+    Koi room nahi. Upar se add karo.
+</div>
+{% endif %}
+
+<!-- Inmates -->
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;
+        margin-bottom:0.65rem; flex-wrap:wrap; gap:0.5rem;">
+        <h3 style="font-size:1rem; color:#1e293b;">
+            🎓 Inmates ({{ inmates|length }})
+        </h3>
+        <form method="GET" style="display:flex; gap:0.4rem;">
+            <input name="q" value="{{ search }}" placeholder="Search name/roll/room"
+                style="padding:0.4rem 0.7rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.82rem; width:180px;">
+            <button type="submit" class="btn"
+                style="padding:0.4rem 0.8rem; font-size:0.82rem;">Search</button>
+        </form>
+    </div>
+
+    {% if inmates %}
+    <div style="overflow:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;
+        min-width:600px;">
+        <thead style="background:#f1f5f9;">
+            <tr>
+                <th style="padding:0.5rem; text-align:left;">Student</th>
+                <th style="padding:0.5rem; text-align:left;">Class</th>
+                <th style="padding:0.5rem; text-align:left;">Room</th>
+                <th style="padding:0.5rem; text-align:left;">Check-in</th>
+                <th style="padding:0.5rem; text-align:right;">Fee</th>
+                <th style="padding:0.5rem; text-align:right;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in inmates %}
+            <tr style="border-top:1px solid #e2e8f0;">
+                <td style="padding:0.5rem;">
+                    <strong>{{ i.name }}</strong>
+                    <div style="font-size:0.72rem; color:#94a3b8;">
+                        Roll: {{ i.roll or '—' }}
+                    </div>
+                </td>
+                <td style="padding:0.5rem;">
+                    {{ i.class_name or '—' }}{% if i.section %}-{{ i.section }}{% endif %}
+                </td>
+                <td style="padding:0.5rem;">
+                    <strong>{{ i.room_no }}</strong>
+                    {% if i.floor %}<div style="font-size:0.7rem; color:#94a3b8;">{{ i.floor }}</div>{% endif %}
+                </td>
+                <td style="padding:0.5rem; font-size:0.8rem;">
+                    {{ i.check_in.strftime('%d %b %Y') if i.check_in else '—' }}
+                </td>
+                <td style="padding:0.5rem; text-align:right;">
+                    ₹{{ "%.0f"|format(i.monthly_fee) }}
+                </td>
+                <td style="padding:0.5rem; text-align:right;">
+                    <form method="POST" action="{{ url_for('hostel.checkout', student_id=i.student_id) }}"
+                          onsubmit="return confirm('Checkout {{ i.name }}?');"
+                          style="display:inline;">
+                        <input type="hidden" name="hostel_id" value="{{ h.id }}">
+                        <button style="background:none; border:none; color:#ef4444;
+                            cursor:pointer; font-size:0.8rem;">Checkout</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p style="color:#94a3b8; font-size:0.85rem;">
+        Koi inmate nahi. "+ Allocate Student" se add karo.
+    </p>
+    {% endif %}
+</div>
+{% endblock %}
