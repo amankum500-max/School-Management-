@@ -332,6 +332,7 @@
 <div class="section-label">Finance</div>
 {% if session.admin_role in ['super_admin', 'admin', 'accountant'] %}
 <a href="{{ url_for('fees.index') }}">Fees</a>
+<a href="{{ url_for('admin_payments.index') }}">💳 Online Payments</a>
 <a href="{{ url_for('bills.index') }}">Bills</a>
 <a href="{{ url_for('salary.index') }}">Salary</a>
 <a href="{{ url_for('expenses.index') }}">Expenses</a>
