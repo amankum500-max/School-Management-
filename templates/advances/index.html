@@ -1,1 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Advances/Loans{% endblock %}
+{% block page_title %}💵 Staff Advances & Loans{% endblock %}
 
+{% block content %}
+
+<!-- Outstanding summary -->
+<div class="card" style="background:linear-gradient(135deg,#f59e0b,#d97706);
+    color:white; margin-bottom:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center;
+        flex-wrap:wrap; gap:0.75rem;">
+        <div>
+            <div style="font-size:0.75rem; opacity:0.9;">
+                Total Outstanding
+            </div>
+            <div style="font-size:2rem; font-weight:800;">
+                ₹{{ "%.0f"|format(summary.outstanding) }}
+            </div>
+            <div style="font-size:0.8rem; opacity:0.9;">
+                {{ summary.active_count }} active advance{{ 's' if summary.active_count != 1 }}
+            </div>
+        </div>
+        <a href="{{ url_for('advances.new') }}"
+           style="padding:0.65rem 1.3rem; background:white; color:#d97706;
+           border-radius:8px; text-decoration:none; font-weight:700;
+           font-size:0.9rem;">
+            + New Advance
+        </a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block;
+            margin-bottom:0.2rem;">Status</label>
+        <select name="status"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">All</option>
+            {% for st in ['active','closed','cancelled'] %}
+            <option value="{{ st }}" {% if st == selected_status %}selected{% endif %}>
+                {{ st|capitalize }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block;
+            margin-bottom:0.2rem;">Staff</label>
+        <select name="staff_id"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;
+            max-width:200px;">
+            <option value="">All staff</option>
+            {% for s in staff_list %}
+            <option value="{{ s.id }}" {% if s.id == selected_staff %}selected{% endif %}>
+                {{ s.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn">Filter</button>
+</form>
+</div>
+
+{% if not advances %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Koi advance record nahi.
+</div>
+{% else %}
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:700px;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.55rem; text-align:left;">Staff</th>
+            <th style="padding:0.55rem; text-align:left;">Type</th>
+            <th style="padding:0.55rem; text-align:right;">Total</th>
+            <th style="padding:0.55rem; text-align:right;">Monthly</th>
+            <th style="padding:0.55rem; text-align:right;">Remaining</th>
+            <th style="padding:0.55rem; text-align:left;">Start</th>
+            <th style="padding:0.55rem; text-align:center;">Status</th>
+            <th style="padding:0.55rem; text-align:right;"></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for a in advances %}
+        <tr style="border-top:1px solid #e2e8f0;
+            {{ 'background:#f0f9ff' if a.status == 'active' }}">
+            <td style="padding:0.5rem;">
+                <a href="{{ url_for('advances.detail', adv_id=a.id) }}"
+                   style="color:#1e293b; text-decoration:none; font-weight:600;">
+                    {{ a.staff_name }}
+                </a>
+                <div style="font-size:0.72rem; color:#94a3b8;
+                    text-transform:capitalize;">{{ a.staff_role }}</div>
+            </td>
+            <td style="padding:0.5rem; font-size:0.8rem; text-transform:capitalize;">
+                {{ a.advance_type }}
+            </td>
+            <td style="padding:0.5rem; text-align:right;">
+                ₹{{ "%.0f"|format(a.total) }}
+            </td>
+            <td style="padding:0.5rem; text-align:right; color:#64748b;">
+                ₹{{ "%.0f"|format(a.monthly) }}
+            </td>
+            <td style="padding:0.5rem; text-align:right; font-weight:700;
+                color:{{ '#ef4444' if a.remaining > 0 and a.status == 'active' else '#94a3b8' }};">
+                ₹{{ "%.0f"|format(a.remaining) }}
+            </td>
+            <td style="padding:0.5rem; font-size:0.8rem;">{{ a.start_month }}</td>
+            <td style="padding:0.5rem; text-align:center;">
+                <span style="font-size:0.7rem; padding:0.15rem 0.45rem;
+                    border-radius:3px; font-weight:600; text-transform:uppercase;
+                    background:{{ '#fef3c7' if a.status == 'active' else ('#d1fae5' if a.status == 'closed' else '#f1f5f9') }};
+                    color:{{ '#92400e' if a.status == 'active' else ('#065f46' if a.status == 'closed' else '#64748b') }};">
+                    {{ a.status }}
+                </span>
+            </td>
+            <td style="padding:0.5rem; text-align:right;">
+                <a href="{{ url_for('advances.detail', adv_id=a.id) }}"
+                   style="color:#3b82f6; text-decoration:none; font-size:0.78rem;">
+                    View
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}
