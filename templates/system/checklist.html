@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Production Checklist{% endblock %}
+{% block page_title %}✅ Production Checklist{% endblock %}
+
+{% block content %}
+
+<div class="card" style="background:#eff6ff; border-left:3px solid #3b82f6;
+    font-size:0.85rem; color:#1e40af; margin-bottom:1rem;">
+    <strong>ℹ️ Use karo:</strong>
+    Ye checklist school ke live use se pehle verify karo. Print karo ya tick karo
+    jaise-jaise complete karo.
+</div>
+
+{% set categories = items|groupby(0) %}
+
+{% for category, cat_items in categories %}
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.65rem; color:#1e293b;
+        text-transform:uppercase; letter-spacing:0.5px;
+        border-bottom:2px solid #e2e8f0; padding-bottom:0.4rem;">
+        {{ category }}
+    </h3>
+    <div style="display:flex; flex-direction:column; gap:0.4rem;">
+        {% for item in cat_items %}
+        <label style="display:flex; gap:0.5rem; align-items:start;
+            cursor:pointer; padding:0.4rem 0; font-size:0.88rem;">
+            <input type="checkbox" style="margin-top:0.15rem; cursor:pointer;">
+            <span>{{ item[1] }}</span>
+        </label>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+
+<div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+    <button onclick="window.print()" class="btn"
+        style="background:#3b82f6;">🖨️ Print Checklist</button>
+    <a href="{{ url_for('system.status') }}" class="btn"
+       style="background:#10b981;">← System Status</a>
+</div>
+{% endblock %}
