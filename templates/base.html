@@ -167,6 +167,15 @@
 
 <div class="layout">
     <!-- Sidebar -->
+    <a href="{{ url_for('chat.index') }}" style="display:flex; justify-content:space-between; align-items:center;">
+    <span>💬 Messages</span>
+    {% if chat_unread and chat_unread > 0 %}
+    <span style="background:#ef4444; color:white; border-radius:10px;
+        padding:0.1rem 0.45rem; font-size:0.7rem; font-weight:700;">
+        {{ chat_unread }}
+    </span>
+    {% endif %}
+    </a>
     <aside class="sidebar" id="sidebar">
         <div class="section-label">Management</div>
 <a href="{{ url_for('staff.index') }}">Staff</a>
