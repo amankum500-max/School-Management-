@@ -49,6 +49,8 @@
             <a href="{{ url_for('parent.events') }}">Events</a>
             <span style="opacity:0.8; font-size:0.8rem;">{{ session.parent_name }}</span>
             <a href="{{ url_for('parent.messages_list') }}">💬 Messages</a>
+            <a href="{{ url_for('parent.homework_list') }}">Homework</a>
+            <a href="{{ url_for('parent.online_exams_list') }}">📝 Online Exams</a>
             <a href="{{ url_for('parent.logout') }}">Logout</a>
             <a href="{{ url_for('parent.messages_list') }}">
     Messages
@@ -67,6 +69,7 @@
             {% endfor %}
         {% endwith %}
 
+        
         {% block content %}{% endblock %}
     </div>
 </body>
