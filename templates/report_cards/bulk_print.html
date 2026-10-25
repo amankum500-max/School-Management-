@@ -1,1 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Report Cards — Class {{ class_name }} — {{ ay }}</title>
+    <style>
+        /* Reuse same styling as single print, but wrap each report in a page break */
+        {% include 'report_cards/_print_styles.html' %}
 
+        .report-page {
+            page-break-after: always;
+            break-after: page;
+        }
+        .report-page:last-child {
+            page-break-after: auto;
+            break-after: auto;
+        }
+
+        /* Bulk controls */
+        .bulk-controls {
+            position: fixed;
+            top: 1rem; right: 1rem;
+            background: white;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 100;
+        }
+        .bulk-controls button {
+            padding: 0.55rem 1.2rem;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        @media print {
+            .bulk-controls { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="bulk-controls">
+    <div style="font-size:0.8rem; color:#64748b; margin-bottom:0.35rem;">
+        {{ reports|length }} report cards
+    </div>
+    <button onclick="window.print()">🖨️ Print All</button>
+</div>
+
+{% for r in reports %}
+<div class="report-page">
+    <div class="page">
+        <!-- Same content as single print — copy karo -->
+        <div class="letterhead">
+            <h1>{{ school.school_name if school else 'School' }}</h1>
+            {% if school and school.tagline %}
+            <div class="tagline">{{ school.tagline }}</div>
+            {% endif %}
+            <div class="contact">
+                {% if school and school.address %}{{ school.address }}{% endif %}
+                {% if school and school.address and school.phone %} • {% endif %}
+                {% if school and school.phone %}📞 {{ school.phone }}{% endif %}
+            </div>
+        </div>
+
+        <div class="cert-title">Annual Report Card</div>
+        <div class="ay-label">Academic Year: <strong>{{ r.academic_year }}</strong></div>
+
+        <div class="info-grid">
+            <span class="label">Name:</span>
+            <span class="value">{{ r.student.name }}</span>
+            <span class="label">Roll No:</span>
+            <span class="value">{{ r.student.roll or '—' }}</span>
+
+            <span class="label">Class:</span>
+            <span class="value">{{ r.student.class_name }}{% if r.student.section %}-{{ r.student.section }}{% endif %}</span>
+            <span class="label">DOB:</span>
+            <span class="value">{{ r.student.dob.strftime('%d %b %Y') if r.student.dob else '—' }}</span>
+
+            <span class="label">Parent:</span>
+            <span class="value">{{ r.student.parent_name or '—' }}</span>
+            <span class="label">Conduct:</span>
+            <span class="value">{{ r.remarks.conduct }}</span>
+        </div>
+
+        {% if r.exams %}
+        <table class="marks">
+            <thead>
+                <tr>
+                    <th>Examination</th>
+                    {% for subj in r.all_subjects %}<th>{{ subj }}</th>{% endfor %}
+                    <th>Total</th>
+                    <th>%</th>
+                    <th>Grade</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in r.exams %}
+                <tr>
+                    <td><strong>{{ e.name }}</strong></td>
+                    {% for subj in r.all_subjects %}
+                    <td>
+                        {% if subj in e.marks and e.marks[subj] is not none %}
+                        {{ e.marks[subj] }}
+                        {% else %}<span style="color:#cbd5e1;">—</span>{% endif %}
+                    </td>
+                    {% endfor %}
+                    <td><strong>{{ "%.0f"|format(e.obtained) }}/{{ e.max }}</strong></td>
+                    <td><strong>{{ e.percent }}%</strong></td>
+                    <td><strong>{{ e.grade }}</strong></td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                    <td>Average (%)</td>
+                    {% for subj in r.all_subjects %}
+                    {% set avg = r.subject_averages.get(subj) %}
+                    <td>{{ avg if avg is not none else '—' }}</td>
+                    {% endfor %}
+                    <td>{{ "%.0f"|format(r.total_obtained) }}/{{ r.total_max }}</td>
+                    <td><strong>{{ r.overall_percent }}%</strong></td>
+                    <td><strong>{{ r.overall_grade }}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+        {% endif %}
+
+        <div class="final-result">
+            <div class="result-cell highlight">
+                <div class="lbl">Total Marks</div>
+                <div class="val">{{ "%.0f"|format(r.total_obtained) }}/{{ r.total_max }}</div>
+            </div>
+            <div class="result-cell highlight">
+                <div class="lbl">Percentage</div>
+                <div class="val">{{ r.overall_percent }}%</div>
+            </div>
+            <div class="result-cell highlight">
+                <div class="lbl">Grade</div>
+                <div class="val">{{ r.overall_grade }}</div>
+            </div>
+            <div class="result-cell highlight">
+                <div class="lbl">Class Rank</div>
+                <div class="val">{{ r.class_rank or '—' }}/{{ r.class_total }}</div>
+            </div>
+        </div>
+
+        <div class="two-col">
+            <div class="summary-box">
+                <h4>Attendance</h4>
+                <div class="row"><span>Present</span><strong>{{ r.attendance.present }}</strong></div>
+                <div class="row"><span>Absent</span><strong>{{ r.attendance.absent }}</strong></div>
+                <div class="row"><span>Overall %</span><strong>{{ r.attendance.percent }}%</strong></div>
+            </div>
+            <div class="summary-box">
+                <h4>Fee Status</h4>
+                <div class="row"><span>Billed</span><strong>₹{{ "%.0f"|format(r.fee_status.billed) }}</strong></div>
+                <div class="row"><span>Paid</span><strong>₹{{ "%.0f"|format(r.fee_status.paid) }}</strong></div>
+                <div class="row"><span>Pending</span><strong>₹{{ "%.0f"|format(r.fee_status.pending) }}</strong></div>
+            </div>
+        </div>
+
+        {% if r.remarks.teacher_remark or r.remarks.principal_remark %}
+        <div class="remarks-section">
+            {% if r.remarks.teacher_remark %}
+            <div class="remark-item">
+                <div class="lbl">Class Teacher</div>
+                <div class="val">{{ r.remarks.teacher_remark }}</div>
+            </div>
+            {% endif %}
+            {% if r.remarks.principal_remark %}
+            <div class="remark-item">
+                <div class="lbl">Principal</div>
+                <div class="val">{{ r.remarks.principal_remark }}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="signs">
+            <div class="sign"><div class="line"></div>Class Teacher</div>
+            <div class="sign"><div class="line"></div>Parent / Guardian</div>
+            <div class="sign"><div class="line"></div>Principal</div>
+        </div>
+
+        <div class="foot">
+            {{ school.school_name if school else 'School' }} • {{ r.academic_year }}
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+</body>
+</html>
