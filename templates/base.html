@@ -198,11 +198,22 @@
                 <h1>{% block page_title %}Dashboard{% endblock %}</h1>
             </div>
             {% if session.admin_id %}
-            <div class="user">
-                {{ session.admin_name }}
-                <a href="{{ url_for('settings.index') }}">Settings</a>
-<a href="{{ url_for('auth.profile') }}">My Profile</a>
-                <a href="{{ url_for('auth.logout') }}">Logout</a>
+            <div class="user" style="display:flex; align-items:center; gap:0.75rem;">
+    <a href="{{ url_for('notifications_page') }}" id="notifBtn"
+       style="position:relative; text-decoration:none; font-size:1.2rem;
+       display:flex; align-items:center;">
+        🔔
+        <span id="notifBadge"
+            style="display:none; position:absolute; top:-4px; right:-8px;
+            background:#ef4444; color:white; font-size:0.6rem; font-weight:700;
+            padding:1px 5px; border-radius:10px; line-height:1.2;">0</span>
+    </a>
+    <a href="{{ url_for('auth.profile') }}"
+       style="color:#475569; text-decoration:none; font-size:0.88rem;">
+        {{ session.admin_name }}
+    </a>
+    <a href="{{ url_for('auth.logout') }}"
+       style="color:#ef4444; text-decoration:none; font-size:0.82rem;">Logout</a>
             </div>
             {% endif %}
         </header>
