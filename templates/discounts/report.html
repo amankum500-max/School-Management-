@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Discount Report{% endblock %}
+{% block page_title %}📊 Discount Report{% endblock %}
+
+{% block content %}
+
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.5rem; align-items:end;
+    flex-wrap:wrap;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block;
+            margin-bottom:0.2rem;">Class</label>
+        <select name="class" required
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">Select class</option>
+            {% for c in classes %}
+            <option value="{{ c }}" {% if c == selected_class %}selected{% endif %}>
+                Class {{ c }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn">Generate</button>
+    <a href="{{ url_for('discounts.index') }}" class="btn"
+       style="background:#64748b; margin-left:auto;">← Discounts</a>
+</form>
+</div>
+
+{% if results %}
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.5rem; text-align:left;">Roll</th>
+            <th style="padding:0.5rem; text-align:left;">Student</th>
+            <th style="padding:0.5rem; text-align:left;">Section</th>
+            <th style="padding:0.5rem; text-align:left;">Discount</th>
+            <th style="padding:0.5rem; text-align:center;">Category</th>
+            <th style="padding:0.5rem; text-align:right;">Value</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in results %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.5rem; color:#64748b;">{{ r.roll or '—' }}</td>
+            <td style="padding:0.5rem;">
+                <a href="{{ url_for('discounts.student_view', student_id=r.student_id) }}"
+                   style="color:#1e293b; text-decoration:none; font-weight:500;">
+                    {{ r.name }}
+                </a>
+            </td>
+            <td style="padding:0.5rem;">{{ r.section or '—' }}</td>
+            <td style="padding:0.5rem;">
+                <span style="background:#ede9fe; color:#5b21b6;
+                    padding:0.15rem 0.45rem; border-radius:3px;
+                    font-size:0.75rem; font-weight:600;">
+                    {{ r.discount_name }}
+                </span>
+            </td>
+            <td style="padding:0.5rem; text-align:center; font-size:0.8rem;
+                text-transform:capitalize;">
+                {{ r.category|replace('_', ' ') }}
+            </td>
+            <td style="padding:0.5rem; text-align:right; font-weight:600;">
+                {% if r.dtype == 'percent' %}{{ "%.0f"|format(r.value) }}%
+                {% else %}₹{{ "%.0f"|format(r.value) }}{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+<div style="margin-top:1rem; font-size:0.82rem; color:#64748b;">
+    Total: <strong>{{ results|length }}</strong> discount(s) across
+    <strong>{{ results|map(attribute='student_id')|unique|list|length }}</strong>
+    student(s)
+</div>
+{% elif selected_class %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Is class mein koi active discount nahi.
+</div>
+{% endif %}
+{% endblock %}
