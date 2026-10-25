@@ -318,6 +318,161 @@
         }
     })();
     </script>
+    <!-- Command Palette Modal -->
+<div id="cmdPalette"
+    style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.65);
+    z-index:9999; align-items:flex-start; justify-content:center; padding-top:10vh;">
+    <div onclick="event.stopPropagation()"
+        style="background:white; width:100%; max-width:560px; margin:0 1rem;
+        border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.4);
+        overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:0.5rem;
+            padding:0.75rem 1rem; border-bottom:1px solid #e2e8f0;">
+            <span style="font-size:1.1rem;">🔍</span>
+            <input id="cmdInput" type="text" placeholder="Search students, staff, notices, events..."
+                style="flex:1; border:none; outline:none; font-size:0.95rem;">
+            <kbd style="background:#f1f5f9; padding:0.15rem 0.45rem;
+                border-radius:4px; font-size:0.7rem; color:#64748b;">ESC</kbd>
+        </div>
+        <div id="cmdResults"
+            style="max-height:60vh; overflow-y:auto; padding:0.5rem 0;">
+            <p style="padding:1.5rem 1rem; text-align:center; color:#94a3b8;
+                font-size:0.85rem;">
+                Type to search... (2+ characters)
+            </p>
+        </div>
+        <div style="padding:0.5rem 1rem; background:#f8fafc;
+            border-top:1px solid #e2e8f0; font-size:0.7rem; color:#94a3b8;
+            display:flex; gap:1rem; flex-wrap:wrap;">
+            <span><kbd style="background:#e2e8f0; padding:0.1rem 0.35rem;
+                border-radius:3px;">↑↓</kbd> navigate</span>
+            <span><kbd style="background:#e2e8f0; padding:0.1rem 0.35rem;
+                border-radius:3px;">Enter</kbd> open</span>
+            <span><kbd style="background:#e2e8f0; padding:0.1rem 0.35rem;
+                border-radius:3px;">ESC</kbd> close</span>
+        </div>
+    </div>
+</div>
+
+<script>
+let cmdTimeout = null;
+let cmdSelectedIndex = 0;
+let cmdItems = [];
+
+function openCommandPalette() {
+    document.getElementById('cmdPalette').style.display = 'flex';
+    setTimeout(() => document.getElementById('cmdInput').focus(), 50);
+}
+
+function closeCommandPalette() {
+    document.getElementById('cmdPalette').style.display = 'none';
+    document.getElementById('cmdInput').value = '';
+    document.getElementById('cmdResults').innerHTML =
+        '<p style="padding:1.5rem 1rem; text-align:center; color:#94a3b8; font-size:0.85rem;">Type to search...</p>';
+}
+
+document.addEventListener('keydown', (e) => {
+    // Ctrl+K or Cmd+K
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        openCommandPalette();
+    }
+    // ESC
+    if (e.key === 'Escape' && document.getElementById('cmdPalette').style.display === 'flex') {
+        closeCommandPalette();
+    }
+    // Arrow navigation
+    if (document.getElementById('cmdPalette').style.display === 'flex') {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            cmdSelectedIndex = Math.min(cmdSelectedIndex + 1, cmdItems.length - 1);
+            highlightCmdItem();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            cmdSelectedIndex = Math.max(cmdSelectedIndex - 1, 0);
+            highlightCmdItem();
+        } else if (e.key === 'Enter' && cmdItems[cmdSelectedIndex]) {
+            e.preventDefault();
+            window.location.href = cmdItems[cmdSelectedIndex].link;
+        }
+    }
+});
+
+document.getElementById('cmdInput').addEventListener('input', (e) => {
+    clearTimeout(cmdTimeout);
+    const q = e.target.value.trim();
+    if (q.length < 2) {
+        document.getElementById('cmdResults').innerHTML =
+            '<p style="padding:1.5rem 1rem; text-align:center; color:#94a3b8; font-size:0.85rem;">Type 2+ characters...</p>';
+        return;
+    }
+    cmdTimeout = setTimeout(async () => {
+        try {
+            const res = await fetch('/quick-search?q=' + encodeURIComponent(q));
+            const data = await res.json();
+            renderCmdResults(data);
+        } catch (err) {
+            document.getElementById('cmdResults').innerHTML =
+                '<p style="padding:1rem; color:#ef4444; font-size:0.85rem;">Search error</p>';
+        }
+    }, 200);
+});
+
+function renderCmdResults(data) {
+    cmdItems = [];
+    const icons = { students: '🎓', staff: '👤', notices: '📢', events: '📅' };
+    const labels = { students: 'Students', staff: 'Staff', notices: 'Notices', events: 'Events' };
+    const links = {
+        students: (x) => '/students/' + x.id,
+        staff: (x) => '/staff/' + x.id,
+        notices: (x) => '/notices/' + x.id,
+        events: (x) => '/events/' + x.id,
+    };
+    const texts = {
+        students: (x) => `${x.name}${x.roll ? ' • Roll ' + x.roll : ''}${x.class_name ? ' • Class ' + x.class_name : ''}${x.section ? '-' + x.section : ''}`,
+        staff: (x) => `${x.name} — ${x.role || ''}`,
+        notices: (x) => `${x.title} (${x.category || ''})`,
+        events: (x) => `${x.title} — ${x.date || ''}`,
+    };
+
+    let html = '';
+    let count = 0;
+    for (const cat of ['students', 'staff', 'notices', 'events']) {
+        if (!data[cat] || !data[cat].length) continue;
+        html += `<div style="padding:0.4rem 1rem; font-size:0.7rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">${icons[cat]} ${labels[cat]}</div>`;
+        for (const item of data[cat]) {
+            const idx = count;
+            const link = links[cat](item);
+            cmdItems.push({ link });
+            html += `<a href="${link}" class="cmd-item" data-idx="${idx}" style="display:block; padding:0.55rem 1rem; text-decoration:none; color:inherit;">
+                <div style="font-size:0.88rem; color:#1e293b;">${icons[cat]} ${texts[cat](item)}</div>
+            </a>`;
+            count++;
+        }
+    }
+    if (!count) {
+        html = '<p style="padding:1.5rem 1rem; text-align:center; color:#94a3b8; font-size:0.85rem;">Koi result nahi mila</p>';
+    }
+    document.getElementById('cmdResults').innerHTML = html;
+    cmdSelectedIndex = 0;
+    highlightCmdItem();
+}
+
+function highlightCmdItem() {
+    document.querySelectorAll('.cmd-item').forEach((el, i) => {
+        if (i === cmdSelectedIndex) {
+            el.style.background = '#eff6ff';
+        } else {
+            el.style.background = 'transparent';
+        }
+    });
+}
+
+// Close palette on backdrop click
+document.getElementById('cmdPalette').addEventListener('click', (e) => {
+    if (e.target.id === 'cmdPalette') closeCommandPalette();
+});
+        </script>
 </body>
 </html>
 <a href="{{ url_for('students.list_students') }}">Students</a>
