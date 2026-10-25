@@ -1,1 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Bulk Photo Upload{% endblock %}
+{% block page_title %}📤 Bulk Photo Upload{% endblock %}
 
+{% block content %}
+
+<div style="margin-bottom:1rem;">
+    <a href="{{ url_for('photos.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+</div>
+
+<div class="card" style="background:#fef3c7; border-left:3px solid #f59e0b;
+    font-size:0.85rem; color:#92400e; margin-bottom:1rem;">
+    <strong>📌 Filename format (important):</strong>
+    <ul style="margin:0.35rem 0 0 1.2rem; line-height:1.7;">
+        <li><code>101.jpg</code> — Roll No 101</li>
+        <li><code>101_5.jpg</code> — Roll 101 Class 5 (safer)</li>
+        <li><code>101_5_A.jpg</code> — Roll 101 Class 5 Section A</li>
+        <li><code>42.jpg</code> — Student ID 42</li>
+    </ul>
+    <p style="margin-top:0.35rem;">
+        Match nahi hua toh skip ho jayega — result page mein detail dikhega.
+    </p>
+</div>
+
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.5rem; align-items:end;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block;
+            margin-bottom:0.2rem;">Filter Class (optional)</label>
+        <select name="class" onchange="this.form.submit()"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">All Classes</option>
+            {% for c in classes %}
+            <option value="{{ c }}" {% if c == selected_class %}selected{% endif %}>
+                Class {{ c }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+</div>
+
+{% if not students %}
+<div class="card" style="text-align:center; padding:2rem; color:#10b981;">
+    🎉 Sabhi students ke photos already uploaded hain.
+</div>
+{% else %}
+
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.65rem; color:#1e293b;">
+        Missing Photos: {{ students|length }}
+    </h3>
+    <div style="overflow:auto; max-height:300px;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.82rem;">
+        <thead style="background:#f1f5f9;">
+            <tr>
+                <th style="padding:0.45rem; text-align:left;">Roll</th>
+                <th style="padding:0.45rem; text-align:left;">Name</th>
+                <th style="padding:0.45rem; text-align:left;">Class</th>
+                <th style="padding:0.45rem; text-align:left;">Expected Filename</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in students %}
+            <tr style="border-top:1px solid #e2e8f0;">
+                <td style="padding:0.45rem; color:#64748b; font-family:monospace;">
+                    {{ s.roll or '—' }}
+                </td>
+                <td style="padding:0.45rem;"><strong>{{ s.name }}</strong></td>
+                <td style="padding:0.45rem;">
+                    {{ s.class_name or '—' }}{% if s.section %}-{{ s.section }}{% endif %}
+                </td>
+                <td style="padding:0.45rem; font-family:monospace;
+                    color:#8b5cf6; font-size:0.75rem;">
+                    {{ s.roll or s.id }}.jpg
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="font-size:1rem; margin-bottom:0.65rem; color:#1e293b;">
+        📤 Upload Photos
+    </h3>
+    <form method="POST" enctype="multipart/form-data">
+        <div style="margin-bottom:1rem;">
+            <input type="file" name="photos" accept="image/*" multiple required
+                style="width:100%; padding:0.75rem; border:2px dashed #cbd5e1;
+                border-radius:8px; font-size:0.9rem; background:#f8fafc;
+                cursor:pointer;">
+            <small style="color:#94a3b8; font-size:0.72rem; display:block;
+                margin-top:0.35rem;">
+                Multiple files select kar sakte ho — sab ek saath upload honge
+            </small>
+        </div>
+
+        <div style="background:#eff6ff; padding:0.65rem 0.9rem; border-radius:6px;
+            font-size:0.82rem; color:#1e40af; margin-bottom:1rem;">
+            <strong>ℹ️</strong> Har file ka size 2 MB se kam, format JPG/PNG.
+            Filename match nahi hua toh skip ho jayega.
+        </div>
+
+        <button type="submit" class="btn" style="background:#8b5cf6;"
+            onclick="return confirm('{{ students|length }} students ke liye photos upload karein?');">
+            Upload All
+        </button>
+    </form>
+</div>
+{% endif %}
+{% endblock %}
