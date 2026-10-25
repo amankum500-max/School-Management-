@@ -1,1 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Messages{% endblock %}
+{% block page_title %}💬 Messages{% endblock %}
 
+{% block content %}
+
+<div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;
+    align-items:center;">
+    <form method="GET" style="display:flex; gap:0.5rem; flex:1; min-width:200px;">
+        <input name="q" value="{{ search }}" placeholder="Search subject / parent / student"
+            style="flex:1; padding:0.55rem 0.85rem; border:1px solid #cbd5e1;
+            border-radius:8px;">
+        <select name="status"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+            <option value="">All</option>
+            <option value="open" {% if selected_status=='open' %}selected{% endif %}>Open</option>
+            <option value="closed" {% if selected_status=='closed' %}selected{% endif %}>Closed</option>
+        </select>
+        <button type="submit" class="btn">Search</button>
+    </form>
+    <a href="{{ url_for('chat.new_thread') }}" class="btn"
+       style="background:#8b5cf6;">+ New Message</a>
+</div>
+
+{% if unread_total > 0 %}
+<div class="card" style="background:#fee2e2; border-left:4px solid #ef4444;
+    margin-bottom:1rem; font-size:0.85rem; color:#991b1b;">
+    <strong>{{ unread_total }}</strong> thread{{ 's' if unread_total > 1 }} mein unread messages hain.
+</div>
+{% endif %}
+
+{% if not threads %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Koi message thread nahi.
+</div>
+{% else %}
+<div style="display:flex; flex-direction:column; gap:0.5rem;">
+    {% for t in threads %}
+    <a href="{{ url_for('chat.view', thread_id=t.id) }}"
+       style="text-decoration:none; color:inherit;">
+        <div class="card" style="border-left:4px solid
+            {{ '#ef4444' if t.unread_by_admin > 0 else ('#10b981' if t.status=='open' else '#94a3b8') }};
+            {{ 'background:#fef2f2' if t.unread_by_admin > 0 }}">
+            <div style="display:flex; justify-content:space-between; align-items:start;
+                gap:0.5rem; flex-wrap:wrap; margin-bottom:0.35rem;">
+                <div style="flex:1;">
+                    <div style="display:flex; gap:0.5rem; align-items:center;
+                        flex-wrap:wrap; margin-bottom:0.15rem;">
+                        <strong style="font-size:0.95rem; color:#1e293b;">
+                            {{ t.subject or 'General' }}
+                        </strong>
+                        {% if t.unread_by_admin > 0 %}
+                        <span style="background:#ef4444; color:white;
+                            font-size:0.7rem; padding:0.1rem 0.45rem;
+                            border-radius:10px; font-weight:700;">
+                            {{ t.unread_by_admin }} new
+                        </span>
+                        {% endif %}
+                        {% if t.status == 'closed' %}
+                        <span style="background:#f1f5f9; color:#64748b;
+                            font-size:0.68rem; padding:0.1rem 0.4rem;
+                            border-radius:3px;">CLOSED</span>
+                        {% endif %}
+                    </div>
+                    <div style="font-size:0.82rem; color:#475569;">
+                        <strong>{{ t.parent_name or 'Parent' }}</strong>
+                        {% if t.student_name %}
+                        • {{ t.student_name }}
+                        ({{ t.class_name or '' }}{% if t.section %}-{{ t.section }}{% endif %})
+                        {% endif %}
+                    </div>
+                </div>
+                <div style="text-align:right; font-size:0.7rem; color:#94a3b8;">
+                    {{ t.last_message_at.strftime('%d %b, %H:%M') if t.last_message_at else '' }}
+                </div>
+            </div>
+            <div style="font-size:0.82rem; color:#64748b; white-space:nowrap;
+                overflow:hidden; text-overflow:ellipsis;">
+                {% if t.last_message_by == 'admin' %}
+                <span style="color:#3b82f6;">You:</span>
+                {% endif %}
+                {{ t.last_msg }}
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
