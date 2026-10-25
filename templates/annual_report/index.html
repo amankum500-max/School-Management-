@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% block title %}Annual Report — {{ fy_label }}{% endblock %}
+{% block page_title %}📊 Annual Report{% endblock %}
+
+{% block content %}
+
+<!-- FY selector -->
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:end;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">
+            Financial Year
+        </label>
+        <select name="fy" onchange="this.form.submit()"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;
+            font-weight:600;">
+            {% for y in fy_options %}
+            <option value="{{ y }}" {% if y == fy %}selected{% endif %}>
+                FY {{ y }}-{{ (y+1)|string|truncate(2, true, '') }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div style="margin-left:auto; display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <a href="{{ url_for('annual_report.print_view', fy=fy) }}" target="_blank"
+           class="btn" style="background:#8b5cf6;">🖨️ Print Report</a>
+        <a href="{{ url_for('backup.download') }}" class="btn"
+           style="background:#10b981;">💾 Backup</a>
+    </div>
+</form>
+</div>
+
+<!-- Hero: Net P&L -->
+<div class="card" style="background:linear-gradient(135deg,
+    {{ '#10b981,#34d399' if financial.profit else '#ef4444,#f87171' }});
+    color:white; text-align:center; padding:2rem 1rem; margin-bottom:1rem;">
+    <div style="font-size:0.9rem; opacity:0.9;">FY {{ fy_label }} — {{ 'NET PROFIT' if financial.profit else 'NET LOSS' }}</div>
+    <div style="font-size:2.8rem; font-weight:800; margin-top:0.35rem;">
+        ₹{{ "%.0f"|format(financial.net|abs) }}
+    </div>
+    <div style="font-size:0.8rem; margin-top:0.35rem; opacity:0.85;">
+        {{ financial.start.strftime('%d %b %Y') }} – {{ financial.end.strftime('%d %b %Y') }}
+    </div>
+</div>
+
+<!-- KPI Row -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+    gap:0.75rem; margin-bottom:1rem;">
+    <div class="card" style="padding:0.85rem; border-left:3px solid #10b981;">
+        <div style="font-size:0.72rem; color:#64748b;">Fees Collected</div>
+        <div style="font-size:1.4rem; font-weight:700; color:#10b981;">
+            ₹{{ "%.0f"|format(financial.fees_collected) }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.85rem; border-left:3px solid #3b82f6;">
+        <div style="font-size:0.72rem; color:#64748b;">Salaries Paid</div>
+        <div style="font-size:1.4rem; font-weight:700; color:#ef4444;">
+            ₹{{ "%.0f"|format(financial.salary_paid) }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.85rem; border-left:3px solid #f59e0b;">
+        <div style="font-size:0.72rem; color:#64748b;">Other Expenses</div>
+        <div style="font-size:1.4rem; font-weight:700; color:#ef4444;">
+            ₹{{ "%.0f"|format(financial.expenses_total) }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.85rem; border-left:3px solid #8b5cf6;">
+        <div style="font-size:0.72rem; color:#64748b;">Fee Efficiency</div>
+        <div style="font-size:1.4rem; font-weight:700;
+            color:{{ '#10b981' if fee_eff.efficiency_percent >= 80 else '#f59e0b' }};">
+            {{ fee_eff.efficiency_percent }}%
+        </div>
+    </div>
+</div>
+
+<!-- Students -->
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#1e293b;">
+        🎓 Students Summary
+    </h3>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+        gap:0.75rem; margin-bottom:0.75rem;">
+        <div>
+            <div style="font-size:0.75rem; color:#64748b;">Active Students</div>
+            <div style="font-size:1.5rem; font-weight:700;">
+                {{ students.total_active }}
+            </div>
+        </div>
+        <div>
+            <div style="font-size:0.75rem; color:#64748b;">New Admissions (FY)</div>
+            <div style="font-size:1.5rem; font-weight:700; color:#3b82f6;">
+                {{ students.new_admissions }}
+            </div>
+        </div>
+    </div>
+
+    {% if students.gender_distribution %}
+    <div style="display:flex; gap:0.75rem; flex-wrap:wrap; font-size:0.82rem;
+        margin-top:0.5rem;">
+        {% for g in students.gender_distribution %}
+        <span style="padding:0.25rem 0.7rem; background:#f1f5f9; border-radius:5px;">
+            <strong>{{ g.gender }}:</strong> {{ g.count }}
+        </span>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if students.class_distribution %}
+    <div style="margin-top:0.75rem;">
+        <div style="font-size:0.75rem; color:#64748b; margin-bottom:0.35rem;">
+            Class-wise distribution
+        </div>
+        <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+            {% for c in students.class_distribution %}
+            <span style="padding:0.25rem 0.7rem; background:#eff6ff; color:#1e40af;
+                border-radius:5px; font-size:0.8rem; font-weight:600;">
+                {{ c.class_name }}: {{ c.count }}
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Attendance -->
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#1e293b;">
+        📊 Attendance Summary (Overall: {{ attendance.overall_percent }}%)
+    </h3>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr));
+        gap:0.65rem; margin-bottom:0.75rem;">
+        <div style="background:#d1fae5; padding:0.6rem; border-radius:6px; text-align:center;">
+            <div style="font-size:0.7rem; color:#065f46;">Present</div>
+            <div style="font-size:1.2rem; font-weight:700; color:#065f46;">
+                {{ attendance.present }}
+            </div>
+        </div>
+        <div style="background:#fee2e2; padding:0.6rem; border-radius:6px; text-align:center;">
+            <div style="font-size:0.7rem; color:#991b1b;">Absent</div>
+            <div style="font-size:1.2rem; font-weight:700; color:#991b1b;">
+                {{ attendance.absent }}
+            </div>
+        </div>
+        <div style="background:#fef3c7; padding:0.6rem; border-radius:6px; text-align:center;">
+            <div style="font-size:0.7rem; color:#92400e;">Late</div>
+            <div style="font-size:1.2rem; font-weight:700; color:#92400e;">
+                {{ attendance.late }}
+            </div>
+        </div>
+        <div style="background:#dbeafe; padding:0.6rem; border-radius:6px; text-align:center;">
+            <div style="font-size:0.7rem; color:#1e40af;">Leave</div>
+            <div style="font-size:1.2rem; font-weight:700; color:#1e40af;">
+                {{ attendance.leave }}
+            </div>
+        </div>
+    </div>
+
+    {% if attendance.monthly_trend %}
+    <div style="overflow-x:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
+        <thead>
+            <tr style="background:#f1f5f9;">
+                {% for m in attendance.monthly_trend %}
+                <th style="padding:0.4rem; text-align:center; font-weight:600;">
+                    {{ m.month }}
+                </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                {% for m in attendance.monthly_trend %}
+                <td style="padding:0.4rem; text-align:center;
+                    color:{{ '#10b981' if m.percent >= 75 else '#f59e0b' }};
+                    font-weight:600;">
+                    {{ m.percent }}%
+                </td>
+                {% endfor %}
+            </tr>
+        </tbody>
+    </table>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Academic Performance -->
+{% if academic.class_performance %}
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#1e293b;">
+        📝 Academic Performance ({{ academic.exams_conducted }} exams conducted)
+    </h3>
+    <div style="overflow:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+        <thead style="background:#f1f5f9;">
+            <tr>
+                <th style="padding:0.5rem; text-align:left;">Class</th>
+                <th style="padding:0.5rem; text-align:center;">Students</th>
+                <th style="padding:0.5rem; text-align:right;">Avg %</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in academic.class_performance %}
+            <tr style="border-top:1px solid #e2e8f0;">
+                <td style="padding:0.5rem;"><strong>{{ c.class_name }}</strong></td>
+                <td style="padding:0.5rem; text-align:center;">{{ c.student_count }}</td>
+                <td style="padding:0.5rem; text-align:right;
+                    color:{{ '#10b981' if c.avg_percent >= 75 else ('#f59e0b' if c.avg_percent >= 50 else '#ef4444') }};
+                    font-weight:600;">
+                    {{ c.avg_percent }}%
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Expense Categories -->
+{% if financial.expense_categories %}
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#1e293b;">
+        💸 Expense Breakdown
+    </h3>
+    <div style="display:flex; flex-direction:column; gap:0.4rem;">
+        {% set max_exp = financial.expense_categories[0].amount if financial.expense_categories else 1 %}
+        {% for c in financial.expense_categories %}
+        <div>
+            <div style="display:flex; justify-content:space-between; font-size:0.82rem;
+                margin-bottom:0.15rem;">
+                <strong>{{ c.category }}</strong>
+                <span>₹{{ "%.0f"|format(c.amount) }}</span>
+            </div>
+            <div style="height:6px; background:#f1f5f9; border-radius:3px;
+                overflow:hidden;">
+                <div style="width:{{ (c.amount / max_exp * 100) if max_exp else 0 }}%;
+                    height:100%; background:#f59e0b;"></div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="card" style="background:#f8fafc; font-size:0.82rem; color:#64748b;
+    margin-top:1rem;">
+    <strong>ℹ️ Note:</strong>
+    FY {{ fy_label }} (1 April {{ fy }} – 31 March {{ fy + 1 }}).
+    "Fees Collected" actual payment date se count hote hain.
+    Fee efficiency = collected / expected bills ke against.
+</div>
+{% endblock %}
