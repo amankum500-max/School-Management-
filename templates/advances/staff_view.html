@@ -1,1 +1,94 @@
+{% extends "base.html" %}
+{% block title %}{{ m.name }} — Advances{% endblock %}
+{% block page_title %}💵 {{ m.name }} — Advances & Loans{% endblock %}
 
+{% block content %}
+
+<div style="margin-bottom:1rem;">
+    <a href="{{ url_for('staff.view', staff_id=m.id) }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">
+        ← Staff Profile
+    </a>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    gap:0.65rem; margin-bottom:1rem;">
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Active Advances</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#f59e0b;">
+            {{ summary.active_count }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Outstanding Balance</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#ef4444;">
+            ₹{{ "%.0f"|format(summary.active_remaining) }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Closed</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#10b981;">
+            {{ summary.closed_count }}
+        </div>
+    </div>
+</div>
+
+<div style="margin-bottom:1rem;">
+    <a href="{{ url_for('advances.new') }}" class="btn"
+       style="background:#f59e0b;">+ New Advance</a>
+</div>
+
+{% if advances %}
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.5rem; text-align:left;">ID</th>
+            <th style="padding:0.5rem; text-align:left;">Type</th>
+            <th style="padding:0.5rem; text-align:right;">Total</th>
+            <th style="padding:0.5rem; text-align:right;">Remaining</th>
+            <th style="padding:0.5rem; text-align:left;">Start</th>
+            <th style="padding:0.5rem; text-align:center;">Status</th>
+            <th style="padding:0.5rem; text-align:right;"></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for a in advances %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.5rem;">#{{ a.id }}</td>
+            <td style="padding:0.5rem; text-transform:capitalize; font-size:0.8rem;">
+                {{ a.advance_type }}
+            </td>
+            <td style="padding:0.5rem; text-align:right;">
+                ₹{{ "%.0f"|format(a.total) }}
+            </td>
+            <td style="padding:0.5rem; text-align:right; font-weight:600;
+                color:{{ '#ef4444' if a.remaining > 0 else '#10b981' }};">
+                ₹{{ "%.0f"|format(a.remaining) }}
+            </td>
+            <td style="padding:0.5rem; font-size:0.8rem;">{{ a.start_month }}</td>
+            <td style="padding:0.5rem; text-align:center;">
+                <span style="font-size:0.7rem; padding:0.15rem 0.45rem;
+                    border-radius:3px; font-weight:600; text-transform:uppercase;
+                    background:{{ '#fef3c7' if a.status == 'active' else ('#d1fae5' if a.status == 'closed' else '#f1f5f9') }};
+                    color:{{ '#92400e' if a.status == 'active' else ('#065f46' if a.status == 'closed' else '#64748b') }};">
+                    {{ a.status }}
+                </span>
+            </td>
+            <td style="padding:0.5rem; text-align:right;">
+                <a href="{{ url_for('advances.detail', adv_id=a.id) }}"
+                   style="color:#3b82f6; text-decoration:none; font-size:0.78rem;">
+                    View
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Koi advance record nahi.
+</div>
+{% endif %}
+{% endblock %}
