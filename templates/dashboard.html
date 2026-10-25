@@ -470,7 +470,27 @@
     </div>
 </div>
 {% endif %}
-
+{% if advance_outstanding and advance_outstanding.active_count > 0 %}
+<div class="card" style="margin-bottom:1rem; border-left:4px solid #f59e0b;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+            <div style="font-size:0.75rem; color:#64748b;">
+                💵 Staff Advance Outstanding
+            </div>
+            <div style="font-size:1.5rem; font-weight:700; color:#f59e0b;">
+                ₹{{ "%.0f"|format(advance_outstanding.outstanding) }}
+            </div>
+            <div style="font-size:0.72rem; color:#94a3b8;">
+                {{ advance_outstanding.active_count }} active advance{{ 's' if advance_outstanding.active_count > 1 }}
+            </div>
+        </div>
+        <a href="{{ url_for('advances.index') }}"
+           style="padding:0.5rem 1rem; background:#f59e0b; color:white;
+           border-radius:6px; text-decoration:none; font-size:0.82rem;
+           font-weight:600;">Manage →</a>
+    </div>
+</div>
+{% endif %}
 <!-- Alerts -->
 {% if computed_alerts or custom_alerts %}
 <div class="card" style="margin-bottom:1rem;">
