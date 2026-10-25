@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Apply Leave{% endblock %}
+{% block page_title %}🌴 New Leave Application{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:600px;">
+<form method="POST">
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Staff *</label>
+        <select name="staff_id" required
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px;">
+            <option value="">Select staff</option>
+            {% for s in staff_list %}
+            <option value="{{ s.id }}">{{ s.name }} ({{ s.role }})</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Leave Type *</label>
+        <select name="leave_type_id" required
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px;">
+            <option value="">Select type</option>
+            {% for lt in leave_types %}
+            <option value="{{ lt.id }}">
+                {{ lt.name }} ({{ lt.default_days }} days/year)
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;
+        margin-bottom:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">From Date *</label>
+            <input name="from_date" type="date" required value="{{ today }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+                border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">To Date *</label>
+            <input name="to_date" type="date" required value="{{ today }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+                border-radius:6px;">
+        </div>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Reason</label>
+        <textarea name="reason" rows="3"
+            placeholder="Kuch reason ya detail..."
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px;"></textarea>
+    </div>
+
+    <div style="background:#eff6ff; padding:0.65rem 0.9rem; border-radius:6px;
+        font-size:0.82rem; color:#1e40af; margin-bottom:1rem;">
+        <strong>ℹ️ Note:</strong>
+        Sundays ko count nahi kiya jayega. Approve hone pe attendance automatically
+        "leave" mark hogi aur leave balance update hoga.
+    </div>
+
+    <div style="display:flex; gap:0.75rem;">
+        <button type="submit" class="btn">Submit Application</button>
+        <a href="{{ url_for('leave.index') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">
+            Cancel
+        </a>
+    </div>
+</form>
+</div>
+{% endblock %}
