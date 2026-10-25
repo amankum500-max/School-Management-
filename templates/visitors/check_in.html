@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Visitor Check-In{% endblock %}
+{% block page_title %}✅ Visitor Check-In{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:1rem;">
+    <a href="{{ url_for('visitors.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+</div>
+
+<div class="card" style="max-width:700px;">
+<form method="POST">
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Visitor Name *</label>
+        <input name="name" required placeholder="Full name"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px;">
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;
+        margin-bottom:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Phone</label>
+            <input name="phone" type="tel" placeholder="10-digit"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+                border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Purpose *</label>
+            <select name="purpose" required
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+                border-radius:6px;">
+                {% for p in purposes %}
+                <option value="{{ p }}" {% if p == 'meeting' %}selected{% endif %}>
+                    {{ p|capitalize }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">To Meet (Staff)</label>
+        <select name="staff_id"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px;">
+            <option value="">— Select staff —</option>
+            {% for st in staff %}
+            <option value="{{ st.id }}">{{ st.name }} ({{ st.role }})</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">For Student (optional)</label>
+        <select name="student_id"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px;">
+            <option value="">— Select student —</option>
+            {% for s in students %}
+            <option value="{{ s.id }}">
+                {{ s.name }} ({{ s.roll or '—' }} • {{ s.class_name or '?' }}{% if s.section %}-{{ s.section }}{% endif %})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;
+        margin-bottom:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">ID Proof Type</label>
+            <select name="id_proof_type"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+                border-radius:6px;">
+                <option value="">None</option>
+                <option value="aadhaar">Aadhaar</option>
+                <option value="dl">Driving License</option>
+                <option value="pan">PAN</option>
+                <option value="voter">Voter ID</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">ID Proof Number</label>
+            <input name="id_proof_number" placeholder="XXXX-XXXX-XXXX"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+                border-radius:6px;">
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;
+        margin-bottom:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Vehicle No</label>
+            <input name="vehicle_no" placeholder="DL-01-AB-1234"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+                border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">To Meet (free text)</label>
+            <input name="to_meet" placeholder="e.g. Principal"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+                border-radius:6px;">
+        </div>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Note</label>
+        <textarea name="note" rows="2"
+            placeholder="Any remarks..."
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px;"></textarea>
+    </div>
+
+    <div style="background:#eff6ff; padding:0.65rem 0.9rem; border-radius:6px;
+        font-size:0.82rem; color:#1e40af; margin-bottom:1rem;">
+        <strong>ℹ️ Badge</strong> auto-generate hoga. Check-in ke baad print karke
+        visitor ko de do.
+    </div>
+
+    <div style="display:flex; gap:0.75rem;">
+        <button type="submit" class="btn" style="background:#10b981;">
+            Check In & Generate Badge
+        </button>
+        <a href="{{ url_for('visitors.index') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">
+            Cancel
+        </a>
+    </div>
+</form>
+</div>
+{% endblock %}
