@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}SMS Logs{% endblock %}
+{% block page_title %}📋 SMS Logs{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:1rem;">
+    <a href="{{ url_for('sms.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+</div>
+
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block;
+            margin-bottom:0.2rem;">Search</label>
+        <input name="q" value="{{ search }}" placeholder="phone / name"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;
+            width:200px;">
+    </div>
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block;
+            margin-bottom:0.2rem;">Status</label>
+        <select name="status"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">All</option>
+            <option value="sent" {% if selected_status=='sent' %}selected{% endif %}>Sent</option>
+            <option value="failed" {% if selected_status=='failed' %}selected{% endif %}>Failed</option>
+        </select>
+    </div>
+    <button type="submit" class="btn">Filter</button>
+</form>
+</div>
+
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.8rem; min-width:700px;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.5rem; text-align:left;">When</th>
+            <th style="padding:0.5rem; text-align:left;">Student</th>
+            <th style="padding:0.5rem; text-align:left;">Phone</th>
+            <th style="padding:0.5rem; text-align:left;">Message</th>
+            <th style="padding:0.5rem; text-align:center;">Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for l in logs %}
+        <tr style="border-top:1px solid #e2e8f0;
+            {{ 'background:#fef2f2' if l.status == 'failed' }}">
+            <td style="padding:0.5rem; font-size:0.72rem; color:#64748b; white-space:nowrap;">
+                {{ l.sent_at.strftime('%d %b, %H:%M') if l.sent_at else '—' }}
+            </td>
+            <td style="padding:0.5rem;">
+                <strong>{{ l.student_name or '—' }}</strong>
+                {% if l.class_name %}
+                <span style="color:#94a3b8; font-size:0.7rem;">• {{ l.class_name }}</span>
+                {% endif %}
+            </td>
+            <td style="padding:0.5rem; font-family:monospace; font-size:0.75rem;">
+                {{ l.phone }}
+            </td>
+            <td style="padding:0.5rem; font-size:0.75rem; color:#475569;
+                max-width:250px; overflow:hidden; text-overflow:ellipsis;
+                white-space:nowrap;" title="{{ l.message }}">
+                {{ l.message[:60] }}...
+            </td>
+            <td style="padding:0.5rem; text-align:center;">
+                <span style="font-size:0.7rem; padding:0.15rem 0.45rem;
+                    border-radius:3px; font-weight:600;
+                    background:{{ '#d1fae5' if l.status in ['sent','delivered'] else '#fee2e2' }};
+                    color:{{ '#065f46' if l.status in ['sent','delivered'] else '#991b1b' }};">
+                    {{ l.status }}
+                </span>
+                {% if l.error %}
+                <div style="font-size:0.65rem; color:#991b1b; margin-top:0.15rem;">
+                    {{ l.error[:60] }}
+                </div>
+                {% endif %}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="padding:2rem; text-align:center; color:#64748b;">
+            Koi log nahi.
+        </td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}
