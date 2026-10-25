@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Visitors{% endblock %}
+{% block page_title %}🚶 Visitor Management{% endblock %}
+
+{% block content %}
+
+<!-- Summary -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+    gap:0.65rem; margin-bottom:1rem;">
+    <div class="card" style="padding:0.65rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Currently In</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#3b82f6;">
+            {{ summary.currently_in }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.65rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Total Today</div>
+        <div style="font-size:1.5rem; font-weight:700;">{{ summary.total_today }}</div>
+    </div>
+    <div class="card" style="padding:0.65rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Meetings</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#8b5cf6;">
+            {{ summary.meetings }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.65rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Fee Visits</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#10b981;">
+            {{ summary.fee_visits }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.65rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Enquiries</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#f59e0b;">
+            {{ summary.enquiries }}
+        </div>
+    </div>
+</div>
+
+<!-- Actions + filters -->
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block;
+            margin-bottom:0.2rem;">Date</label>
+        <input type="date" name="date" value="{{ date }}"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block;
+            margin-bottom:0.2rem;">Status</label>
+        <select name="status"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">All</option>
+            <option value="in" {% if selected_status=='in' %}selected{% endif %}>Currently In</option>
+            <option value="out" {% if selected_status=='out' %}selected{% endif %}>Checked Out</option>
+        </select>
+    </div>
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block;
+            margin-bottom:0.2rem;">Search</label>
+        <input name="q" value="{{ search }}" placeholder="name/phone/badge"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;
+            width:160px;">
+    </div>
+    <button type="submit" class="btn">Filter</button>
+    <a href="{{ url_for('visitors.check_in') }}" class="btn"
+       style="background:#10b981; margin-left:auto;">+ Check In</a>
+</form>
+</div>
+
+<!-- List -->
+{% if not visitors %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Koi visitor record nahi.
+</div>
+{% else %}
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:700px;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.55rem; text-align:left;">Visitor</th>
+            <th style="padding:0.55rem; text-align:left;">Purpose</th>
+            <th style="padding:0.55rem; text-align:left;">To Meet</th>
+            <th style="padding:0.55rem; text-align:left;">Badge</th>
+            <th style="padding:0.55rem; text-align:center;">In</th>
+            <th style="padding:0.55rem; text-align:center;">Out</th>
+            <th style="padding:0.55rem; text-align:center;">Status</th>
+            <th style="padding:0.55rem; text-align:right;"></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for v in visitors %}
+        <tr style="border-top:1px solid #e2e8f0;
+            {{ 'background:#f0f9ff' if v.status == 'in' }}">
+            <td style="padding:0.5rem;">
+                <a href="{{ url_for('visitors.view', visitor_id=v.id) }}"
+                   style="color:#1e293b; text-decoration:none; font-weight:500;">
+                    {{ v.name }}
+                </a>
+                {% if v.phone %}
+                <div style="font-size:0.72rem; color:#94a3b8; font-family:monospace;">
+                    {{ v.phone }}
+                </div>
+                {% endif %}
+            </td>
+            <td style="padding:0.5rem; font-size:0.8rem; text-transform:capitalize;">
+                {{ v.purpose }}
+            </td>
+            <td style="padding:0.5rem; font-size:0.82rem;">
+                {% if v.student_name %}
+                <strong>{{ v.student_name }}</strong>
+                <div style="font-size:0.7rem; color:#94a3b8;">
+                    {{ v.class_name or '—' }}{% if v.section %}-{{ v.section }}{% endif %}
+                </div>
+                {% elif v.staff_name %}
+                <strong>{{ v.staff_name }}</strong>
+                <div style="font-size:0.7rem; color:#94a3b8;">Staff</div>
+                {% else %}
+                {{ v.to_meet or '—' }}
+                {% endif %}
+            </td>
+            <td style="padding:0.5rem; font-family:monospace; font-size:0.75rem;">
+                {{ v.badge_no or '—' }}
+            </td>
+            <td style="padding:0.5rem; text-align:center; font-size:0.78rem;">
+                {{ v.in_time.strftime('%H:%M') if v.in_time else '—' }}
+            </td>
+            <td style="padding:0.5rem; text-align:center; font-size:0.78rem;">
+                {{ v.out_time.strftime('%H:%M') if v.out_time else '—' }}
+            </td>
+            <td style="padding:0.5rem; text-align:center;">
+                <span style="font-size:0.7rem; padding:0.15rem 0.45rem;
+                    border-radius:3px; font-weight:600; text-transform:uppercase;
+                    background:{{ '#dbeafe' if v.status == 'in' else '#f1f5f9' }};
+                    color:{{ '#1e40af' if v.status == 'in' else '#64748b' }};">
+                    {{ v.status }}
+                </span>
+            </td>
+            <td style="padding:0.5rem; text-align:right; white-space:nowrap;">
+                <a href="{{ url_for('visitors.badge', visitor_id=v.id) }}"
+                   target="_blank"
+                   style="color:#3b82f6; text-decoration:none; font-size:0.78rem;
+                   margin-right:0.5rem;">Badge</a>
+                {% if v.status == 'in' %}
+                <form method="POST"
+                      action="{{ url_for('visitors.checkout', visitor_id=v.id) }}"
+                      onsubmit="return confirm('Check out {{ v.name }}?');"
+                      style="display:inline;">
+                    <button style="background:#ef4444; color:white; border:none;
+                        padding:0.3rem 0.65rem; border-radius:4px; cursor:pointer;
+                        font-size:0.75rem; font-weight:600;">Check Out</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}
