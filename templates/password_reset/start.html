@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Reset</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:system-ui,sans-serif; min-height:100vh;
+            background:linear-gradient(135deg,#1e293b,#3b82f6);
+            display:flex; align-items:center; justify-content:center; padding:1rem; }
+        .card { background:white; padding:2rem; border-radius:14px;
+            width:100%; max-width:400px; box-shadow:0 20px 50px rgba(0,0,0,0.2); }
+        h1 { font-size:1.4rem; margin-bottom:0.25rem; color:#1e293b; }
+        p.sub { color:#64748b; font-size:0.88rem; margin-bottom:1.5rem; }
+        label { display:block; font-size:0.85rem; color:#334155;
+            margin-bottom:0.35rem; font-weight:500; }
+        input, select { width:100%; padding:0.65rem; border:1px solid #cbd5e1;
+            border-radius:8px; font-size:0.95rem; margin-bottom:1rem; }
+        button { width:100%; padding:0.75rem; background:#3b82f6; color:white;
+            border:none; border-radius:8px; font-size:0.95rem; font-weight:600;
+            cursor:pointer; }
+        .flash { padding:0.65rem; border-radius:6px; font-size:0.85rem;
+            margin-bottom:1rem; }
+        .flash.success { background:#d1fae5; color:#065f46; }
+        .flash.error { background:#fee2e2; color:#991b1b; }
+        .link { text-align:center; margin-top:1rem; font-size:0.85rem; }
+        .link a { color:#3b82f6; text-decoration:none; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔐 Reset Password</h1>
+        <p class="sub">OTP aapke registered phone pe aayega</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for cat, msg in messages %}
+            <div class="flash {{ cat }}">{{ msg }}</div>
+            {% endfor %}
+        {% endwith %}
+
+        <form method="POST">
+            <label>Account Type</label>
+            <select name="user_type" required>
+                <option value="parent">Parent</option>
+                <option value="teacher">Teacher</option>
+                <option value="admin">Admin</option>
+            </select>
+
+            <label>Phone / Username</label>
+            <input name="identifier" required
+                placeholder="10-digit phone ya username">
+
+            <button type="submit">Send OTP</button>
+        </form>
+
+        <div class="link">
+            <a href="{{ url_for('auth.login') }}">← Back to Login</a>
+        </div>
+    </div>
+</body>
+</html>
