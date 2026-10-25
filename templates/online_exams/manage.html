@@ -1,1 +1,216 @@
+{% extends "base.html" %}
+{% block title %}{{ exam.title }} — Manage{% endblock %}
+{% block page_title %}📝 {{ exam.title }}{% endblock %}
 
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+    <a href="{{ url_for('online_exams.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <form method="POST"
+              action="{{ url_for('online_exams.toggle_publish', eid=exam.id) }}"
+              style="display:inline;"
+              onsubmit="return confirm('{{ 'Unpublish' if exam.is_published else 'Publish' }} this exam?');">
+            <button class="btn" style="background:{{ '#ef4444' if exam.is_published else '#10b981' }}; font-size:0.85rem;">
+                {{ 'Unpublish' if exam.is_published else 'Publish' }}
+            </button>
+        </form>
+        <a href="{{ url_for('online_exams.edit', eid=exam.id) }}"
+           class="btn" style="background:#f59e0b; font-size:0.85rem;">Edit</a>
+    </div>
+</div>
+
+<!-- Summary -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+    gap:0.65rem; margin-bottom:1rem;">
+    <div class="card" style="padding:0.65rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Questions</div>
+        <div style="font-size:1.4rem; font-weight:700;">{{ questions|length }}</div>
+    </div>
+    <div class="card" style="padding:0.65rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Total Marks</div>
+        <div style="font-size:1.4rem; font-weight:700;">{{ exam.total_marks or 0 }}</div>
+    </div>
+    <div class="card" style="padding:0.65rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Duration</div>
+        <div style="font-size:1.4rem; font-weight:700;">{{ exam.duration }}m</div>
+    </div>
+    <div class="card" style="padding:0.65rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Attempts</div>
+        <div style="font-size:1.4rem; font-weight:700;">{{ results|length }}</div>
+    </div>
+</div>
+
+<!-- Add question -->
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.65rem; color:#1e293b;">
+        ➕ Add Question
+    </h3>
+    <form method="POST" action="{{ url_for('online_exams.add_question', eid=exam.id) }}">
+        <div style="margin-bottom:0.65rem;">
+            <label style="font-size:0.78rem; color:#64748b; display:block;
+                margin-bottom:0.2rem;">Question *</label>
+            <textarea name="question_text" rows="2" required
+                placeholder="e.g. What is 2 + 2?"
+                style="width:100%; padding:0.55rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;"></textarea>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;
+            margin-bottom:0.65rem;">
+            <div>
+                <label style="font-size:0.72rem; color:#64748b; display:block;
+                    margin-bottom:0.15rem;">Option A *</label>
+                <input name="option_a" required
+                    style="width:100%; padding:0.45rem; border:1px solid #cbd5e1;
+                    border-radius:4px; font-size:0.85rem;">
+            </div>
+            <div>
+                <label style="font-size:0.72rem; color:#64748b; display:block;
+                    margin-bottom:0.15rem;">Option B *</label>
+                <input name="option_b" required
+                    style="width:100%; padding:0.45rem; border:1px solid #cbd5e1;
+                    border-radius:4px; font-size:0.85rem;">
+            </div>
+            <div>
+                <label style="font-size:0.72rem; color:#64748b; display:block;
+                    margin-bottom:0.15rem;">Option C (optional)</label>
+                <input name="option_c"
+                    style="width:100%; padding:0.45rem; border:1px solid #cbd5e1;
+                    border-radius:4px; font-size:0.85rem;">
+            </div>
+            <div>
+                <label style="font-size:0.72rem; color:#64748b; display:block;
+                    margin-bottom:0.15rem;">Option D (optional)</label>
+                <input name="option_d"
+                    style="width:100%; padding:0.45rem; border:1px solid #cbd5e1;
+                    border-radius:4px; font-size:0.85rem;">
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:0.5rem;
+            align-items:end;">
+            <div>
+                <label style="font-size:0.72rem; color:#64748b; display:block;
+                    margin-bottom:0.15rem;">Correct *</label>
+                <select name="correct_option" required
+                    style="width:100%; padding:0.45rem; border:1px solid #cbd5e1;
+                    border-radius:4px; font-size:0.85rem;">
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="D">D</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:0.72rem; color:#64748b; display:block;
+                    margin-bottom:0.15rem;">Marks</label>
+                <input name="marks" type="number" min="1" value="1"
+                    style="width:100%; padding:0.45rem; border:1px solid #cbd5e1;
+                    border-radius:4px; font-size:0.85rem;">
+            </div>
+            <button type="submit" class="btn"
+                style="padding:0.45rem 1rem; font-size:0.85rem;">+ Add</button>
+        </div>
+    </form>
+</div>
+
+<!-- Questions list -->
+{% if questions %}
+<div class="card" style="padding:0;">
+    <div style="padding:0.65rem 1rem; background:#f1f5f9; border-bottom:1px solid #e2e8f0;">
+        <strong style="font-size:0.9rem; color:#1e293b;">
+            Questions ({{ questions|length }})
+        </strong>
+    </div>
+    {% for q in questions %}
+    <div style="padding:0.75rem 1rem; border-top:1px solid #f1f5f9;">
+        <div style="display:flex; justify-content:space-between; gap:0.5rem;
+            flex-wrap:wrap;">
+            <div style="flex:1;">
+                <div style="font-weight:600; color:#1e293b; font-size:0.9rem;
+                    margin-bottom:0.35rem;">
+                    Q{{ q.q_no }}. {{ q.text }}
+                    <span style="font-size:0.7rem; background:#eff6ff;
+                        color:#1e40af; padding:0.1rem 0.4rem;
+                        border-radius:3px; margin-left:0.3rem;">
+                        {{ q.marks }} mark{{ 's' if q.marks > 1 }}
+                    </span>
+                </div>
+                <div style="font-size:0.82rem; color:#475569;
+                    display:flex; flex-direction:column; gap:0.15rem;">
+                    {% for opt, label in [('a','A'), ('b','B'), ('c','C'), ('d','D')] %}
+                        {% if q[opt] %}
+                        <div style="padding:0.2rem 0.5rem; border-radius:3px;
+                            {{ 'background:#d1fae5; color:#065f46; font-weight:600;' if q.correct == label }}">
+                            <strong>{{ label }}.</strong> {{ q[opt] }}
+                            {% if q.correct == label %}✓{% endif %}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            <form method="POST"
+                  action="{{ url_for('online_exams.remove_question', qid=q.id) }}"
+                  onsubmit="return confirm('Delete Q{{ q.q_no }}?');"
+                  style="display:inline;">
+                <button style="background:none; border:none; color:#ef4444;
+                    cursor:pointer; font-size:0.78rem;">×</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Abhi koi question nahi. Upar se add karo.
+</div>
+{% endif %}
+
+<!-- Results (if any) -->
+{% if results %}
+<div class="card" style="margin-top:1rem; padding:0; overflow:auto;">
+    <div style="padding:0.65rem 1rem; background:#f1f5f9; border-bottom:1px solid #e2e8f0;">
+        <strong style="font-size:0.9rem; color:#1e293b;">
+            Results ({{ results|length }})
+        </strong>
+    </div>
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+        <thead>
+            <tr>
+                <th style="padding:0.5rem; text-align:left;">Rank</th>
+                <th style="padding:0.5rem; text-align:left;">Student</th>
+                <th style="padding:0.5rem; text-align:left;">Class</th>
+                <th style="padding:0.5rem; text-align:right;">Score</th>
+                <th style="padding:0.5rem; text-align:center;">%</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in results %}
+            {% set pct = (r.score / r.total_marks * 100) if r.total_marks > 0 else 0 %}
+            <tr style="border-top:1px solid #e2e8f0;">
+                <td style="padding:0.5rem; font-weight:700;
+                    color:{{ '#f59e0b' if loop.index == 1 else '#64748b' }};">
+                    #{{ loop.index }}
+                </td>
+                <td style="padding:0.5rem;">
+                    <strong>{{ r.student_name }}</strong>
+                    <div style="font-size:0.7rem; color:#94a3b8;">Roll {{ r.roll or '—' }}</div>
+                </td>
+                <td style="padding:0.5rem;">{{ r.class_name or '—' }}</td>
+                <td style="padding:0.5rem; text-align:right; font-weight:600;">
+                    {{ r.score }}/{{ r.total_marks }}
+                </td>
+                <td style="padding:0.5rem; text-align:center; font-weight:600;
+                    color:{{ '#10b981' if pct >= 75 else ('#f59e0b' if pct >= 40 else '#ef4444') }};">
+                    {{ pct|round(1) }}%
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}
