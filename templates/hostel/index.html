@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Hostel{% endblock %}
+{% block page_title %}Hostel Management{% endblock %}
+
+{% block content %}
+
+<!-- Stats -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+    gap:0.75rem; margin-bottom:1rem;">
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Hostels</div>
+        <div style="font-size:1.5rem; font-weight:700;">{{ stats.hostels }}</div>
+    </div>
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Rooms</div>
+        <div style="font-size:1.5rem; font-weight:700;">{{ stats.rooms }}</div>
+    </div>
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Beds Occupied</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#f59e0b;">
+            {{ stats.occupied }}/{{ stats.beds }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Available Beds</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#10b981;">
+            {{ stats.available }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.75rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Monthly Revenue</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#8b5cf6;">
+            ₹{{ "%.0f"|format(stats.monthly_revenue) }}
+        </div>
+    </div>
+</div>
+
+<div style="display:flex; justify-content:flex-end; margin-bottom:1rem;">
+    <a href="{{ url_for('hostel.add') }}" class="btn">+ Add Hostel</a>
+</div>
+
+{% for h in hostels %}
+<div class="card" style="margin-bottom:0.75rem; border-left:4px solid
+    {{ '#10b981' if h.status == 'active' else '#94a3b8' }};">
+    <div style="display:flex; justify-content:space-between; align-items:start; gap:0.5rem; flex-wrap:wrap;">
+        <div style="flex:1;">
+            <a href="{{ url_for('hostel.view', hid=h.id) }}"
+               style="font-size:1.05rem; font-weight:700; color:#1e293b; text-decoration:none;">
+                🏠 {{ h.name }}
+            </a>
+            <div style="margin-top:0.5rem; font-size:0.85rem; color:#475569;
+                display:flex; gap:1rem; flex-wrap:wrap;">
+                {% if h.warden_name %}<span>👤 {{ h.warden_name }}</span>{% endif %}
+                {% if h.warden_phone %}<span>📞 {{ h.warden_phone }}</span>{% endif %}
+                <span>🛏️ {{ h.occupied_beds }}/{{ h.total_beds }} beds</span>
+                <span>🚪 {{ h.room_count }} rooms</span>
+            </div>
+            <div style="margin-top:0.4rem;">
+                <div style="width:100%; height:6px; background:#f1f5f9; border-radius:3px; overflow:hidden;">
+                    {% set pct = (h.occupied_beds * 100 / h.total_beds) if h.total_beds > 0 else 0 %}
+                    <div style="width:{{ pct }}%; height:100%;
+                        background:{{ '#ef4444' if pct >= 90 else ('#f59e0b' if pct >= 60 else '#10b981') }};"></div>
+                </div>
+            </div>
+        </div>
+        <div style="display:flex; gap:0.4rem;">
+            <a href="{{ url_for('hostel.edit', hid=h.id) }}"
+               style="color:#f59e0b; text-decoration:none; font-size:0.85rem;">Edit</a>
+            <a href="{{ url_for('hostel.view', hid=h.id) }}"
+               style="color:#3b82f6; text-decoration:none; font-size:0.85rem;">View</a>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Koi hostel nahi. "+ Add Hostel" se shuru karo.
+</div>
+{% endfor %}
+{% endblock %}
