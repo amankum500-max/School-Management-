@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Discounts{% endblock %}
+{% block page_title %}🎁 Fee Discounts & Scholarships{% endblock %}
+
+{% block content %}
+
+<!-- Summary -->
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.65rem; color:#1e293b;">
+        📊 Active Discounts Summary
+    </h3>
+    {% if summary %}
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+        gap:0.65rem;">
+        {% for s in summary %}
+        {% if s.student_count > 0 %}
+        <div style="background:#f8fafc; padding:0.65rem; border-radius:6px;
+            border-left:3px solid #8b5cf6;">
+            <div style="font-size:0.85rem; font-weight:600; color:#1e293b;">
+                {{ s.name }}
+            </div>
+            <div style="font-size:0.72rem; color:#64748b; text-transform:capitalize;
+                margin-bottom:0.35rem;">
+                {{ s.category|replace('_', ' ') }} •
+                {% if s.dtype == 'percent' %}{{ s.value }}%{% else %}₹{{ "%.0f"|format(s.value) }}{% endif %}
+            </div>
+            <div style="font-size:1.4rem; font-weight:700; color:#8b5cf6;">
+                {{ s.student_count }}
+                <span style="font-size:0.72rem; color:#64748b; font-weight:400;">
+                    student{{ 's' if s.student_count > 1 }}
+                </span>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="color:#94a3b8; font-size:0.85rem;">Koi active discounts nahi.</p>
+    {% endif %}
+</div>
+
+<!-- Add new type -->
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.65rem; color:#1e293b;">
+        ➕ Add New Discount Type
+    </h3>
+    <form method="POST" action="{{ url_for('discounts.add_type') }}"
+          style="display:grid; grid-template-columns:2fr 1.5fr 1fr 1fr auto;
+          gap:0.5rem; align-items:end;">
+        <div>
+            <label style="font-size:0.7rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Name *</label>
+            <input name="name" required placeholder="e.g. Alumni Discount"
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+        </div>
+        <div>
+            <label style="font-size:0.7rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Category</label>
+            <select name="category"
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+                {% for c in categories %}
+                <option value="{{ c }}">{{ c|replace('_', ' ')|title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.7rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Type</label>
+            <select name="discount_type"
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+                <option value="percent">Percent (%)</option>
+                <option value="fixed">Fixed (₹)</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.7rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Value *</label>
+            <input name="value" type="number" step="0.01" min="0" required
+                placeholder="10"
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+        </div>
+        <button type="submit" class="btn"
+            style="padding:0.5rem 1rem; font-size:0.85rem;">Add</button>
+    </form>
+</div>
+
+<!-- All types -->
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.6rem; text-align:left;">Name</th>
+            <th style="padding:0.6rem; text-align:left;">Category</th>
+            <th style="padding:0.6rem; text-align:center;">Type</th>
+            <th style="padding:0.6rem; text-align:right;">Value</th>
+            <th style="padding:0.6rem; text-align:right;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for t in types %}
+        <tr style="border-top:1px solid #e2e8f0;
+            {{ 'opacity:0.5;' if not t.is_active }}">
+            <td style="padding:0.55rem;"><strong>{{ t.name }}</strong></td>
+            <td style="padding:0.55rem; text-transform:capitalize; font-size:0.8rem;">
+                {{ t.category|replace('_', ' ') }}
+            </td>
+            <td style="padding:0.55rem; text-align:center; font-size:0.8rem;">
+                {{ t.discount_type }}
+            </td>
+            <td style="padding:0.55rem; text-align:right; font-weight:600;">
+                {% if t.discount_type == 'percent' %}{{ "%.0f"|format(t.value) }}%
+                {% else %}₹{{ "%.0f"|format(t.value) }}{% endif %}
+            </td>
+            <td style="padding:0.55rem; text-align:right;">
+                <form method="POST"
+                      action="{{ url_for('discounts.delete_type', dtid=t.id) }}"
+                      onsubmit="return confirm('Delete {{ t.name }}? Student discounts bhi remove ho jayenge.');"
+                      style="display:inline;">
+                    <button style="background:none; border:none; color:#ef4444;
+                        cursor:pointer; font-size:0.78rem;">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<div style="margin-top:1rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+    <a href="{{ url_for('discounts.report') }}" class="btn"
+       style="background:#3b82f6;">📊 Class-wise Report</a>
+</div>
+{% endblock %}
