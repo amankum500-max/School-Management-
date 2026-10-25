@@ -1,0 +1,94 @@
+{% extends "public/base.html" %}
+{% block title %}Gallery — {{ school.school_name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+
+<div style="text-align:center; margin-bottom:2rem;">
+    <h1 class="section-title" style="display:inline-block;">Photo Gallery</h1>
+    <p style="color:#64748b; font-size:0.9rem; margin:0.5rem auto 0;">
+        Glimpses of life at {{ school.school_name }}
+    </p>
+</div>
+
+<!-- Category filter -->
+{% if categories %}
+<div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center;
+    margin-bottom:1.5rem;">
+    <a href="{{ url_for('public_site.gallery_page') }}"
+       style="padding:0.4rem 0.9rem; border-radius:20px; text-decoration:none;
+       font-size:0.85rem; font-weight:600;
+       background:{{ '#3b82f6' if not selected else 'white' }};
+       color:{{ 'white' if not selected else '#475569' }};
+       border:1px solid {{ '#3b82f6' if not selected else '#cbd5e1' }};">
+        All
+    </a>
+    {% for c in categories %}
+    <a href="{{ url_for('public_site.gallery_page', category=c) }}"
+       style="padding:0.4rem 0.9rem; border-radius:20px; text-decoration:none;
+       font-size:0.85rem; font-weight:600; text-transform:capitalize;
+       background:{{ '#3b82f6' if selected == c else 'white' }};
+       color:{{ 'white' if selected == c else '#475569' }};
+       border:1px solid {{ '#3b82f6' if selected == c else '#cbd5e1' }};">
+        {{ c }}
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Grid -->
+{% if items %}
+<div style="display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+    gap:0.75rem;">
+    {% for g in items %}
+    <div class="pub-card" style="padding:0; overflow:hidden; cursor:pointer;"
+         onclick="openLightbox('{{ g.image_url }}', '{{ (g.title or '')|e }}')">
+        <img src="{{ g.image_url }}" alt="{{ g.title or '' }}"
+             loading="lazy"
+             style="width:100%; aspect-ratio:1; object-fit:cover; display:block;">
+        {% if g.title %}
+        <div style="padding:0.5rem 0.75rem; font-size:0.82rem; color:#475569;
+            white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            {{ g.title }}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="pub-card" style="text-align:center; padding:3rem; color:#94a3b8;">
+    Abhi koi photo nahi hai.
+</div>
+{% endif %}
+
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox"
+     style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92);
+     z-index:1000; align-items:center; justify-content:center; padding:1rem;"
+     onclick="closeLightbox()">
+    <button onclick="event.stopPropagation(); closeLightbox()"
+        style="position:absolute; top:1rem; right:1rem; background:rgba(255,255,255,0.2);
+        color:white; border:none; width:40px; height:40px; border-radius:50%;
+        cursor:pointer; font-size:1.3rem;">×</button>
+    <img id="lightboxImg" src="" alt=""
+         style="max-width:95vw; max-height:90vh; object-fit:contain;
+         border-radius:8px;" onclick="event.stopPropagation()">
+</div>
+
+<script>
+function openLightbox(url, title) {
+    const lb = document.getElementById('lightbox');
+    document.getElementById('lightboxImg').src = url;
+    lb.style.display = 'flex';
+}
+function closeLightbox() {
+    document.getElementById('lightbox').style.display = 'none';
+}
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeLightbox();
+});
+</script>
+{% endblock %}
