@@ -5,8 +5,50 @@
 {% block content %}
 <div class="card" style="max-width:800px;">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
-        <div>
-            <h2 style="margin-bottom:0.25rem;">{{ student.name }}</h2>
+        <div style="display:flex; gap:1rem; align-items:flex-start;">
+            <!-- Photo -->
+            <div style="flex-shrink:0;">
+                {% if student.photo_url %}
+                <img src="{{ student.photo_url }}" alt="{{ student.name }}"
+                    style="width:80px; height:105px; object-fit:cover;
+                    border-radius:8px; border:2px solid #cbd5e1;">
+                {% else %}
+                <div style="width:80px; height:105px; background:#f1f5f9;
+                    border:2px solid #cbd5e1; border-radius:8px;
+                    display:flex; align-items:center; justify-content:center;
+                    font-size:2rem; font-weight:700; color:#3b82f6;">
+                    {{ student.name[0]|upper }}
+                </div>
+                {% endif %}
+                <form method="POST"
+                      action="{{ url_for('photos.upload', student_id=student.id) }}"
+                      enctype="multipart/form-data"
+                      style="margin-top:0.35rem;">
+                    <label style="display:block; text-align:center;
+                        padding:0.25rem 0.4rem; background:#3b82f6; color:white;
+                        border-radius:4px; cursor:pointer; font-size:0.7rem;
+                        font-weight:600;">
+                        📷 {{ 'Change' if student.photo_url else 'Upload' }}
+                        <input type="file" name="photo" accept="image/*"
+                            style="display:none;" onchange="this.form.submit();">
+                    </label>
+                </form>
+                {% if student.photo_url %}
+                <form method="POST"
+                      action="{{ url_for('photos.delete', student_id=student.id) }}"
+                      onsubmit="return confirm('Photo delete karein?');"
+                      style="margin-top:0.25rem;">
+                    <button style="width:100%; background:none; border:1px solid #ef4444;
+                        color:#ef4444; border-radius:4px; cursor:pointer;
+                        padding:0.2rem 0.4rem; font-size:0.68rem;">
+                        Delete
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+
+            <div>
+                <h2 style="margin-bottom:0.25rem;">{{ student.name }}</h2>
             <p style="color:#64748b; font-size:0.9rem;">
                 {{ student.class_name or '—' }}{% if student.section %} - {{ student.section }}{% endif %}
                 • Roll: {{ student.roll_no or '—' }}
