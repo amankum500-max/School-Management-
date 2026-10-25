@@ -691,6 +691,42 @@
     </div>
 </div>
 {% endif %}
+    {% if visitors_today %}
+<div class="card" style="margin-bottom:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center;
+        margin-bottom:0.5rem;">
+        <h3 style="font-size:0.95rem; color:#1e293b;">🚶 Visitors Today</h3>
+        <a href="{{ url_for('visitors.index') }}"
+           style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">
+            View All →
+        </a>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr));
+        gap:0.5rem;">
+        <div style="background:#dbeafe; padding:0.5rem; border-radius:6px;
+            text-align:center;">
+            <div style="font-size:0.7rem; color:#1e40af;">Currently In</div>
+            <div style="font-size:1.3rem; font-weight:700; color:#1e40af;">
+                {{ visitors_today.currently_in }}
+            </div>
+        </div>
+        <div style="background:#f1f5f9; padding:0.5rem; border-radius:6px;
+            text-align:center;">
+            <div style="font-size:0.7rem; color:#475569;">Total Today</div>
+            <div style="font-size:1.3rem; font-weight:700; color:#475569;">
+                {{ visitors_today.total_today }}
+            </div>
+        </div>
+        <div style="background:#fef3c7; padding:0.5rem; border-radius:6px;
+            text-align:center;">
+            <div style="font-size:0.7rem; color:#92400e;">Meetings</div>
+            <div style="font-size:1.3rem; font-weight:700; color:#92400e;">
+                {{ visitors_today.meetings }}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 <div class="card" style="margin-bottom:1rem;">
     <h3 style="font-size:0.95rem; margin-bottom:0.65rem; color:#1e293b;">
         📊 Class-wise Attendance Today
