@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Compose SMS{% endblock %}
+{% block page_title %}✉️ Compose SMS{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:1rem;">
+    <a href="{{ url_for('sms.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+</div>
+
+<!-- Template selector -->
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;">
+    <input type="hidden" name="mode" value="{{ mode }}">
+    {% if mode == 'defaulters' %}
+    <input type="hidden" name="month" value="{{ month }}">
+    {% endif %}
+    <div style="flex:1; min-width:200px;">
+        <label style="font-size:0.75rem; color:#64748b; display:block;
+            margin-bottom:0.2rem;">Template</label>
+        <select name="template_id" onchange="this.form.submit()"
+            style="width:100%; padding:0.55rem; border:1px solid #cbd5e1;
+            border-radius:6px;">
+            {% for t in templates %}
+            <option value="{{ t.id }}"
+                {% if selected_template and selected_template.id == t.id %}selected{% endif %}>
+                {{ t.name }} ({{ t.category }})
+                {% if not t.msg91_template_id %}⚠️{% endif %}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+</div>
+
+{% if selected_template and not selected_template.msg91_template_id %}
+<div class="card" style="background:#fef3c7; border-left:3px solid #f59e0b;
+    font-size:0.82rem; color:#92400e; margin-bottom:1rem;">
+    ⚠️ Ye template ka MSG91 template ID set nahi hai.
+    DLT approve hone ke baad <a href="{{ url_for('sms.templates_list') }}"
+    style="color:#92400e; text-decoration:underline;">Templates page</a> pe ID daalo.
+    Abhi ke liye plain-text mode use hoga (sirf test number pe kaam karega).
+</div>
+{% endif %}
+
+<form method="POST">
+<input type="hidden" name="action" value="bulk">
+<input type="hidden" name="template_id" value="{{ selected_template.id if selected_template else 0 }}">
+
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.82rem; min-width:650px;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.5rem; text-align:center; width:40px;">
+                <input type="checkbox" id="selectAll" onchange="toggleAll(this)">
+            </th>
+            <th style="padding:0.5rem; text-align:left;">Student</th>
+            <th style="padding:0.5rem; text-align:left;">Phone</th>
+            {% if mode == 'defaulters' %}
+            <th style="padding:0.5rem; text-align:right;">Pending</th>
+            {% endif %}
+            <th style="padding:0.5rem; text-align:left;">Preview</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for s in students %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.45rem; text-align:center;">
+                <input type="checkbox" name="student_ids" value="{{ s.id }}"
+                    {% if s.id in preselected %}checked{% endif %}>
+            </td>
+            <td style="padding:0.45rem;">
+                <strong>{{ s.name }}</strong>
+                <div style="font-size:0.72rem; color:#94a3b8;">
+                    {{ s.class_name or '—' }}{% if s.section %}-{{ s.section }}{% endif %}
+                </div>
+            </td>
+            <td style="padding:0.45rem; font-family:monospace; font-size:0.78rem;">
+                {{ s.phone or '—' }}
+            </td>
+            {% if mode == 'defaulters' %}
+            <td style="padding:0.45rem; text-align:right; color:#ef4444;
+                font-weight:600;">
+                ₹{{ "%.0f"|format(s.pending_fees) }}
+            </td>
+            {% endif %}
+            <td style="padding:0.45rem; font-size:0.72rem; color:#64748b;
+                max-width:280px;">
+                {{ s.preview[:120] }}{% if s.preview|length > 120 %}...{% endif %}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="padding:2rem; text-align:center; color:#64748b;">
+            Koi student nahi.
+        </td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+{% if students %}
+<div class="card" style="margin-top:1rem; display:flex; gap:0.5rem;
+    align-items:center; flex-wrap:wrap;">
+    <button type="submit" class="btn" style="background:#3b82f6;"
+        onclick="return confirm('Selected students ko SMS bhejein? Ye chargeable hai.');">
+        📤 Send Selected SMS
+    </button>
+    <span style="font-size:0.75rem; color:#94a3b8;">
+        ⚠️ Har SMS chargeable hai (₹0.15-0.25 typical)
+    </span>
+</div>
+{% endif %}
+</form>
+
+<script>
+    function toggleAll(el) {
+        document.querySelectorAll('input[name="student_ids"]').forEach(c => {
+            c.checked = el.checked;
+        });
+    }
+</script>
+{% endblock %}
