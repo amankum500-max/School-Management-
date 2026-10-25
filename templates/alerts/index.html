@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Alerts{% endblock %}
+{% block page_title %}🔔 Alerts & Notifications{% endblock %}
+
+{% block content %}
+
+<!-- Computed alerts -->
+<h3 style="font-size:1rem; margin-bottom:0.75rem; color:#1e293b;">
+    System Alerts ({{ computed|length }})
+</h3>
+
+{% if not computed %}
+<div class="card" style="text-align:center; padding:1.5rem; color:#10b981;">
+    🎉 Sab clear hai! Koi pending alert nahi.
+</div>
+{% else %}
+{% set type_colors = {
+    'danger': ('#fee2e2', '#991b1b', '#ef4444'),
+    'warning': ('#fef3c7', '#92400e', '#f59e0b'),
+    'success': ('#d1fae5', '#065f46', '#10b981'),
+    'info': ('#dbeafe', '#1e40af', '#3b82f6')
+} %}
+{% for a in computed %}
+{% set c = type_colors.get(a.type, type_colors['info']) %}
+<a href="{{ a.link }}" style="text-decoration:none; color:inherit;">
+    <div class="card" style="background:{{ c[0] }}; border-left:4px solid {{ c[2] }}; margin-bottom:0.5rem;">
+        <div style="display:flex; gap:0.75rem; align-items:center;">
+            <div style="font-size:1.5rem;">{{ a.icon }}</div>
+            <div style="flex:1;">
+                <div style="font-size:1rem; font-weight:700; color:{{ c[1] }};">{{ a.title }}</div>
+                <div style="font-size:0.82rem; color:{{ c[1] }}; opacity:0.85; margin-top:0.15rem;">
+                    {{ a.message }}
+                </div>
+            </div>
+            <div style="font-size:1.3rem; color:{{ c[2] }};">→</div>
+        </div>
+    </div>
+</a>
+{% endfor %}
+{% endif %}
+
+<!-- Custom alerts -->
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; margin-top:1.5rem;">
+    <h3 style="font-size:1rem; color:#1e293b;">
+        Custom Alerts ({{ custom|length }})
+    </h3>
+    <a href="{{ url_for('alerts.add') }}" class="btn"
+       style="background:#8b5cf6; font-size:0.85rem;">+ New Custom Alert</a>
+</div>
+
+{% if not custom %}
+<div class="card" style="text-align:center; padding:1.5rem; color:#64748b;">
+    Koi custom alert nahi. "+ New Custom Alert" se banao — announcements, reminders,
+    ya kuch bhi.
+</div>
+{% else %}
+{% for a in custom %}
+{% set c = type_colors.get(a.alert_type, type_colors['info']) %}
+<div class="card" style="border-left:4px solid {{ c[2] }};
+    {{ 'opacity:0.6;' if not a.is_active }}; margin-bottom:0.5rem;">
+    <div style="display:flex; justify-content:space-between; align-items:start; gap:0.5rem; flex-wrap:wrap;">
+        <div style="flex:1;">
+            <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.35rem;">
+                <h4 style="font-size:0.98rem; color:#1e293b;">{{ a.title }}</h4>
+                <span style="font-size:0.7rem; padding:0.15rem 0.45rem; border-radius:3px;
+                    background:{{ c[0] }}; color:{{ c[1] }}; font-weight:600; text-transform:uppercase;">
+                    {{ a.alert_type }}
+                </span>
+                {% if not a.is_active %}
+                <span style="font-size:0.7rem; background:#f1f5f9; color:#94a3b8;
+                    padding:0.15rem 0.45rem; border-radius:3px;">INACTIVE</span>
+                {% endif %}
+            </div>
+            {% if a.message %}
+            <p style="font-size:0.88rem; color:#475569; margin:0;">{{ a.message }}</p>
+            {% endif %}
+            <div style="font-size:0.72rem; color:#94a3b8; margin-top:0.5rem;">
+                Target: <strong style="text-transform:capitalize;">{{ a.target }}</strong>
+                • Created {{ a.created_at.strftime('%d %b') if a.created_at else '' }}
+                {% if a.expires_at %}• Expires {{ a.expires_at.strftime('%d %b') }}{% endif %}
+            </div>
+        </div>
+        <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+            <form method="POST" action="{{ url_for('alerts.toggle', aid=a.id) }}"
+                  style="display:inline;">
+                <input type="hidden" name="is_active" value="{{ '0' if a.is_active else '1' }}">
+                <button style="background:none; border:1px solid #cbd5e1; color:#475569;
+                    padding:0.35rem 0.7rem; border-radius:4px; cursor:pointer; font-size:0.78rem;">
+                    {{ 'Deactivate' if a.is_active else 'Activate' }}
+                </button>
+            </form>
+            <form method="POST" action="{{ url_for('alerts.remove', aid=a.id) }}"
+                  onsubmit="return confirm('Delete alert?');" style="display:inline;">
+                <button style="background:none; border:none; color:#ef4444;
+                    cursor:pointer; font-size:0.78rem;">Delete</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}
