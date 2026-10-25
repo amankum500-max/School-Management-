@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Allocate Room — {{ h.name }}{% endblock %}
+{% block page_title %}Allocate Student to {{ h.name }}{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:1rem;">
+    <a href="{{ url_for('hostel.view', hid=h.id) }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+</div>
+
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.5rem;">
+    <input name="q" value="{{ search }}" placeholder="Search student by name or roll"
+        style="flex:1; padding:0.55rem 0.85rem; border:1px solid #cbd5e1; border-radius:6px;">
+    <button type="submit" class="btn">Search</button>
+</form>
+</div>
+
+{% if not rooms %}
+<div class="card" style="text-align:center; padding:2rem; color:#f59e0b;">
+    Is hostel mein koi available room nahi. Pehle rooms add karo ya kuch seats khaali karo.
+</div>
+{% elif not students %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Koi student nahi mila.
+</div>
+{% else %}
+
+{% for s in students %}
+<div class="card" style="margin-bottom:0.5rem; padding:0.75rem;">
+    <form method="POST" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+        <input type="hidden" name="student_id" value="{{ s.id }}">
+        <div style="flex:1; min-width:180px;">
+            <strong>{{ s.name }}</strong>
+            <div style="font-size:0.75rem; color:#94a3b8;">
+                Roll: {{ s.roll or '—' }} • Class {{ s.class_name or '?' }}{% if s.section %}-{{ s.section }}{% endif %}
+            </div>
+        </div>
+        <select name="room_id" required
+            style="padding:0.5rem; border:1px solid #cbd5e1; border-radius:5px;
+            font-size:0.85rem;">
+            <option value="">Select room</option>
+            {% for r in rooms %}
+            <option value="{{ r.id }}">
+                Room {{ r.room_no }} ({{ r.available }} left • ₹{{ "%.0f"|format(r.monthly_fee) }}/mo)
+            </option>
+            {% endfor %}
+        </select>
+        <input name="check_in" type="date" value="{{ today }}" required
+            style="padding:0.5rem; border:1px solid #cbd5e1; border-radius:5px;
+            font-size:0.85rem;">
+        <button type="submit" class="btn"
+            style="background:#8b5cf6; font-size:0.82rem;">Allocate</button>
+    </form>
+</div>
+{% endfor %}
+
+{% endif %}
+{% endblock %}
