@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}{{ m.name }} — Leave{% endblock %}
+{% block page_title %}🌴 {{ m.name }} — Leave Summary{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:1rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+    <a href="{{ url_for('staff.view', staff_id=m.id) }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">
+        ← Staff Profile
+    </a>
+</div>
+
+<!-- Balance cards -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+    gap:0.65rem; margin-bottom:1rem;">
+    {% for b in summary.balances %}
+    <div class="card" style="border-left:3px solid {{ b.color }}; padding:0.75rem;">
+        <div style="font-size:0.75rem; color:#64748b;">{{ b.name }}</div>
+        <div style="font-size:1.6rem; font-weight:700; color:{{ b.color }};">
+            {{ b.available }}
+        </div>
+        <div style="font-size:0.7rem; color:#94a3b8;">
+            {{ b.used }} used / {{ b.entitled }} entitled
+        </div>
+        <div style="height:4px; background:#f1f5f9; border-radius:2px;
+            margin-top:0.35rem; overflow:hidden;">
+            {% set pct = (b.used / b.entitled * 100) if b.entitled > 0 else 0 %}
+            <div style="width:{{ pct }}%; height:100%; background:{{ b.color }};"></div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Stats -->
+<div class="card" style="margin-bottom:1rem; padding:0.75rem;">
+    <div style="display:flex; gap:1.5rem; flex-wrap:wrap; font-size:0.85rem;">
+        <span><span style="color:#64748b;">Approved:</span>
+            <strong>{{ summary.approved_count }}</strong></span>
+        <span><span style="color:#64748b;">Pending:</span>
+            <strong style="color:#f59e0b;">{{ summary.pending_count }}</strong></span>
+        <span><span style="color:#64748b;">Total approved days:</span>
+            <strong>{{ summary.total_approved_days }}</strong></span>
+        <span><span style="color:#64748b;">Year:</span>
+            <strong>{{ summary.year }}</strong></span>
+    </div>
+</div>
+
+<!-- History -->
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;
+        margin-bottom:0.65rem;">
+        <h3 style="font-size:1rem; color:#1e293b;">Recent Applications</h3>
+        <a href="{{ url_for('leave.apply') }}" class="btn"
+           style="background:#8b5cf6; font-size:0.82rem;">+ Apply</a>
+    </div>
+    {% if history %}
+    <div style="overflow:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.82rem;">
+        <thead style="background:#f1f5f9;">
+            <tr>
+                <th style="padding:0.5rem; text-align:left;">Type</th>
+                <th style="padding:0.5rem; text-align:left;">From</th>
+                <th style="padding:0.5rem; text-align:left;">To</th>
+                <th style="padding:0.5rem; text-align:center;">Days</th>
+                <th style="padding:0.5rem; text-align:center;">Status</th>
+                <th style="padding:0.5rem; text-align:right;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in history %}
+            {% set sc = {
+                'pending': ('#fef3c7', '#92400e'),
+                'approved': ('#d1fae5', '#065f46'),
+                'rejected': ('#fee2e2', '#991b1b'),
+                'cancelled': ('#f1f5f9', '#64748b')
+            }.get(a.status, ('#f1f5f9', '#64748b')) %}
+            <tr style="border-top:1px solid #e2e8f0;">
+                <td style="padding:0.5rem; color:{{ a.color or '#3b82f6' }};
+                    font-weight:600;">
+                    {{ a.leave_type or '—' }}
+                </td>
+                <td style="padding:0.5rem;">{{ a.from_date.strftime('%d %b') }}</td>
+                <td style="padding:0.5rem;">{{ a.to_date.strftime('%d %b') }}</td>
+                <td style="padding:0.5rem; text-align:center; font-weight:600;">
+                    {{ a.days }}
+                </td>
+                <td style="padding:0.5rem; text-align:center;">
+                    <span style="font-size:0.7rem; padding:0.15rem 0.45rem;
+                        border-radius:3px; font-weight:600;
+                        background:{{ sc[0] }}; color:{{ sc[1] }};
+                        text-transform:uppercase;">
+                        {{ a.status }}
+                    </span>
+                </td>
+                <td style="padding:0.5rem; text-align:right;">
+                    <a href="{{ url_for('leave.detail', lid=a.id) }}"
+                       style="color:#3b82f6; text-decoration:none; font-size:0.78rem;">
+                        View
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p style="color:#94a3b8; font-size:0.85rem;">Koi application nahi.</p>
+    {% endif %}
+</div>
+{% endblock %}
