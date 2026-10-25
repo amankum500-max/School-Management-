@@ -1,0 +1,154 @@
+{% extends "parent/base.html" %}
+{% block title %}Pay Fees — {{ student.name }}{% endblock %}
+
+{% block content %}
+
+<div style="max-width:550px; margin:0 auto;">
+    <div style="text-align:center; margin-bottom:1rem;">
+        <a href="{{ url_for('parent.child_detail', student_id=student.id) }}"
+           style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+    </div>
+
+    <div class="card">
+        <h2 style="font-size:1.1rem; margin-bottom:0.25rem;">💳 Fee Payment</h2>
+        <p style="color:#64748b; font-size:0.85rem; margin-bottom:1rem;">
+            {{ student.name }} — {{ student.class_name or '—' }}{% if student.section %}-{{ student.section }}{% endif %}
+        </p>
+
+        <div style="background:#f8fafc; padding:0.75rem; border-radius:6px;
+            margin-bottom:1rem;">
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem;
+                padding:0.25rem 0;">
+                <span style="color:#64748b;">Month</span>
+                <strong>{{ dues.month }}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem;
+                padding:0.25rem 0;">
+                <span style="color:#64748b;">Total Due</span>
+                <strong>₹{{ "%.0f"|format(dues.due) }}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem;
+                padding:0.25rem 0;">
+                <span style="color:#64748b;">Already Paid</span>
+                <strong style="color:#10b981;">₹{{ "%.0f"|format(dues.paid) }}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.95rem;
+                padding:0.5rem 0 0; border-top:1px solid #e2e8f0; margin-top:0.35rem;">
+                <span style="color:#64748b;">Paying Now</span>
+                <strong style="color:#3b82f6; font-size:1.2rem;">
+                    ₹{{ "%.0f"|format(amount) }}
+                </strong>
+            </div>
+        </div>
+
+        <button id="payBtn" onclick="startPayment()"
+            style="width:100%; padding:0.85rem; background:#3b82f6; color:white;
+            border:none; border-radius:8px; font-size:1rem; font-weight:700;
+            cursor:pointer;">
+            Pay ₹{{ "%.0f"|format(amount) }} Securely
+        </button>
+
+        <p style="font-size:0.72rem; color:#94a3b8; text-align:center;
+            margin-top:0.75rem;">
+            🔒 Secure payment powered by Razorpay<br>
+            UPI, Cards, NetBanking, Wallets supported
+        </p>
+
+        <div id="statusBox" style="display:none; margin-top:1rem; padding:0.75rem;
+            border-radius:6px; font-size:0.85rem; text-align:center;"></div>
+    </div>
+</div>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+const RAZORPAY_KEY = {{ razorpay_key|tojson }};
+const ORDER_ID = {{ order.id|tojson }};
+const AMOUNT_PAISE = {{ order.amount }};
+const STUDENT_ID = {{ student.id }};
+const STUDENT_NAME = {{ student.name|tojson }};
+const PARENT_PHONE = {{ (student.parent_phone or '')|tojson }};
+
+function showStatus(text, color = '#3b82f6') {
+    const box = document.getElementById('statusBox');
+    box.textContent = text;
+    box.style.display = 'block';
+    box.style.background = color + '20';
+    box.style.color = color;
+    box.style.border = '1px solid ' + color;
+}
+
+function startPayment() {
+    const btn = document.getElementById('payBtn');
+    btn.disabled = true;
+    btn.textContent = 'Opening...';
+
+    const options = {
+        key: RAZORPAY_KEY,
+        amount: AMOUNT_PAISE,
+        currency: 'INR',
+        name: {{ school.school_name|tojson if school else 'School' }},
+        description: 'Fee Payment - ' + STUDENT_NAME,
+        order_id: ORDER_ID,
+        prefill: {
+            name: STUDENT_NAME,
+            contact: PARENT_PHONE
+        },
+        theme: { color: '#3b82f6' },
+        handler: async function(response) {
+            showStatus('Verifying payment...', '#3b82f6');
+            try {
+                const res = await fetch('{{ url_for("payments.verify") }}', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_signature: response.razorpay_signature
+                    })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    showStatus('✅ Payment successful! Redirecting...', '#10b981');
+                    setTimeout(() => {
+                        window.location.href = '{{ url_for("payments.success", student_id=student.id) }}';
+                    }, 1000);
+                } else {
+                    showStatus('❌ ' + (data.error || 'Verification failed'), '#ef4444');
+                    btn.disabled = false;
+                    btn.textContent = 'Retry Payment';
+                }
+            } catch (e) {
+                showStatus('Error: ' + e.message, '#ef4444');
+                btn.disabled = false;
+                btn.textContent = 'Retry Payment';
+            }
+        },
+        modal: {
+            ondismiss: function() {
+                btn.disabled = false;
+                btn.textContent = 'Pay ₹' + {{ "%.0f"|format(amount) }};
+                fetch('{{ url_for("payments.failed") }}', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({order_id: ORDER_ID, reason: 'User cancelled'})
+                });
+            }
+        }
+    };
+
+    try {
+        const rzp = new Razorpay(options);
+        rzp.on('payment.failed', function(response) {
+            showStatus('❌ Payment failed: ' + (response.error.description || 'Unknown'), '#ef4444');
+            btn.disabled = false;
+            btn.textContent = 'Retry Payment';
+        });
+        rzp.open();
+    } catch (e) {
+        showStatus('Error: ' + e.message, '#ef4444');
+        btn.disabled = false;
+        btn.textContent = 'Retry Payment';
+    }
+}
+</script>
+{% endblock %}
