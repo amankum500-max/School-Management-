@@ -1,1 +1,103 @@
+{% extends "parent/base.html" %}
+{% block title %}{{ attempt.exam_title }} — Result{% endblock %}
 
+{% block content %}
+
+<div style="max-width:800px; margin:0 auto;">
+
+<div style="margin-bottom:1rem;">
+    <a href="{{ url_for('parent.online_exams_list', child_id=attempt.student_id) }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">
+        ← Online Exams
+    </a>
+</div>
+
+{% set passed = percent >= 40 %}
+<div class="card" style="text-align:center;
+    background:linear-gradient(135deg,{{ '#10b981,#34d399' if passed else '#ef4444,#f87171' }});
+    color:white; padding:2rem 1rem; margin-bottom:1rem;">
+    <div style="font-size:0.9rem; opacity:0.9;">
+        {{ attempt.exam_title }}
+    </div>
+    <div style="font-size:3rem; font-weight:800; margin:0.35rem 0;">
+        {{ attempt.score }}/{{ attempt.total_marks }}
+    </div>
+    <div style="font-size:1.3rem; font-weight:700;">
+        {{ percent }}%
+    </div>
+    <div style="font-size:0.85rem; margin-top:0.35rem; opacity:0.9;">
+        {{ attempt.student_name }} • Roll {{ attempt.roll or '—' }}
+        {{ attempt.class_name or '' }}{% if attempt.section %}-{{ attempt.section }}{% endif %}
+    </div>
+</div>
+
+<!-- Answer review -->
+<div class="card" style="padding:0;">
+    <div style="padding:0.75rem 1rem; background:#f1f5f9;
+        border-bottom:1px solid #e2e8f0;">
+        <strong style="font-size:0.95rem; color:#1e293b;">
+            📋 Answer Review
+        </strong>
+    </div>
+    {% for a in answers %}
+    <div style="padding:0.75rem 1rem; border-top:1px solid #f1f5f9;">
+        <div style="display:flex; gap:0.5rem; align-items:start;
+            margin-bottom:0.35rem;">
+            <span style="width:22px; height:22px; border-radius:50%;
+                display:flex; align-items:center; justify-content:center;
+                font-size:0.75rem; font-weight:700; flex-shrink:0;
+                background:{{ '#d1fae5' if a.is_correct else '#fee2e2' }};
+                color:{{ '#065f46' if a.is_correct else '#991b1b' }};">
+                {{ '✓' if a.is_correct else '✗' }}
+            </span>
+            <div style="flex:1;">
+                <div style="font-size:0.88rem; color:#1e293b; font-weight:600;">
+                    Q{{ a.q_no }}. {{ a.text }}
+                </div>
+            </div>
+            <span style="font-size:0.7rem; padding:0.15rem 0.4rem;
+                border-radius:3px; font-weight:600;
+                background:{{ '#d1fae5' if a.is_correct else '#fee2e2' }};
+                color:{{ '#065f46' if a.is_correct else '#991b1b' }};">
+                {{ '+' ~ a.marks if a.is_correct else '0' }}/{{ a.marks }}
+            </span>
+        </div>
+        <div style="font-size:0.82rem; margin-left:2rem;
+            display:flex; flex-direction:column; gap:0.15rem;">
+            {% for opt_key, opt_label in [('a','A'), ('b','B'), ('c','C'), ('d','D')] %}
+                {% if a[opt_key] %}
+                <div style="padding:0.25rem 0.5rem; border-radius:3px;
+                    {% if opt_label == a.correct %}
+                    background:#d1fae5; color:#065f46; font-weight:600;
+                    {% elif opt_label == a.selected and not a.is_correct %}
+                    background:#fee2e2; color:#991b1b; font-weight:600;
+                    {% else %}
+                    color:#64748b;
+                    {% endif %}">
+                    <strong>{{ opt_label }}.</strong> {{ a[opt_key] }}
+                    {% if opt_label == a.selected %}
+                    <span style="font-size:0.7rem; margin-left:0.3rem;
+                        opacity:0.8;">(your answer)</span>
+                    {% endif %}
+                    {% if opt_label == a.correct %}
+                    <span style="font-size:0.7rem; margin-left:0.3rem;
+                        opacity:0.8;">✓ correct</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div style="margin-top:1rem; display:flex; gap:0.5rem; justify-content:center;
+    flex-wrap:wrap;">
+    <a href="{{ url_for('parent.online_exams_list', child_id=attempt.student_id) }}"
+       style="padding:0.6rem 1.5rem; background:#64748b; color:white;
+       border-radius:6px; text-decoration:none; font-size:0.9rem;
+       font-weight:600;">Back to Exams</a>
+</div>
+
+</div>
+{% endblock %}
