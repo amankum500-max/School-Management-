@@ -1,1 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Online Exams{% endblock %}
+{% block page_title %}📝 Online Exams (MCQ){% endblock %}
 
+{% block content %}
+
+<div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;
+    align-items:center;">
+    <form method="GET" style="display:flex; gap:0.5rem;">
+        <select name="class" onchange="this.form.submit()"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">All Classes</option>
+            {% for c in classes %}
+            <option value="{{ c }}" {% if c == selected_class %}selected{% endif %}>
+                Class {{ c }}
+            </option>
+            {% endfor %}
+        </select>
+    </form>
+    <a href="{{ url_for('online_exams.add') }}" class="btn"
+       style="background:#8b5cf6; margin-left:auto;">+ New Exam</a>
+</div>
+
+{% for e in exams %}
+<div class="card" style="margin-bottom:0.75rem; border-left:4px solid
+    {{ '#10b981' if e.is_published else '#94a3b8' }};">
+    <div style="display:flex; justify-content:space-between; align-items:start;
+        flex-wrap:wrap; gap:0.5rem;">
+        <div style="flex:1;">
+            <div style="display:flex; gap:0.5rem; align-items:center;
+                flex-wrap:wrap; margin-bottom:0.35rem;">
+                <a href="{{ url_for('online_exams.manage', eid=e.id) }}"
+                   style="font-size:1rem; font-weight:600; color:#1e293b;
+                   text-decoration:none;">
+                    {{ e.title }}
+                </a>
+                {% if e.is_published %}
+                <span style="font-size:0.7rem; background:#d1fae5;
+                    color:#065f46; padding:0.15rem 0.45rem;
+                    border-radius:3px; font-weight:600;">PUBLISHED</span>
+                {% else %}
+                <span style="font-size:0.7rem; background:#fef3c7;
+                    color:#92400e; padding:0.15rem 0.45rem;
+                    border-radius:3px; font-weight:600;">DRAFT</span>
+                {% endif %}
+            </div>
+            <div style="font-size:0.82rem; color:#64748b;">
+                Class {{ e.class_name }}
+                {% if e.subject %}• {{ e.subject }}{% endif %}
+                • {{ e.question_count }} Qs
+                • {{ e.total_marks }} marks
+                • {{ e.duration }} min
+                • {{ e.attempt_count }} attempts
+            </div>
+        </div>
+        <div style="display:flex; gap:0.4rem;">
+            <a href="{{ url_for('online_exams.manage', eid=e.id) }}"
+               class="btn" style="background:#3b82f6; font-size:0.8rem;
+               padding:0.4rem 0.85rem;">Manage</a>
+            <a href="{{ url_for('online_exams.edit', eid=e.id) }}"
+               style="color:#f59e0b; text-decoration:none; font-size:0.8rem;
+               padding:0.4rem;">Edit</a>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Koi online exam nahi. "+ New Exam" se shuru karo.
+</div>
+{% endfor %}
+{% endblock %}
