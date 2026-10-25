@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Staff Attendance{% endblock %}
+{% block page_title %}👨‍🏫 Staff Attendance{% endblock %}
+
+{% block content %}
+
+<!-- Filters -->
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block;
+            margin-bottom:0.2rem;">Date</label>
+        <input type="date" name="date" value="{{ date }}"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block;
+            margin-bottom:0.2rem;">Role</label>
+        <select name="role"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">All roles</option>
+            {% for r in roles %}
+            <option value="{{ r }}" {% if r == selected_role %}selected{% endif %}>
+                {{ r|capitalize }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn">Load</button>
+    <a href="{{ url_for('staff_attendance.monthly') }}" class="btn"
+       style="background:#8b5cf6; margin-left:auto;">📊 Monthly View</a>
+</form>
+</div>
+
+<!-- Summary -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
+    gap:0.65rem; margin-bottom:1rem;">
+    <div class="card" style="padding:0.65rem; text-align:center;">
+        <div style="font-size:0.7rem; color:#64748b;">Present</div>
+        <div style="font-size:1.4rem; font-weight:700; color:#10b981;">
+            {{ summary.present }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.65rem; text-align:center;">
+        <div style="font-size:0.7rem; color:#64748b;">Absent</div>
+        <div style="font-size:1.4rem; font-weight:700; color:#ef4444;">
+            {{ summary.absent }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.65rem; text-align:center;">
+        <div style="font-size:0.7rem; color:#64748b;">Leave</div>
+        <div style="font-size:1.4rem; font-weight:700; color:#3b82f6;">
+            {{ summary.leave }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.65rem; text-align:center;">
+        <div style="font-size:0.7rem; color:#64748b;">Half Day</div>
+        <div style="font-size:1.4rem; font-weight:700; color:#f59e0b;">
+            {{ summary.half_day }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.65rem; text-align:center;">
+        <div style="font-size:0.7rem; color:#64748b;">Unmarked</div>
+        <div style="font-size:1.4rem; font-weight:700; color:#94a3b8;">
+            {{ summary.unmarked }}
+        </div>
+    </div>
+</div>
+
+<!-- Bulk actions -->
+<div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;">
+    <form method="POST" action="{{ url_for('staff_attendance.mark_all') }}"
+          style="display:inline;"
+          onsubmit="return confirm('Sabhi {{ 'role ' + selected_role if selected_role else 'active staff' }} ko Present mark karein?');">
+        <input type="hidden" name="date" value="{{ date }}">
+        <input type="hidden" name="status" value="present">
+        <input type="hidden" name="role" value="{{ selected_role }}">
+        <button class="btn" style="background:#10b981;">✓ All Present</button>
+    </form>
+    <form method="POST" action="{{ url_for('staff_attendance.mark_all') }}"
+          style="display:inline;">
+        <input type="hidden" name="date" value="{{ date }}">
+        <input type="hidden" name="status" value="holiday">
+        <input type="hidden" name="role" value="{{ selected_role }}">
+        <button class="btn" style="background:#64748b;">🎉 Mark Holiday</button>
+    </form>
+</div>
+
+<!-- Staff list -->
+<div class="card" style="padding:0;">
+{% for s in staff %}
+<div style="display:flex; align-items:center; justify-content:space-between;
+    padding:0.75rem 1rem; border-bottom:1px solid #e2e8f0; flex-wrap:wrap;
+    gap:0.5rem;">
+    <div>
+        <a href="{{ url_for('staff_attendance.staff_detail', staff_id=s.id) }}"
+           style="color:#1e293b; text-decoration:none; font-weight:600;
+           font-size:0.92rem;">{{ s.name }}</a>
+        <div style="font-size:0.72rem; color:#94a3b8; text-transform:capitalize;">
+            {{ s.role }}
+            {% if s.check_in %} • Check-in: {{ s.check_in.strftime('%H:%M') if s.check_in.strftime else s.check_in }}{% endif %}
+        </div>
+    </div>
+    <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+        {% for st, color in [
+            ('present','#10b981'),
+            ('absent','#ef4444'),
+            ('half_day','#f59e0b'),
+            ('leave','#3b82f6'),
+            ('holiday','#94a3b8')
+        ] %}
+        <form method="POST" action="{{ url_for('staff_attendance.mark') }}"
+              style="display:inline;">
+            <input type="hidden" name="staff_id" value="{{ s.id }}">
+            <input type="hidden" name="date" value="{{ date }}">
+            <input type="hidden" name="status" value="{{ st }}">
+            <button type="submit"
+                style="padding:0.4rem 0.7rem; border:none; border-radius:4px;
+                cursor:pointer; font-size:0.75rem; font-weight:600;
+                background:{{ color if s.status == st else '#f1f5f9' }};
+                color:{{ 'white' if s.status == st else '#475569' }};">
+                {{ st.replace('_',' ')|title }}
+            </button>
+        </form>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div style="padding:2rem; text-align:center; color:#64748b;">
+    Koi active staff nahi mila.
+</div>
+{% endfor %}
+</div>
+{% endblock %}
