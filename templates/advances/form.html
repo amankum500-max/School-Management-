@@ -1,1 +1,102 @@
+{% extends "base.html" %}
+{% block title %}New Advance{% endblock %}
+{% block page_title %}💵 New Advance / Loan{% endblock %}
 
+{% block content %}
+
+<div style="margin-bottom:1rem;">
+    <a href="{{ url_for('advances.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
+</div>
+
+<div class="card" style="max-width:600px;">
+<form method="POST">
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Staff *</label>
+        <select name="staff_id" required
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px;">
+            <option value="">Select staff</option>
+            {% for s in staff_list %}
+            <option value="{{ s.id }}">
+                {{ s.name }} ({{ s.role }}{% if s.salary %} • ₹{{ "%.0f"|format(s.salary) }}{% endif %})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;
+        margin-bottom:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Type *</label>
+            <select name="advance_type" required
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+                border-radius:6px;">
+                {% for t in advance_types %}
+                <option value="{{ t }}">{{ t|capitalize }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">
+                Start Month *
+            </label>
+            <input name="start_month" type="month" required value="{{ today_month }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+                border-radius:6px;">
+            <small style="color:#94a3b8; font-size:0.7rem;">
+                Is month se deduction start hoga
+            </small>
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;
+        margin-bottom:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Total Amount (₹) *</label>
+            <input name="total_amount" type="number" step="0.01" min="1" required
+                placeholder="5000"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+                border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">
+                Monthly Deduction (₹) *
+            </label>
+            <input name="monthly_deduction" type="number" step="0.01" min="1" required
+                placeholder="1000"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+                border-radius:6px;">
+            <small style="color:#94a3b8; font-size:0.7rem;">
+                Salary se monthly minus hoga
+            </small>
+        </div>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Reason / Purpose</label>
+        <textarea name="reason" rows="2"
+            placeholder="e.g. Medical emergency, Festival advance..."
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px;"></textarea>
+    </div>
+
+    <div style="background:#eff6ff; padding:0.65rem 0.9rem; border-radius:6px;
+        font-size:0.82rem; color:#1e40af; margin-bottom:1rem;">
+        <strong>ℹ️ Kaise kaam karega:</strong>
+        Salary generate karne pe <strong>monthly deduction</strong> automatically
+        minus hoga. Jab salary mark paid hogi, advance ki balance reduce hogi
+        aur repayment log banega. Balance 0 pe advance auto-close ho jayega.
+    </div>
+
+    <div style="display:flex; gap:0.75rem;">
+        <button type="submit" class="btn">Create Advance</button>
+        <a href="{{ url_for('advances.index') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">
+            Cancel
+        </a>
+    </div>
+</form>
+</div>
+{% endblock %}
