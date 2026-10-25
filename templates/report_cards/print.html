@@ -1,1 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Report Card — {{ r.student.name }}</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: Georgia, 'Times New Roman', serif;
+            background: #e2e8f0;
+            padding: 1rem;
+            color: #1e293b;
+        }
+        .page {
+            background: white;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem;
+            border: 1px solid #cbd5e1;
+        }
 
+        /* Letterhead */
+        .letterhead {
+            text-align: center;
+            border-bottom: 3px double #1e293b;
+            padding-bottom: 0.65rem;
+            margin-bottom: 0.75rem;
+        }
+        .letterhead h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #1e293b;
+            text-transform: uppercase;
+        }
+        .letterhead .tagline {
+            font-size: 0.8rem;
+            color: #64748b;
+            font-style: italic;
+            margin-top: 0.15rem;
+        }
+        .letterhead .contact {
+            font-size: 0.7rem;
+            color: #64748b;
+            margin-top: 0.2rem;
+        }
+        .cert-title {
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #1e40af;
+            margin: 0.65rem 0 0.35rem;
+        }
+        .cert-title::before, .cert-title::after {
+            content: '— ';
+        }
+        .cert-title::after { content: ' —'; }
+        .ay-label {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #475569;
+            margin-bottom: 0.75rem;
+            font-family: system-ui, sans-serif;
+        }
+
+        /* Student info */
+        .info-grid {
+            display: grid;
+            grid-template-columns: auto 1fr auto 1fr;
+            gap: 0.3rem 1rem;
+            font-size: 0.82rem;
+            font-family: system-ui, sans-serif;
+            padding: 0.5rem 0;
+            border-top: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 0.85rem;
+        }
+        .info-grid .label {
+            color: #64748b;
+        }
+        .info-grid .value {
+            color: #1e293b;
+            font-weight: 600;
+        }
+
+        /* Table */
+        table.marks {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.78rem;
+            font-family: system-ui, sans-serif;
+            margin-bottom: 0.85rem;
+        }
+        table.marks th, table.marks td {
+            border: 1px solid #cbd5e1;
+            padding: 0.35rem 0.5rem;
+            text-align: center;
+        }
+        table.marks th {
+            background: #1e293b;
+            color: white;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        table.marks td:first-child, table.marks th:first-child {
+            text-align: left;
+        }
+        table.marks tr:nth-child(even) td {
+            background: #f8fafc;
+        }
+        table.marks .total-row td {
+            background: #eff6ff !important;
+            font-weight: 700;
+            border-top: 2px solid #1e293b;
+        }
+        .grade-badge {
+            display: inline-block;
+            padding: 0.05rem 0.4rem;
+            border-radius: 3px;
+            font-weight: 700;
+            font-size: 0.75rem;
+        }
+
+        /* Two-col: attendance + fee */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 0.85rem;
+            font-family: system-ui, sans-serif;
+            font-size: 0.82rem;
+        }
+        .summary-box {
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 0.55rem 0.75rem;
+        }
+        .summary-box h4 {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            margin-bottom: 0.4rem;
+        }
+        .summary-box .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.1rem 0;
+        }
+        .summary-box .row strong {
+            color: #1e293b;
+        }
+
+        /* Final result */
+        .final-result {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 0.85rem;
+            font-family: system-ui, sans-serif;
+        }
+        .result-cell {
+            text-align: center;
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+        }
+        .result-cell .lbl {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            color: #64748b;
+            letter-spacing: 0.5px;
+        }
+        .result-cell .val {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #1e293b;
+            margin-top: 0.15rem;
+        }
+        .result-cell.highlight {
+            background: #eff6ff;
+            border-color: #3b82f6;
+        }
+        .result-cell.highlight .val {
+            color: #1e40af;
+        }
+
+        /* Remarks */
+        .remarks-section {
+            font-family: system-ui, sans-serif;
+            font-size: 0.82rem;
+            margin-bottom: 0.85rem;
+        }
+        .remark-item {
+            padding: 0.4rem 0;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+        .remark-item:last-child {
+            border-bottom: none;
+        }
+        .remark-item .lbl {
+            font-size: 0.72rem;
+            color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.1rem;
+        }
+        .remark-item .val {
+            font-size: 0.85rem;
+            color: #334155;
+        }
+
+        /* Signatures */
+        .signs {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2rem;
+            font-family: system-ui, sans-serif;
+        }
+        .sign {
+            text-align: center;
+            font-size: 0.78rem;
+            color: #334155;
+        }
+        .sign .line {
+            width: 140px;
+            border-top: 1.5px solid #1e293b;
+            margin: 0 auto 0.3rem;
+            padding-top: 0.3rem;
+        }
+
+        .foot {
+            margin-top: 1rem;
+            padding-top: 0.5rem;
+            border-top: 1px dashed #cbd5e1;
+            font-size: 0.68rem;
+            color: #94a3b8;
+            text-align: center;
+            font-family: system-ui, sans-serif;
+        }
+
+        .actions {
+            text-align: center;
+            margin-top: 1rem;
+            font-family: system-ui, sans-serif;
+        }
+        .actions button {
+            padding: 0.6rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            background: #3b82f6;
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
+        @media print {
+            body { background: white; padding: 0; }
+            .page { border: none; padding: 0; max-width: none; }
+            .actions { display: none; }
+            table.marks tr { page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+
+        <!-- Letterhead -->
+        <div class="letterhead">
+            <h1>{{ school.school_name if school else 'School' }}</h1>
+            {% if school and school.tagline %}
+            <div class="tagline">{{ school.tagline }}</div>
+            {% endif %}
+            <div class="contact">
+                {% if school and school.address %}{{ school.address }}{% endif %}
+                {% if school and school.address and school.phone %} • {% endif %}
+                {% if school and school.phone %}📞 {{ school.phone }}{% endif %}
+                {% if school and school.email %} • ✉️ {{ school.email }}{% endif %}
+            </div>
+        </div>
+
+        <div class="cert-title">Annual Report Card</div>
+        <div class="ay-label">
+            Academic Year: <strong>{{ r.academic_year }}</strong>
+        </div>
+
+        <!-- Student info -->
+        <div class="info-grid">
+            <span class="label">Name:</span>
+            <span class="value">{{ r.student.name }}</span>
+            <span class="label">Roll No:</span>
+            <span class="value">{{ r.student.roll or '—' }}</span>
+
+            <span class="label">Class:</span>
+            <span class="value">{{ r.student.class_name }}{% if r.student.section %}-{{ r.student.section }}{% endif %}</span>
+            <span class="label">DOB:</span>
+            <span class="value">{{ r.student.dob.strftime('%d %b %Y') if r.student.dob else '—' }}</span>
+
+            <span class="label">Parent:</span>
+            <span class="value">{{ r.student.parent_name or '—' }}</span>
+            <span class="label">Conduct:</span>
+            <span class="value">{{ r.remarks.conduct }}</span>
+        </div>
+
+        <!-- Exam-wise marks table -->
+        {% if r.exams %}
+        <table class="marks">
+            <thead>
+                <tr>
+                    <th>Examination</th>
+                    {% for subj in r.all_subjects %}
+                    <th>{{ subj }}</th>
+                    {% endfor %}
+                    <th>Total</th>
+                    <th>%</th>
+                    <th>Grade</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in r.exams %}
+                <tr>
+                    <td><strong>{{ e.name }}</strong></td>
+                    {% for subj in r.all_subjects %}
+                    <td>
+                        {% if subj in e.marks and e.marks[subj] is not none %}
+                        {{ e.marks[subj] }}
+                        {% else %}
+                        <span style="color:#cbd5e1;">—</span>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                    <td><strong>{{ "%.0f"|format(e.obtained) }}/{{ e.max }}</strong></td>
+                    <td><strong>{{ e.percent }}%</strong></td>
+                    <td>
+                        <span class="grade-badge" style="
+                            background:{{ '#d1fae5' if e.grade in ['A+','A'] else ('#fef3c7' if e.grade in ['B','C'] else ('#fee2e2' if e.grade == 'F' else '#f1f5f9')) }};
+                            color:{{ '#065f46' if e.grade in ['A+','A'] else ('#92400e' if e.grade in ['B','C'] else ('#991b1b' if e.grade == 'F' else '#475569')) }};">
+                            {{ e.grade }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+
+                <!-- Subject averages + overall -->
+                <tr class="total-row">
+                    <td>Average (%)</td>
+                    {% for subj in r.all_subjects %}
+                    {% set avg = r.subject_averages.get(subj) %}
+                    <td>{{ avg if avg is not none else '—' }}</td>
+                    {% endfor %}
+                    <td>{{ "%.0f"|format(r.total_obtained) }}/{{ r.total_max }}</td>
+                    <td><strong>{{ r.overall_percent }}%</strong></td>
+                    <td>
+                        <span class="grade-badge" style="
+                            background:{{ '#d1fae5' if r.overall_grade in ['A+','A'] else ('#fef3c7' if r.overall_grade in ['B','C'] else ('#fee2e2' if r.overall_grade == 'F' else '#f1f5f9')) }};
+                            color:{{ '#065f46' if r.overall_grade in ['A+','A'] else ('#92400e' if r.overall_grade in ['B','C'] else ('#991b1b' if r.overall_grade == 'F' else '#475569')) }};">
+                            {{ r.overall_grade }}
+                        </span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        {% endif %}
+
+        <!-- Final result highlights -->
+        <div class="final-result">
+            <div class="result-cell highlight">
+                <div class="lbl">Total Marks</div>
+                <div class="val">{{ "%.0f"|format(r.total_obtained) }}/{{ r.total_max }}</div>
+            </div>
+            <div class="result-cell highlight">
+                <div class="lbl">Percentage</div>
+                <div class="val">{{ r.overall_percent }}%</div>
+            </div>
+            <div class="result-cell highlight">
+                <div class="lbl">Grade</div>
+                <div class="val">{{ r.overall_grade }}</div>
+            </div>
+            <div class="result-cell highlight">
+                <div class="lbl">Class Rank</div>
+                <div class="val">{{ r.class_rank or '—' }}/{{ r.class_total }}</div>
+            </div>
+        </div>
+
+        <!-- Attendance + Fee -->
+        <div class="two-col">
+            <div class="summary-box">
+                <h4>Attendance (April–March)</h4>
+                <div class="row"><span>Present</span><strong>{{ r.attendance.present }} days</strong></div>
+                <div class="row"><span>Absent</span><strong>{{ r.attendance.absent }} days</strong></div>
+                <div class="row"><span>Late</span><strong>{{ r.attendance.late }} days</strong></div>
+                <div class="row" style="border-top:1px solid #e2e8f0;
+                    padding-top:0.25rem; margin-top:0.15rem;">
+                    <span>Overall %</span>
+                    <strong style="color:#1e40af;">{{ r.attendance.percent }}%</strong>
+                </div>
+            </div>
+            <div class="summary-box">
+                <h4>Fee Status</h4>
+                <div class="row"><span>Total Billed</span><strong>₹{{ "%.0f"|format(r.fee_status.billed) }}</strong></div>
+                <div class="row"><span>Paid</span><strong style="color:#065f46;">₹{{ "%.0f"|format(r.fee_status.paid) }}</strong></div>
+                <div class="row" style="border-top:1px solid #e2e8f0;
+                    padding-top:0.25rem; margin-top:0.15rem;">
+                    <span>Pending</span>
+                    <strong style="color:{{ '#991b1b' if r.fee_status.pending > 0 else '#065f46' }};">
+                        ₹{{ "%.0f"|format(r.fee_status.pending) }}
+                    </strong>
+                </div>
+                <div class="row" style="margin-top:0.2rem;">
+                    <span>Status</span>
+                    <strong style="color:{{ '#065f46' if r.fee_status.cleared else '#991b1b' }};">
+                        {{ '✓ Cleared' if r.fee_status.cleared else '⚠ Pending' }}
+                    </strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Remarks -->
+        {% if r.remarks.teacher_remark or r.remarks.principal_remark %}
+        <div class="remarks-section">
+            {% if r.remarks.teacher_remark %}
+            <div class="remark-item">
+                <div class="lbl">Class Teacher's Remarks</div>
+                <div class="val">{{ r.remarks.teacher_remark }}</div>
+            </div>
+            {% endif %}
+            {% if r.remarks.principal_remark %}
+            <div class="remark-item">
+                <div class="lbl">Principal's Remarks</div>
+                <div class="val">{{ r.remarks.principal_remark }}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Signatures -->
+        <div class="signs">
+            <div class="sign">
+                <div class="line"></div>
+                Class Teacher
+            </div>
+            <div class="sign">
+                <div class="line"></div>
+                Parent / Guardian
+            </div>
+            <div class="sign">
+                <div class="line"></div>
+                Principal
+            </div>
+        </div>
+
+        <div class="foot">
+            This is a computer-generated report card. • {{ r.academic_year }}
+        </div>
+    </div>
+
+    <div class="actions">
+        <button onclick="window.print()">🖨️ Print / Save as PDF</button>
+    </div>
+</body>
+</html>
