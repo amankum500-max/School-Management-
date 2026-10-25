@@ -1,1 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Year-End Report Cards{% endblock %}
+{% block page_title %}📋 Year-End Report Cards{% endblock %}
 
+{% block content %}
+
+<div class="card" style="background:#eff6ff; border-left:3px solid #3b82f6;
+    font-size:0.85rem; color:#1e40af; margin-bottom:1rem;">
+    <strong>ℹ️ Ye page kya karta hai:</strong>
+    Pure saal ke saare exams ke marks combine karke ek consolidated report card
+    banata hai — subject-wise averages, rank, attendance, fee status, remarks.
+</div>
+
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.5rem; flex-wrap:wrap;
+    align-items:end;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block;
+            margin-bottom:0.2rem;">Class *</label>
+        <select name="class" required
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">Select class</option>
+            {% for c in classes %}
+            <option value="{{ c }}" {% if c == selected_class %}selected{% endif %}>
+                Class {{ c }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block;
+            margin-bottom:0.2rem;">Academic Year</label>
+        <select name="ay"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            {% for y in ay_options %}
+            <option value="{{ y }}" {% if y == academic_year %}selected{% endif %}>
+                {{ y }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn">Load</button>
+    {% if selected_class and summary %}
+    <a href="{{ url_for('report_cards.bulk_print', **{'class': selected_class, 'ay': academic_year}) }}"
+       target="_blank" class="btn" style="background:#8b5cf6; margin-left:auto;">
+        🖨️ Print All ({{ summary|length }})
+    </a>
+    {% endif %}
+</form>
+</div>
+
+{% if selected_class and summary %}
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem;
+    min-width:600px;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.6rem; text-align:center;">Rank</th>
+            <th style="padding:0.6rem; text-align:left;">Student</th>
+            <th style="padding:0.6rem; text-align:left;">Roll</th>
+            <th style="padding:0.6rem; text-align:center;">Section</th>
+            <th style="padding:0.6rem; text-align:center;">Exams</th>
+            <th style="padding:0.6rem; text-align:right;">Total</th>
+            <th style="padding:0.6rem; text-align:right;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for s in summary %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.55rem; text-align:center; font-weight:700;
+                color:{{ '#f59e0b' if s.rank == 1 else ('#94a3b8' if s.rank == 2 else ('#b45309' if s.rank == 3 else '#475569')) }};">
+                #{{ s.rank }}
+            </td>
+            <td style="padding:0.55rem;"><strong>{{ s.name }}</strong></td>
+            <td style="padding:0.55rem; color:#64748b;">{{ s.roll or '—' }}</td>
+            <td style="padding:0.55rem; text-align:center;">{{ s.section or '—' }}</td>
+            <td style="padding:0.55rem; text-align:center;">{{ s.exam_count }}</td>
+            <td style="padding:0.55rem; text-align:right; font-weight:600;">
+                {{ "%.0f"|format(s.total_obtained) }}
+            </td>
+            <td style="padding:0.55rem; text-align:right; white-space:nowrap;">
+                <a href="{{ url_for('report_cards.view', student_id=s.student_id, ay=academic_year) }}"
+                   style="color:#3b82f6; text-decoration:none; font-size:0.82rem;
+                   margin-right:0.4rem;">View</a>
+                <a href="{{ url_for('report_cards.print_view', student_id=s.student_id, ay=academic_year) }}"
+                   target="_blank"
+                   style="color:#8b5cf6; text-decoration:none; font-size:0.82rem;">
+                    Print
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% elif selected_class %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Is class/Year mein koi marks data nahi hai. Pehle exams aur marks enter karo.
+</div>
+{% endif %}
+{% endblock %}
