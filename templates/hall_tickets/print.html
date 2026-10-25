@@ -1,1 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Hall Tickets — {{ exam.name }}</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background:#e2e8f0;
+            padding:1rem;
+        }
 
+        .controls {
+            max-width:900px; margin:0 auto 1rem; background:white;
+            padding:0.85rem 1rem; border-radius:10px;
+            display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center;
+            box-shadow:0 1px 3px rgba(0,0,0,0.05);
+        }
+        .controls button, .controls a {
+            padding:0.55rem 1.1rem; border:none; border-radius:6px;
+            cursor:pointer; font-size:0.88rem; font-weight:600;
+            text-decoration:none;
+        }
+        .btn-print { background:#3b82f6; color:white; }
+        .btn-back { background:#64748b; color:white; }
+
+        .tickets-wrap {
+            max-width:900px; margin:0 auto;
+            display:grid;
+            grid-template-columns:repeat(auto-fill, minmax(5.5in, 1fr));
+            gap:0.3in;
+        }
+
+        .ticket {
+            background:white;
+            width:5.5in;
+            min-height:3.3in;
+            padding:0.3in 0.35in;
+            border:2px solid #1e293b;
+            border-radius:6px;
+            display:flex;
+            flex-direction:column;
+            font-size:9pt;
+            break-inside:avoid;
+            page-break-inside:avoid;
+            position:relative;
+        }
+
+        .ticket-head {
+            text-align:center;
+            border-bottom:2px solid #1e293b;
+            padding-bottom:6px;
+            margin-bottom:8px;
+        }
+        .school-name {
+            font-size:13pt;
+            font-weight:800;
+            color:#1e293b;
+            letter-spacing:0.5px;
+            text-transform:uppercase;
+        }
+        .school-addr {
+            font-size:7pt;
+            color:#64748b;
+            margin-top:2px;
+        }
+        .ticket-title {
+            font-size:10pt;
+            font-weight:700;
+            color:#1e40af;
+            text-transform:uppercase;
+            letter-spacing:1px;
+            margin-top:4px;
+        }
+        .exam-name {
+            font-size:9pt;
+            color:#475569;
+            font-weight:600;
+        }
+
+        /* Student info + photo */
+        .info-row {
+            display:flex;
+            gap:10px;
+            margin-bottom:8px;
+        }
+        .photo-box {
+            width:0.65in;
+            height:0.85in;
+            background:#f1f5f9;
+            border:1.5px solid #cbd5e1;
+            border-radius:4px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:20pt;
+            font-weight:700;
+            color:#3b82f6;
+            flex-shrink:0;
+        }
+        .info-table {
+            flex:1;
+            font-size:8.5pt;
+            line-height:1.35;
+        }
+        .info-table .label {
+            color:#64748b;
+            display:inline-block;
+            width:55px;
+        }
+        .info-table .value {
+            color:#1e293b;
+            font-weight:600;
+        }
+
+        /* Subjects table */
+        .subjects-table {
+            width:100%;
+            border-collapse:collapse;
+            font-size:8pt;
+            margin-bottom:6px;
+        }
+        .subjects-table th,
+        .subjects-table td {
+            border:1px solid #cbd5e1;
+            padding:3px 6px;
+            text-align:left;
+        }
+        .subjects-table th {
+            background:#f1f5f9;
+            font-weight:600;
+            font-size:7.5pt;
+            color:#475569;
+        }
+
+        /* Seat/room highlight */
+        .seat-info {
+            display:flex;
+            gap:8px;
+            margin-bottom:8px;
+        }
+        .seat-badge {
+            flex:1;
+            background:#eff6ff;
+            border:1px solid #3b82f6;
+            border-radius:4px;
+            padding:3px 6px;
+            text-align:center;
+        }
+        .seat-badge .label {
+            font-size:6.5pt;
+            color:#64748b;
+            text-transform:uppercase;
+            letter-spacing:0.5px;
+        }
+        .seat-badge .value {
+            font-size:11pt;
+            font-weight:800;
+            color:#1e293b;
+            font-family:monospace;
+        }
+
+        /* Footer */
+        .ticket-foot {
+            display:flex;
+            gap:8px;
+            align-items:flex-end;
+            margin-top:auto;
+            padding-top:6px;
+        }
+        .qr-box {
+            width:0.6in;
+            height:0.6in;
+            flex-shrink:0;
+        }
+        .qr-box canvas, .qr-box img {
+            width:100% !important;
+            height:100% !important;
+        }
+        .sign-line {
+            flex:1;
+            text-align:center;
+            font-size:7pt;
+            color:#64748b;
+            padding-top:22px;
+            border-top:1px solid #cbd5e1;
+        }
+
+        .instructions {
+            font-size:7pt;
+            color:#64748b;
+            margin-top:5px;
+            padding-top:4px;
+            border-top:1px dashed #e2e8f0;
+            line-height:1.3;
+        }
+
+        /* Empty */
+        .empty {
+            max-width:900px; margin:2rem auto; background:white;
+            padding:2rem; border-radius:10px; text-align:center;
+            color:#64748b;
+        }
+
+        @page {
+            size: A4;
+            margin: 8mm;
+        }
+        @media print {
+            body { background:white; padding:0; }
+            .controls { display:none; }
+            .tickets-wrap {
+                gap: 3mm;
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .ticket {
+                width:100%;
+                border:1px solid #000;
+                box-shadow:none;
+            }
+            .ticket-head {
+                border-bottom-color:#000;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Controls -->
+<div class="controls">
+    <div style="font-size:0.9rem; color:#334155;">
+        <strong>{{ students|length }}</strong> hall tickets — {{ exam.name }}
+    </div>
+    <button class="btn-print" onclick="window.print()" style="margin-left:auto;">
+        🖨️ Print All
+    </button>
+    <a href="{{ url_for('hall_tickets.manage', exam_id=exam.id) }}" class="btn-back">
+        ← Back
+    </a>
+</div>
+
+{% if not students %}
+<div class="empty">
+    Koi student nahi mila. Pehle seating assign karo ya students add karo.
+</div>
+{% else %}
+<div class="tickets-wrap">
+    {% for s in students %}
+    <div class="ticket">
+        <div class="ticket-head">
+            <div class="school-name">{{ school.school_name if school else 'School' }}</div>
+            {% if school and school.address %}
+            <div class="school-addr">
+                {{ school.address }}{% if school.phone %} • {{ school.phone }}{% endif %}
+            </div>
+            {% endif %}
+            <div class="ticket-title">Hall Ticket / Admit Card</div>
+            <div class="exam-name">{{ exam.name }} — Class {{ exam.class_name }}</div>
+        </div>
+
+        <div class="info-row">
+            <div class="photo-box">{{ s.name[0]|upper if s.name else '?' }}</div>
+            <div class="info-table">
+                <div><span class="label">Name:</span> <span class="value">{{ s.name }}</span></div>
+                <div><span class="label">Roll No:</span> <span class="value">{{ s.roll or '—' }}</span></div>
+                <div><span class="label">Class:</span> <span class="value">{{ s.class_name }}{% if s.section %}-{{ s.section }}{% endif %}</span></div>
+                {% if exam.exam_date %}
+                <div><span class="label">Exam Date:</span> <span class="value">{{ exam.exam_date }}</span></div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="seat-info">
+            <div class="seat-badge">
+                <div class="label">Room No</div>
+                <div class="value">{{ s.room_no or '—' }}</div>
+            </div>
+            <div class="seat-badge">
+                <div class="label">Seat No</div>
+                <div class="value">{{ s.seat_no or '—' }}</div>
+            </div>
+        </div>
+
+        <table class="subjects-table">
+            <thead>
+                <tr>
+                    <th style="width:30px;">#</th>
+                    <th>Subject</th>
+                    <th style="width:60px; text-align:center;">Max Marks</th>
+                    <th style="width:70px; text-align:center;">Signature</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for subj in exam.subjects %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ subj }}</td>
+                    <td style="text-align:center;">{{ exam.max_marks }}</td>
+                    <td></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="instructions">
+            <strong>Instructions:</strong>
+            Bring this ticket to every exam. Reach 15 min early.
+            Mobile phones not allowed. Use blue/black pen only.
+        </div>
+
+        <div class="ticket-foot">
+            <div class="qr-box"
+                 data-qr='{"ticket":"{{ s.id }}-{{ exam.id }}","name":"{{ s.name|e }}","roll":"{{ (s.roll or '')|e }}","class":"{{ s.class_name }}{% if s.section %}-{{ s.section }}{% endif %}","exam":"{{ exam.name|e }}"}'>
+            </div>
+            <div class="sign-line">
+                Principal Signature
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<script>
+    document.querySelectorAll('.qr-box').forEach(el => {
+        try {
+            new QRCode(el, {
+                text: el.dataset.qr,
+                width: 100,
+                height: 100,
+                colorDark: "#1e293b",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        } catch (e) {
+            el.textContent = 'QR err';
+            el.style.fontSize = '6pt';
+            el.style.color = '#ef4444';
+        }
+    });
+</script>
+
+</body>
+</html>
