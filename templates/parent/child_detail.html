@@ -77,6 +77,20 @@
             ₹{{ "%.0f"|format(pending_fees) }}
         </strong>
     </div>
+    {% if pending_fees > 0 %}
+<div style="margin-top:0.75rem;">
+    <a href="{{ url_for('payments.start', student_id=student.id) }}"
+       style="display:block; text-align:center; padding:0.7rem;
+       background:#3b82f6; color:white; border-radius:6px;
+       text-decoration:none; font-weight:700; font-size:0.9rem;">
+        💳 Pay ₹{{ "%.0f"|format(pending_fees) }} Online
+    </a>
+    <p style="font-size:0.7rem; color:#94a3b8; text-align:center;
+        margin-top:0.35rem;">
+        UPI, Card, NetBanking — Razorpay secured
+    </p>
+</div>
+{% endif %}
 
     <h4 style="font-size:0.85rem; color:#334155; margin-top:0.75rem; margin-bottom:0.35rem;">
         Recent Payments
