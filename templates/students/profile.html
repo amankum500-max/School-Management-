@@ -117,6 +117,42 @@
             </a>
         </div>
         {% endif %}
+        {% if hostel_info %}
+<div class="card" style="max-width:800px; margin-top:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center;
+        margin-bottom:0.5rem;">
+        <h3 style="font-size:1rem;">🏠 Hostel</h3>
+        <a href="{{ url_for('hostel.view', hid=hostel_info.hostel_id) }}"
+           style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">
+            View Hostel →
+        </a>
+    </div>
+    <div style="font-size:0.88rem; display:grid;
+        grid-template-columns:1fr 1fr; gap:0.5rem;">
+        <div><span style="color:#64748b;">Hostel:</span>
+            <strong>{{ hostel_info.hostel_name }}</strong></div>
+        <div><span style="color:#64748b;">Room:</span>
+            <strong>{{ hostel_info.room_no }}</strong>
+            {% if hostel_info.floor %}({{ hostel_info.floor }}){% endif %}</div>
+        <div><span style="color:#64748b;">Fee:</span>
+            <strong>₹{{ "%.0f"|format(hostel_info.monthly_fee) }}/mo</strong></div>
+        <div><span style="color:#64748b;">Since:</span>
+            {{ hostel_info.check_in.strftime('%d %b %Y') if hostel_info.check_in else '—' }}</div>
+        {% if hostel_info.warden_name %}
+        <div style="grid-column:1/-1;">
+            <span style="color:#64748b;">Warden:</span>
+            {{ hostel_info.warden_name }}
+            {% if hostel_info.warden_phone %}
+            • <a href="tel:{{ hostel_info.warden_phone }}"
+                 style="color:#3b82f6; text-decoration:none;">
+                {{ hostel_info.warden_phone }}
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
     </div>
     {% else %}
     <p style="color:#94a3b8; font-size:0.85rem;">Koi medical record nahi.</p>
