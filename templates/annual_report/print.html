@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Annual Report {{ fy_label }}</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: Georgia, serif;
+            background: #f5f6fa; padding: 1.5rem; color: #1e293b;
+        }
+        .page {
+            background: white; max-width: 800px; margin: 0 auto;
+            padding: 2rem 2.5rem; border: 1px solid #cbd5e1;
+        }
+        .head {
+            text-align: center; border-bottom: 3px double #1e293b;
+            padding-bottom: 1rem; margin-bottom: 1.5rem;
+        }
+        .head h1 { font-size: 1.6rem; text-transform: uppercase; letter-spacing: 1px; }
+        .head h2 { font-size: 1rem; margin-top: 0.35rem; color: #475569; font-weight: 500; }
+        .head p { font-size: 0.8rem; margin-top: 0.35rem; color: #64748b; }
+
+        h3 {
+            font-size: 1rem; color: #1e293b; margin: 1.5rem 0 0.5rem;
+            border-bottom: 1px solid #e2e8f0; padding-bottom: 0.35rem;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .kpi-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem; margin-bottom: 0.75rem;
+        }
+        .kpi {
+            padding: 0.6rem 0.8rem; background: #f8fafc;
+            border-left: 3px solid #3b82f6;
+        }
+        .kpi-label { font-size: 0.72rem; color: #64748b; font-family: system-ui; }
+        .kpi-value { font-size: 1.2rem; font-weight: 700; margin-top: 0.15rem; }
+
+        table {
+            width: 100%; border-collapse: collapse;
+            font-size: 0.85rem; font-family: system-ui;
+        }
+        th, td {
+            padding: 0.5rem; border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+        }
+        th { background: #f1f5f9; font-weight: 600; }
+        td:last-child, th:last-child { text-align: right; }
+
+        .summary-box {
+            margin-top: 1rem; padding: 1rem; background: #eff6ff;
+            border-left: 4px solid #3b82f6; font-family: system-ui; font-size: 0.9rem;
+        }
+        .summary-box.net {
+            background: {{ '#d1fae5' if financial.profit else '#fee2e2' }};
+            border-left-color: {{ '#10b981' if financial.profit else '#ef4444' }};
+            margin-top: 1.5rem; text-align: center;
+        }
+        .summary-box.net .label { font-size: 0.85rem; color: #64748b; }
+        .summary-box.net .value {
+            font-size: 2rem; font-weight: 800;
+            color: {{ '#065f46' if financial.profit else '#991b1b' }};
+        }
+
+        .foot {
+            margin-top: 2rem; padding-top: 0.75rem;
+            border-top: 1px solid #cbd5e1; text-align: center;
+            font-family: system-ui; font-size: 0.72rem; color: #94a3b8;
+        }
+
+        .actions {
+            text-align: center; margin-top: 1rem; font-family: system-ui;
+        }
+        .actions button {
+            padding: 0.6rem 1.5rem; border: none; border-radius: 6px;
+            cursor: pointer; font-size: 0.9rem; font-weight: 600;
+            background: #3b82f6; color: white;
+        }
+
+        @page { size: A4; margin: 15mm; }
+        @media print {
+            body { background: white; padding: 0; }
+            .page { border: none; max-width: none; padding: 0; }
+            .actions { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="head">
+            <h1>Annual Report</h1>
+            <h2>Financial Year {{ fy_label }}</h2>
+            <p>{{ financial.start.strftime('%d %B %Y') }} – {{ financial.end.strftime('%d %B %Y') }}</p>
+        </div>
+
+        <!-- Financial -->
+        <h3>Financial Summary</h3>
+        <div class="kpi-grid">
+            <div class="kpi" style="border-left-color:#10b981;">
+                <div class="kpi-label">Fees Collected</div>
+                <div class="kpi-value" style="color:#10b981;">
+                    ₹{{ "%.0f"|format(financial.fees_collected) }}
+                </div>
+            </div>
+            <div class="kpi" style="border-left-color:#3b82f6;">
+                <div class="kpi-label">Salaries Paid</div>
+                <div class="kpi-value" style="color:#ef4444;">
+                    ₹{{ "%.0f"|format(financial.salary_paid) }}
+                </div>
+            </div>
+            <div class="kpi" style="border-left-color:#f59e0b;">
+                <div class="kpi-label">Other Expenses</div>
+                <div class="kpi-value" style="color:#ef4444;">
+                    ₹{{ "%.0f"|format(financial.expenses_total) }}
+                </div>
+            </div>
+            <div class="kpi" style="border-left-color:#8b5cf6;">
+                <div class="kpi-label">Fee Collection Efficiency</div>
+                <div class="kpi-value">{{ fee_eff.efficiency_percent }}%</div>
+            </div>
+        </div>
+
+        <div class="summary-box net">
+            <div class="label">{{ 'NET PROFIT' if financial.profit else 'NET LOSS' }}</div>
+            <div class="value">₹{{ "%.0f"|format(financial.net|abs) }}</div>
+        </div>
+
+        {% if financial.expense_categories %}
+        <h3>Expense Breakdown</h3>
+        <table>
+            <thead><tr><th>Category</th><th>Amount</th></tr></thead>
+            <tbody>
+                {% for c in financial.expense_categories %}
+                <tr><td>{{ c.category }}</td>
+                    <td>₹{{ "%.0f"|format(c.amount) }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        <!-- Students -->
+        <h3>Student Enrollment</h3>
+        <div class="kpi-grid">
+            <div class="kpi">
+                <div class="kpi-label">Active Students</div>
+                <div class="kpi-value">{{ students.total_active }}</div>
+            </div>
+            <div class="kpi">
+                <div class="kpi-label">New Admissions</div>
+                <div class="kpi-value" style="color:#3b82f6;">
+                    {{ students.new_admissions }}
+                </div>
+            </div>
+        </div>
+
+        {% if students.class_distribution %}
+        <table>
+            <thead><tr><th>Class</th><th>Students</th></tr></thead>
+            <tbody>
+                {% for c in students.class_distribution %}
+                <tr><td>{{ c.class_name }}</td><td>{{ c.count }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        <!-- Academic -->
+        {% if academic.class_performance %}
+        <h3>Academic Performance ({{ academic.exams_conducted }} exams)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Class</th>
+                    <th>Students</th>
+                    <th>Avg %</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in academic.class_performance %}
+                <tr>
+                    <td>{{ c.class_name }}</td>
+                    <td>{{ c.student_count }}</td>
+                    <td>{{ c.avg_percent }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        <!-- Attendance -->
+        <h3>Attendance Summary</h3>
+        <div class="kpi-grid">
+            <div class="kpi">
+                <div class="kpi-label">Overall Attendance</div>
+                <div class="kpi-value">{{ attendance.overall_percent }}%</div>
+            </div>
+            <div class="kpi">
+                <div class="kpi-label">Total Days Marked</div>
+                <div class="kpi-value">{{ attendance.total_marked }}</div>
+            </div>
+        </div>
+
+        <div class="foot">
+            Computer-generated annual report • FY {{ fy_label }}
+        </div>
+    </div>
+
+    <div class="actions">
+        <button onclick="window.print()">🖨️ Print / Save as PDF</button>
+    </div>
+</body>
+</html>
