@@ -240,6 +240,32 @@
         });
     }
     </script>
+    <script>
+    // Notification badge loader
+    (function() {
+        function loadBadge() {
+            fetch('/notifications/count')
+                .then(r => r.json())
+                .then(d => {
+                    const badge = document.getElementById('notifBadge');
+                    if (!badge) return;
+                    if (d.count > 0) {
+                        badge.textContent = d.count > 99 ? '99+' : d.count;
+                        badge.style.display = 'block';
+                        badge.style.background = d.urgent > 0 ? '#ef4444' : '#f59e0b';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                })
+                .catch(() => {});
+        }
+        if (document.getElementById('notifBadge')) {
+            loadBadge();
+            // refresh every 2 min
+            setInterval(loadBadge, 120000);
+        }
+    })();
+    </script>
 </body>
 </html>
 <a href="{{ url_for('students.list_students') }}">Students</a>
