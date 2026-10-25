@@ -48,6 +48,13 @@
             <a href="{{ url_for('parent.events') }}">Events</a>
             <span style="opacity:0.8; font-size:0.8rem;">{{ session.parent_name }}</span>
             <a href="{{ url_for('parent.logout') }}">Logout</a>
+            <a href="{{ url_for('parent.messages_list') }}">
+    Messages
+    {% set p_unread = namespace(n=0) %}
+    {% if session.parent_id %}
+    {# handled in template via context or count query #}
+    {% endif %}
+            </a>
         </nav>
     </header>
 
