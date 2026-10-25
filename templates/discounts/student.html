@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}{{ student.name }} — Discounts{% endblock %}
+{% block page_title %}🎁 {{ student.name }} — Fee Discounts{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:1rem;">
+    <a href="{{ url_for('students.view_student', student_id=student.id) }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">
+        ← Student Profile
+    </a>
+</div>
+
+<!-- Fee preview card -->
+<div class="card" style="background:linear-gradient(135deg,#8b5cf6,#3b82f6);
+    color:white; margin-bottom:1rem;">
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+        gap:0.75rem;">
+        <div>
+            <div style="font-size:0.72rem; opacity:0.85;">Base Fee / Month</div>
+            <div style="font-size:1.4rem; font-weight:700;">
+                ₹{{ "%.0f"|format(base_fee) }}
+            </div>
+        </div>
+        <div>
+            <div style="font-size:0.72rem; opacity:0.85;">Discount Applied</div>
+            <div style="font-size:1.4rem; font-weight:700; color:#fef3c7;">
+                − ₹{{ "%.0f"|format(discount_amt) }}
+            </div>
+        </div>
+        <div>
+            <div style="font-size:0.72rem; opacity:0.85;">Final Payable</div>
+            <div style="font-size:1.4rem; font-weight:700;">
+                ₹{{ "%.0f"|format(final_fee) }}
+            </div>
+        </div>
+    </div>
+    {% if discount_items %}
+    <div style="margin-top:0.65rem; padding-top:0.65rem;
+        border-top:1px solid rgba(255,255,255,0.2); font-size:0.78rem;">
+        {% for d in discount_items %}
+        <div style="display:flex; justify-content:space-between;">
+            <span>{{ d.name }}
+                ({% if d.type == 'percent' %}{{ d.value }}%{% else %}₹{{ d.value }}{% endif %})</span>
+            <span>− ₹{{ "%.0f"|format(d.amount) }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add discount -->
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.65rem; color:#1e293b;">
+        ➕ Apply Discount
+    </h3>
+    <form method="POST"
+          action="{{ url_for('discounts.add_student', student_id=student.id) }}"
+          style="display:grid; grid-template-columns:1.5fr 1fr 1fr 1fr auto;
+          gap:0.5rem; align-items:end;">
+        <div>
+            <label style="font-size:0.7rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Discount Type *</label>
+            <select name="discount_type_id" required
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+                <option value="">Select</option>
+                {% for t in types %}
+                <option value="{{ t.id }}">
+                    {{ t.name }} ({{ t.value }}{{ '%' if t.discount_type == 'percent' else '₹' }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.7rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Custom Value (opt)</label>
+            <input name="custom_value" type="number" step="0.01" min="0"
+                placeholder="Override"
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+        </div>
+        <div>
+            <label style="font-size:0.7rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">From</label>
+            <input name="from_date" type="date" value="{{ today }}"
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+        </div>
+        <div>
+            <label style="font-size:0.7rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">To (opt)</label>
+            <input name="to_date" type="date"
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+        </div>
+        <button type="submit" class="btn"
+            style="padding:0.5rem 1rem; font-size:0.85rem;">Apply</button>
+        <div style="grid-column:1/-1;">
+            <label style="font-size:0.7rem; color:#64748b; display:block;
+                margin-bottom:0.15rem;">Reason / Note</label>
+            <input name="reason" placeholder="e.g. 2nd child of Mr. Sharma"
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+        </div>
+    </form>
+</div>
+
+<!-- Applied discounts -->
+<div class="card">
+    <h3 style="font-size:1rem; margin-bottom:0.65rem; color:#1e293b;">
+        Applied Discounts ({{ applied|length }})
+    </h3>
+    {% if applied %}
+    <div style="overflow:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+        <thead style="background:#f1f5f9;">
+            <tr>
+                <th style="padding:0.5rem; text-align:left;">Discount</th>
+                <th style="padding:0.5rem; text-align:center;">Value</th>
+                <th style="padding:0.5rem; text-align:left;">From</th>
+                <th style="padding:0.5rem; text-align:left;">To</th>
+                <th style="padding:0.5rem; text-align:left;">Reason</th>
+                <th style="padding:0.5rem; text-align:right;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in applied %}
+            <tr style="border-top:1px solid #e2e8f0;
+                {{ 'opacity:0.5;' if not a.is_active }}">
+                <td style="padding:0.5rem;">
+                    <strong>{{ a.name }}</strong>
+                    <div style="font-size:0.7rem; color:#94a3b8;
+                        text-transform:capitalize;">
+                        {{ a.category|replace('_', ' ') }}
+                    </div>
+                </td>
+                <td style="padding:0.5rem; text-align:center; font-weight:600;">
+                    {% if a.dtype == 'percent' %}{{ "%.0f"|format(a.effective_value) }}%
+                    {% else %}₹{{ "%.0f"|format(a.effective_value) }}{% endif %}
+                </td>
+                <td style="padding:0.5rem; font-size:0.8rem;">
+                    {{ a.from_date.strftime('%d %b %Y') if a.from_date else '—' }}
+                </td>
+                <td style="padding:0.5rem; font-size:0.8rem;">
+                    {{ a.to_date.strftime('%d %b %Y') if a.to_date else 'Ongoing' }}
+                </td>
+                <td style="padding:0.5rem; font-size:0.78rem; color:#64748b;">
+                    {{ a.reason or '—' }}
+                </td>
+                <td style="padding:0.5rem; text-align:right;">
+                    <form method="POST"
+                          action="{{ url_for('discounts.remove_student_discount_route',
+                                             student_id=student.id, sd_id=a.id) }}"
+                          onsubmit="return confirm('Remove this discount?');"
+                          style="display:inline;">
+                        <button style="background:none; border:none; color:#ef4444;
+                            cursor:pointer; font-size:0.78rem;">Remove</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p style="color:#94a3b8; font-size:0.85rem;">
+        Is student pe abhi koi discount nahi.
+    </p>
+    {% endif %}
+</div>
+{% endblock %}
