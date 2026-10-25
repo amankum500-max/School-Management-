@@ -1,1 +1,109 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Add' if mode=='add' else 'Edit' }} Online Exam{% endblock %}
+{% block page_title %}{{ 'New' if mode=='add' else 'Edit' }} Online Exam{% endblock %}
 
+{% block content %}
+<div class="card" style="max-width:650px;">
+<form method="POST">
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Title *</label>
+        <input name="title" required
+            value="{{ exam.title if exam else '' }}"
+            placeholder="e.g. Math Unit Test 1"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px;">
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;
+        margin-bottom:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Class *</label>
+            <select name="class_name" required
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+                border-radius:6px;">
+                <option value="">Select class</option>
+                {% for c in classes %}
+                <option value="{{ c }}"
+                    {% if exam and exam.class_name == c %}selected{% endif %}>
+                    {{ c }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Subject</label>
+            <input name="subject" value="{{ exam.subject if exam else '' }}"
+                placeholder="e.g. Math"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+                border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">
+                Duration (minutes) *
+            </label>
+            <input name="duration_minutes" type="number" min="1" required
+                value="{{ exam.duration if exam else 30 }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+                border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Status</label>
+            <select name="is_published"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+                border-radius:6px;">
+                <option value="off"
+                    {% if not exam or not exam.is_published %}selected{% endif %}>
+                    Draft (not visible)
+                </option>
+                <option value="on"
+                    {% if exam and exam.is_published %}selected{% endif %}>
+                    Publish (students can take)
+                </option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Start Date</label>
+            <input name="start_date" type="date"
+                value="{{ exam.start_date if exam and exam.start_date else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+                border-radius:6px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">End Date</label>
+            <input name="end_date" type="date"
+                value="{{ exam.end_date if exam and exam.end_date else '' }}"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+                border-radius:6px;">
+        </div>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Instructions</label>
+        <textarea name="instructions" rows="3"
+            placeholder="Rules, notes for students..."
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px;">{{ exam.instructions if exam else '' }}</textarea>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="display:flex; align-items:center; gap:0.4rem;
+            font-size:0.85rem; color:#334155;">
+            <input type="checkbox" name="shuffle_questions" value="on"
+                {% if not exam or exam.shuffle_questions %}checked{% endif %}>
+            Shuffle question order (per student)
+        </label>
+    </div>
+
+    <div style="display:flex; gap:0.75rem;">
+        <button type="submit" class="btn">
+            {{ 'Create' if mode=='add' else 'Save' }}
+        </button>
+        <a href="{{ url_for('online_exams.index') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">
+            Cancel
+        </a>
+    </div>
+</form>
+</div>
+{% endblock %}
