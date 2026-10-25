@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bulk QR Codes{% if selected_class %} — Class {{ selected_class }}{% endif %}</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: system-ui, sans-serif; background:#e2e8f0; padding:1rem; }
+
+        .controls {
+            max-width: 900px; margin: 0 auto 1rem; background:white;
+            padding:0.85rem 1rem; border-radius:10px;
+            display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center;
+            box-shadow:0 1px 3px rgba(0,0,0,0.05);
+        }
+        .controls select, .controls input {
+            padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;
+            font-size:0.88rem;
+        }
+        .controls button, .controls a {
+            padding:0.55rem 1.1rem; border:none; border-radius:6px;
+            cursor:pointer; font-size:0.88rem; font-weight:600;
+            text-decoration:none;
+        }
+        .btn-load { background:#8b5cf6; color:white; }
+        .btn-print { background:#3b82f6; color:white; }
+        .btn-back { background:#64748b; color:white; }
+
+        .qr-grid {
+            max-width: 900px; margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(2.3in, 1fr));
+            gap: 0.35in;
+        }
+
+        .qr-card {
+            background: white;
+            border-radius: 10px;
+            padding: 0.5rem;
+            text-align: center;
+            border: 2px solid #1e293b;
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+        .qr-card .qr-wrap {
+            width: 100%;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.25rem;
+        }
+        .qr-card .qr-wrap canvas,
+        .qr-card .qr-wrap img {
+            width: 100% !important; height: 100% !important;
+        }
+        .qr-card .name {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-top: 0.35rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .qr-card .meta {
+            font-size: 0.65rem;
+            color: #64748b;
+            margin-top: 0.1rem;
+        }
+
+        .empty {
+            max-width: 900px; margin: 2rem auto; background:white;
+            padding: 2rem; border-radius: 10px; text-align: center;
+            color: #64748b;
+        }
+
+        @page {
+            size: A4;
+            margin: 8mm;
+        }
+        @media print {
+            body { background: white; padding: 0; }
+            .controls { display: none; }
+            .qr-grid {
+                gap: 3mm;
+                grid-template-columns: repeat(4, 1fr);
+            }
+            .qr-card {
+                border: 1px solid #333;
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="controls">
+    <form method="GET" style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <select name="class" required>
+            <option value="">-- Class --</option>
+            {% for c in classes %}
+            <option value="{{ c }}" {% if c == selected_class %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+        </select>
+        <input name="section" placeholder="Section (optional)"
+            value="{{ selected_section }}" style="width:130px;">
+        <button type="submit" class="btn-load">Load</button>
+    </form>
+    {% if students %}
+    <button class="btn-print" onclick="window.print()" style="margin-left:auto;">
+        🖨️ Print {{ students|length }} QR Cards
+    </button>
+    {% endif %}
+    <a href="{{ url_for('qr_attendance.scan') }}" class="btn-back">← Back to Scanner</a>
+</div>
+
+{% if not students and selected_class %}
+    <div class="empty">Is class mein koi active student nahi mila.</div>
+{% elif not students %}
+    <div class="empty">
+        <p style="font-size:1rem; margin-bottom:0.35rem;">📋 QR Cards Print Karein</p>
+        <p style="font-size:0.85rem;">Class select karo, phir "Load" dabao. Har student ka QR dikhega.</p>
+        <p style="font-size:0.78rem; color:#94a3b8; margin-top:0.65rem;">
+            Print karke laminate karo — students wallet mein rakhein.
+            Teacher phone se scan karke attendance mark karega.
+        </p>
+    </div>
+{% else %}
+    <div class="qr-grid">
+        {% for s in students %}
+        <div class="qr-card">
+            <div class="qr-wrap">
+                <div class="qr" data-content='{"id":{{ s.id }},"name":"{{ s.name|e }}","roll":"{{ (s.roll or '')|e }}","class":"{{ (s.class_name or '')|e }}{% if s.section %}-{{ s.section|e }}{% endif %}"}'></div>
+            </div>
+            <div class="name">{{ s.name }}</div>
+            <div class="meta">
+                Roll {{ s.roll or '—' }} • {{ s.class_name or '?' }}{% if s.section %}-{{ s.section }}{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<script>
+    document.querySelectorAll('.qr').forEach(el => {
+        try {
+            new QRCode(el, {
+                text: el.dataset.content,
+                width: 256,
+                height: 256,
+                colorDark: "#1e293b",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        } catch (e) {
+            el.textContent = 'QR error';
+            el.style.cssText = 'color:#ef4444; font-size:0.7rem;';
+        }
+    });
+</script>
+
+</body>
+</html>
