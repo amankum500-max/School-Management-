@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Hall Tickets{% endblock %}
+{% block page_title %}🎫 Hall Tickets / Admit Cards{% endblock %}
+
+{% block content %}
+
+<div class="card" style="background:#eff6ff; border-left:3px solid #3b82f6;
+    font-size:0.85rem; color:#1e40af; margin-bottom:1rem;">
+    <strong>ℹ️ Process:</strong>
+    <ol style="margin:0.35rem 0 0 1.2rem; line-height:1.7;">
+        <li>Exam select karo</li>
+        <li>Auto-assign seating (1 click) — ya manual</li>
+        <li>Preview karke print karo — sabhi ya ek-ek</li>
+    </ol>
+</div>
+
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.5rem; align-items:end;
+    flex-wrap:wrap;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block;
+            margin-bottom:0.2rem;">Class</label>
+        <select name="class" onchange="this.form.submit()"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">All Classes</option>
+            {% for c in classes %}
+            <option value="{{ c }}" {% if c == selected_class %}selected{% endif %}>
+                Class {{ c }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+</div>
+
+{% if not exams %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Koi exam nahi mila. Pehle
+    <a href="{{ url_for('exams.add') }}" style="color:#3b82f6;">exam create</a>
+    karo.
+</div>
+{% else %}
+<div style="display:flex; flex-direction:column; gap:0.65rem;">
+    {% for e in exams %}
+    <div class="card" style="border-left:4px solid #8b5cf6;">
+        <div style="display:flex; justify-content:space-between; align-items:start;
+            flex-wrap:wrap; gap:0.5rem;">
+            <div style="flex:1;">
+                <h3 style="font-size:1rem; color:#1e293b; margin-bottom:0.15rem;">
+                    {{ e.name }}
+                </h3>
+                <div style="font-size:0.82rem; color:#64748b;">
+                    Class {{ e.class_name }}
+                    {% if e.exam_date %}• {{ e.exam_date.strftime('%d %b %Y') if e.exam_date.strftime else e.exam_date }}{% endif %}
+                    • {{ e.subjects|length }} subjects
+                </div>
+                <div style="font-size:0.72rem; color:#94a3b8; margin-top:0.15rem;">
+                    Subjects: {{ e.subjects|join(', ') }}
+                </div>
+            </div>
+            <div style="display:flex; gap:0.4rem;">
+                <a href="{{ url_for('hall_tickets.manage', exam_id=e.id) }}"
+                   class="btn" style="background:#8b5cf6; font-size:0.82rem;
+                   padding:0.45rem 1rem;">Manage Seating</a>
+                <a href="{{ url_for('hall_tickets.preview', exam_id=e.id) }}"
+                   target="_blank" class="btn" style="background:#3b82f6;
+                   font-size:0.82rem; padding:0.45rem 1rem;">🖨️ Print All</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
