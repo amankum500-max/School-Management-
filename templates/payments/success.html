@@ -1,0 +1,51 @@
+{% extends "parent/base.html" %}
+{% block title %}Payment Successful{% endblock %}
+
+{% block content %}
+<div style="max-width:600px; margin:0 auto; text-align:center;">
+    <div style="font-size:4rem; margin-bottom:1rem;">✅</div>
+    <h1 style="font-size:1.4rem; color:#10b981; margin-bottom:0.5rem;">
+        Payment Successful!
+    </h1>
+    <p style="color:#64748b; font-size:0.9rem; margin-bottom:1.5rem;">
+        Fees for {{ student.name }} have been paid. Receipt will be visible in the portal.
+    </p>
+
+    <div class="card" style="text-align:left;">
+        <h3 style="font-size:0.9rem; margin-bottom:0.75rem; color:#1e293b;">
+            💳 Recent Online Payments
+        </h3>
+        {% if history %}
+        {% for h in history %}
+        <div style="display:flex; justify-content:space-between; padding:0.55rem 0;
+            border-top:1px solid #f1f5f9; font-size:0.85rem;">
+            <div>
+                <div style="color:#1e293b; font-weight:500;">{{ h.purpose|capitalize }} — {{ h.month }}</div>
+                <div style="font-size:0.72rem; color:#94a3b8;">
+                    {{ h.paid_at.strftime('%d %b %Y, %I:%M %p') if h.paid_at else '' }}
+                    {% if h.payment_id %}• {{ h.payment_id[:20] }}{% endif %}
+                </div>
+            </div>
+            <strong style="color:#10b981;">₹{{ "%.0f"|format(h.amount) }}</strong>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p style="color:#94a3b8; font-size:0.85rem;">Koi payment record nahi.</p>
+        {% endif %}
+    </div>
+
+    <div style="margin-top:1rem; display:flex; gap:0.5rem; justify-content:center;
+        flex-wrap:wrap;">
+        <a href="{{ url_for('parent.child_detail', student_id=student.id) }}"
+           style="padding:0.65rem 1.5rem; background:#3b82f6; color:white;
+           border-radius:6px; text-decoration:none; font-weight:600; font-size:0.88rem;">
+            Back to Child Details
+        </a>
+        <a href="{{ url_for('parent.dashboard') }}"
+           style="padding:0.65rem 1.5rem; background:#64748b; color:white;
+           border-radius:6px; text-decoration:none; font-weight:600; font-size:0.88rem;">
+            Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
