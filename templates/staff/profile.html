@@ -16,6 +16,8 @@
             <a href="{{ url_for('staff.edit', staff_id=m.id) }}" class="btn">Edit</a>
             <a href="{{ url_for('timetable.teacher_view', staff_id=m.id) }}" class="btn"
    style="background:#8b5cf6;">📅 Schedule</a>
+            <a href="{{ url_for('leave.staff_leave', staff_id=m.id) }}" class="btn"
+   style="background:#10b981;">🌴 Leave</a>
             <form method="POST" action="{{ url_for('staff.remove', staff_id=m.id) }}"
                   onsubmit="return confirm('Delete {{ m.name }}? Ye action wapas nahi hoga.');">
                 <button style="background:#ef4444; color:white; padding:0.6rem 1.1rem; border:none; border-radius:6px; cursor:pointer;">
