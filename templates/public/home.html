@@ -104,7 +104,52 @@
     {% endfor %}
 </div>
 {% endif %}
+<!-- Gallery preview -->
+{% if gallery_preview %}
+<h2 class="section-title">Life at {{ school.school_name }}</h2>
+<div style="display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+    gap:0.5rem; margin-bottom:1rem;">
+    {% for g in gallery_preview %}
+    <div style="overflow:hidden; border-radius:8px; aspect-ratio:1;
+        background:#f1f5f9;">
+        <img src="{{ g.image_url }}" alt="{{ g.title or '' }}"
+             loading="lazy"
+             style="width:100%; height:100%; object-fit:cover; display:block;">
+    </div>
+    {% endfor %}
+</div>
+<div style="text-align:center; margin-bottom:2rem;">
+    <a href="{{ url_for('public_site.gallery_page') }}"
+       style="color:#3b82f6; text-decoration:none; font-size:0.9rem;
+       font-weight:600;">
+        View Full Gallery →
+    </a>
+</div>
+{% endif %}
 
+<!-- Testimonials preview -->
+{% if testimonials %}
+<h2 class="section-title">What Parents Say</h2>
+<div style="display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+    gap:0.75rem; margin-bottom:2rem;">
+    {% for t in testimonials %}
+    <div class="pub-card">
+        <div style="color:#f59e0b; font-size:0.85rem; margin-bottom:0.35rem;">
+            {{ '⭐' * t.rating }}
+        </div>
+        <p style="font-size:0.85rem; color:#334155; line-height:1.5;
+            font-style:italic; margin-bottom:0.5rem;">
+            "{{ t.message[:160] }}{% if t.message|length > 160 %}...{% endif %}"
+        </p>
+        <div style="font-size:0.78rem; color:#64748b;">
+            — <strong>{{ t.name }}</strong>, {{ t.role }}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
     <!-- CTA -->
     <div class="pub-card" style="text-align:center; background:linear-gradient(135deg,#3b82f6,#8b5cf6); color:white; border:none; padding:2rem 1.25rem;">
         <h2 style="font-size:1.3rem; margin-bottom:0.5rem;">Admissions Open</h2>
