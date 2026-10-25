@@ -17,6 +17,22 @@
             <p style="font-size:0.9rem; color:#475569;">
                 ✉️ {{ school.email or 'Email not set' }}
             </p>
+            <!-- Map -->
+<div class="pub-card" style="padding:0; overflow:hidden; margin-top:1rem;">
+    <iframe
+        src="https://maps.google.com/maps?q={{ school.address or 'school' }}&output=embed"
+        width="100%" height="300" style="border:0; display:block;"
+        loading="lazy" referrerpolicy="no-referrer-when-downgrade">
+    </iframe>
+</div>
+
+<div style="text-align:center; margin-top:0.5rem;">
+    <a href="https://maps.google.com?q={{ school.address or 'school' }}"
+       target="_blank"
+       style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">
+        Open in Google Maps →
+    </a>
+</div>
         </div>
 
         <div class="pub-card">
