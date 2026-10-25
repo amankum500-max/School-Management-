@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Help Center{% endblock %}
+{% block page_title %}❓ Help Center{% endblock %}
+
+{% block content %}
+
+<!-- Search -->
+<div class="card" style="margin-bottom:1rem; background:linear-gradient(135deg,#3b82f6,#8b5cf6); color:white;">
+    <h2 style="font-size:1.15rem; margin-bottom:0.35rem;">Kaise madad chahiye?</h2>
+    <p style="font-size:0.85rem; opacity:0.9; margin-bottom:0.75rem;">
+        Guides search karo ya category browse karo. Har page pe <strong>?</strong> icon se direct help milta hai.
+    </p>
+    <form method="GET" style="display:flex; gap:0.5rem;">
+        <input name="q" value="{{ query }}" placeholder="Search: fees, students, backup..."
+            style="flex:1; padding:0.7rem 1rem; border:none; border-radius:8px;
+            font-size:0.9rem; outline:none;">
+        <button type="submit"
+            style="padding:0.7rem 1.5rem; background:white; color:#3b82f6;
+            border:none; border-radius:8px; font-weight:700; cursor:pointer;
+            font-size:0.9rem;">
+            Search
+        </button>
+    </form>
+    {% if query %}
+    <p style="font-size:0.78rem; margin-top:0.5rem; opacity:0.85;">
+        {{ total }} result(s) for "{{ query }}"
+        • <a href="{{ url_for('help.index') }}" style="color:white; text-decoration:underline;">Clear</a>
+    </p>
+    {% endif %}
+</div>
+
+<!-- Categories with topics -->
+{% for cat in grouped %}
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#1e293b;">
+        {{ cat.label }}
+    </h3>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:0.5rem;">
+        {% for t in cat.topics %}
+        <a href="{{ url_for('help.topic', slug=t.slug) }}"
+           style="text-decoration:none; color:inherit;">
+            <div style="padding:0.75rem; background:#f8fafc; border-radius:8px;
+                border-left:3px solid #3b82f6; height:100%; cursor:pointer;">
+                <div style="font-size:0.95rem; font-weight:600; color:#1e293b;
+                    margin-bottom:0.25rem;">
+                    {{ t.icon }} {{ t.title }}
+                </div>
+                <div style="font-size:0.8rem; color:#64748b; line-height:1.4;">
+                    {{ t.summary }}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    {% if query %}
+    Koi result nahi mila "{{ query }}" ke liye. Doosra keyword try karo.
+    {% else %}
+    Help content nahi hai.
+    {% endif %}
+</div>
+{% endfor %}
+
+<!-- Quick links -->
+<div class="card" style="background:#f8fafc;">
+    <h3 style="font-size:0.9rem; margin-bottom:0.5rem; color:#1e293b;">
+        🔗 Quick Links
+    </h3>
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; font-size:0.85rem;">
+        <a href="{{ url_for('help.getting_started') }}"
+           style="color:#3b82f6; text-decoration:none;">🚀 Getting Started</a>
+        <a href="{{ url_for('backup.index') }}"
+           style="color:#3b82f6; text-decoration:none;">💾 Backup</a>
+        <a href="{{ url_for('system.status') }}"
+           style="color:#3b82f6; text-decoration:none;">🏥 System Status</a>
+    </div>
+</div>
+{% endblock %}
