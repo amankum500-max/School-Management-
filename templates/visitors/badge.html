@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Visitor Badge — {{ v.badge_no }}</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: system-ui, sans-serif;
+            background:#e2e8f0;
+            padding:1rem;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            min-height:100vh;
+        }
+        .badge {
+            background:white;
+            width:4in;
+            height:3in;
+            border-radius:12px;
+            border:2px solid #1e293b;
+            overflow:hidden;
+            display:flex;
+            flex-direction:column;
+            box-shadow:0 8px 25px rgba(0,0,0,0.15);
+        }
+        .badge-head {
+            background:linear-gradient(135deg,#1e293b 0%,#3b82f6 100%);
+            color:white;
+            padding:10px 14px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+        }
+        .badge-head .school {
+            font-size:11pt;
+            font-weight:700;
+            letter-spacing:0.3px;
+        }
+        .badge-head .badge-no {
+            font-size:9pt;
+            font-family:monospace;
+            background:rgba(255,255,255,0.25);
+            padding:3px 8px;
+            border-radius:4px;
+        }
+        .badge-body {
+            flex:1;
+            padding:14px;
+            display:flex;
+            flex-direction:column;
+            justify-content:space-between;
+        }
+        .visitor-name {
+            font-size:18pt;
+            font-weight:800;
+            color:#1e293b;
+            line-height:1.1;
+            margin-bottom:4px;
+            word-break:break-word;
+        }
+        .visitor-purpose {
+            display:inline-block;
+            background:#eff6ff;
+            color:#1e40af;
+            padding:3px 10px;
+            border-radius:5px;
+            font-size:9pt;
+            font-weight:600;
+            text-transform:uppercase;
+            margin-bottom:8px;
+        }
+        .info-row {
+            font-size:8.5pt;
+            color:#475569;
+            line-height:1.5;
+        }
+        .info-row strong {
+            color:#1e293b;
+            font-weight:600;
+        }
+        .badge-foot {
+            background:#f8fafc;
+            border-top:1px solid #e2e8f0;
+            padding:8px 14px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            font-size:8pt;
+            color:#64748b;
+        }
+        .badge-foot .in-time {
+            font-family:monospace;
+            font-weight:600;
+            color:#10b981;
+        }
+
+        .actions {
+            text-align:center;
+            margin-top:1.5rem;
+        }
+        .actions button, .actions a {
+            padding:0.6rem 1.3rem;
+            border:none;
+            border-radius:6px;
+            cursor:pointer;
+            font-size:0.9rem;
+            font-weight:600;
+            margin:0 0.25rem;
+            text-decoration:none;
+            display:inline-block;
+        }
+        .btn-print { background:#3b82f6; color:white; }
+        .btn-back { background:#64748b; color:white; }
+
+        @media print {
+            @page { size: A6; margin: 5mm; }
+            body { background:white; padding:0; min-height:auto; }
+            .badge {
+                box-shadow:none;
+                width:100%;
+                height:auto;
+                min-height:2.8in;
+            }
+            .actions { display:none; }
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <div class="badge">
+            <div class="badge-head">
+                <div class="school">🎓 VISITOR</div>
+                <div class="badge-no">{{ v.badge_no }}</div>
+            </div>
+            <div class="badge-body">
+                <div>
+                    <div class="visitor-name">{{ v.name }}</div>
+                    <span class="visitor-purpose">{{ v.purpose }}</span>
+                </div>
+                <div class="info-row">
+                    {% if v.phone %}<strong>Phone:</strong> {{ v.phone }}<br>{% endif %}
+                    {% if v.student_name %}
+                    <strong>Meeting:</strong> {{ v.student_name }}
+                    ({{ v.class_name or '' }}{% if v.section %}-{{ v.section }}{% endif %})
+                    {% elif v.staff_name %}
+                    <strong>Meeting:</strong> {{ v.staff_name }} (Staff)
+                    {% elif v.to_meet %}
+                    <strong>Meeting:</strong> {{ v.to_meet }}
+                    {% endif %}
+                    {% if v.vehicle_no %}<br><strong>Vehicle:</strong> {{ v.vehicle_no }}{% endif %}
+                </div>
+            </div>
+            <div class="badge-foot">
+                <span>In: <span class="in-time">
+                    {{ v.in_time.strftime('%d %b, %I:%M %p') if v.in_time else '' }}
+                </span></span>
+                <span>{{ school.school_name if school else '' }}</span>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn-print" onclick="window.print()">🖨️ Print Badge</button>
+            <a href="{{ url_for('visitors.index') }}" class="btn-back">← Back</a>
+        </div>
+    </div>
+</body>
+</html>
