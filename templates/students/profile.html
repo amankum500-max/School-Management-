@@ -84,6 +84,41 @@
             {{ 'View/Edit →' if medical else 'Add Record →' }}
         </a>
     </div>
+        <div class="card" style="max-width:800px; margin-top:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center;
+        margin-bottom:0.5rem;">
+        <h3 style="font-size:1rem;">🎁 Fee Discounts</h3>
+        <a href="{{ url_for('discounts.student_view', student_id=student.id) }}"
+           style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">
+            Manage →
+        </a>
+    </div>
+    {% if discounts %}
+    <div style="display:flex; flex-direction:column; gap:0.35rem;">
+        {% for d in discounts %}
+        <div style="display:flex; justify-content:space-between; align-items:center;
+            padding:0.4rem 0; border-bottom:1px solid #f1f5f9;">
+            <div>
+                <strong style="font-size:0.88rem; color:#1e293b;">
+                    {{ d.name }}
+                </strong>
+                {% if d.reason %}
+                <div style="font-size:0.72rem; color:#94a3b8;">
+                    {{ d.reason }}
+                </div>
+                {% endif %}
+            </div>
+            <span style="font-weight:700; color:#8b5cf6; font-size:0.9rem;">
+                {% if d.dtype == 'percent' %}{{ "%.0f"|format(d.effective_value) }}%
+                {% else %}₹{{ "%.0f"|format(d.effective_value) }}{% endif %}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="color:#94a3b8; font-size:0.85rem;">Koi discount nahi.</p>
+    {% endif %}
+        </div>
     {% if medical %}
     <div style="font-size:0.85rem; display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
         {% if medical.blood_group %}
