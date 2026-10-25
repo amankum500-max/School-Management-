@@ -30,7 +30,29 @@
     <button type="submit" class="btn">Load</button>
 </form>
 </div>
-
+<div class="card" style="margin-bottom:1rem; background:linear-gradient(135deg,#3b82f6,#8b5cf6);
+    color:white; display:flex; justify-content:space-between; align-items:center;
+    flex-wrap:wrap; gap:0.5rem; padding:0.85rem 1rem;">
+    <div>
+        <div style="font-size:0.95rem; font-weight:700;">📷 QR Scanner</div>
+        <div style="font-size:0.78rem; opacity:0.9;">
+            Camera se scan karke turant attendance mark karo
+        </div>
+    </div>
+    <div style="display:flex; gap:0.5rem;">
+        <a href="{{ url_for('qr_attendance.scan') }}"
+           style="padding:0.5rem 1rem; background:white; color:#3b82f6;
+           border-radius:6px; text-decoration:none; font-weight:700; font-size:0.85rem;">
+            Open Scanner
+        </a>
+        <a href="{{ url_for('qr_attendance.bulk_print') }}"
+           style="padding:0.5rem 1rem; background:rgba(255,255,255,0.2);
+           color:white; border-radius:6px; text-decoration:none;
+           font-weight:600; font-size:0.85rem;">
+            Print QR Cards
+        </a>
+    </div>
+</div>
 {% if selected_class and students %}
 
 <!-- Summary + mark all -->
