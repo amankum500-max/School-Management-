@@ -261,7 +261,14 @@
         </div>
 
         <div class="info-row">
-            <div class="photo-box">{{ s.name[0]|upper if s.name else '?' }}</div>
+            <div class="photo-box" style="overflow:hidden; padding:0;">
+    {% if s.photo_url %}
+    <img src="{{ s.photo_url }}" alt=""
+        style="width:100%; height:100%; object-fit:cover; display:block;">
+    {% else %}
+    {{ s.name[0]|upper if s.name else '?' }}
+    {% endif %}
+            </div>
             <div class="info-table">
                 <div><span class="label">Name:</span> <span class="value">{{ s.name }}</span></div>
                 <div><span class="label">Roll No:</span> <span class="value">{{ s.roll or '—' }}</span></div>
