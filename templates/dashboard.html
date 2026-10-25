@@ -158,6 +158,43 @@
     </div>
     {% endfor %}
 </div>
+    {% if notifications_preview %}
+<div class="card" style="margin-bottom:1rem;
+    border-left:4px solid {{ '#ef4444' if notifications_urgent > 0 else '#3b82f6' }};">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.65rem;">
+        <h3 style="font-size:0.95rem; color:#1e293b;">
+            🔔 Alerts
+            {% if notifications_urgent > 0 %}
+            <span style="font-size:0.7rem; background:#fee2e2; color:#991b1b;
+                padding:0.1rem 0.45rem; border-radius:3px; margin-left:0.35rem;">
+                {{ notifications_urgent }} urgent
+            </span>
+            {% endif %}
+        </h3>
+        <a href="{{ url_for('notifications_page') }}"
+           style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">
+            View All ({{ notifications_count }}) →
+        </a>
+    </div>
+    {% for n in notifications_preview %}
+    <a href="{{ n.link }}" style="text-decoration:none; color:inherit; display:block;">
+    <div style="display:flex; gap:0.5rem; padding:0.5rem 0; border-top:1px solid #f1f5f9;
+        align-items:center;">
+        <span style="font-size:1.1rem;">{{ n.icon }}</span>
+        <div style="flex:1; min-width:0;">
+            <div style="font-size:0.85rem; color:#1e293b; font-weight:500;
+                overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                {{ n.title }}
+            </div>
+            <div style="font-size:0.72rem; color:#94a3b8;">
+                {{ n.subtitle }}
+            </div>
+        </div>
+    </div>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
 {% endif %}
     <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:#1e293b;">⚡ Quick Actions</h3>
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
