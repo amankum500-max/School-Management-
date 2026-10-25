@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Audit Logs{% endblock %}
+{% block page_title %}📋 Audit Logs{% endblock %}
+
+{% block content %}
+
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">
+            Admin
+        </label>
+        <select name="admin_id"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">All</option>
+            {% for a in admins %}
+            <option value="{{ a.id }}" {% if a.id == selected_admin %}selected{% endif %}>
+                {{ a.full_name or a.username }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">
+            Action
+        </label>
+        <input name="action" value="{{ selected_action }}" placeholder="login, post_request..."
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px; width:180px;">
+    </div>
+    <button type="submit" class="btn">Filter</button>
+    <a href="{{ url_for('admin_users.audit') }}" class="btn"
+       style="background:#64748b;">Clear</a>
+</form>
+</div>
+
+{% if not logs %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Koi log nahi mila.
+</div>
+{% else %}
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.82rem; min-width:800px;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.55rem; text-align:left;">When</th>
+            <th style="padding:0.55rem; text-align:left;">Admin</th>
+            <th style="padding:0.55rem; text-align:left;">Action</th>
+            <th style="padding:0.55rem; text-align:left;">Entity</th>
+            <th style="padding:0.55rem; text-align:left;">Path</th>
+            <th style="padding:0.55rem; text-align:left;">Details</th>
+            <th style="padding:0.55rem; text-align:left;">IP</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for l in logs %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.5rem; font-size:0.75rem; color:#64748b; white-space:nowrap;">
+                {{ l.created_at.strftime('%d %b, %H:%M:%S') if l.created_at else '—' }}
+            </td>
+            <td style="padding:0.5rem;">
+                <strong>{{ l.admin_username or '—' }}</strong>
+            </td>
+            <td style="padding:0.5rem; font-family:monospace; font-size:0.78rem;">
+                <span style="background:{{ '#eff6ff' if 'login' in (l.action or '') else '#f1f5f9' }};
+                    color:{{ '#1e40af' if 'login' in (l.action or '') else '#475569' }};
+                    padding:0.1rem 0.35rem; border-radius:3px;">
+                    {{ l.action }}
+                </span>
+            </td>
+            <td style="padding:0.5rem; font-size:0.78rem;">{{ l.entity or '—' }}</td>
+            <td style="padding:0.5rem; font-size:0.75rem; font-family:monospace;
+                color:#64748b; max-width:200px; overflow:hidden; text-overflow:ellipsis;
+                white-space:nowrap;" title="{{ l.path }}">
+                {{ l.path or '—' }}
+            </td>
+            <td style="padding:0.5rem; font-size:0.75rem; color:#64748b;">
+                {{ l.details or '—' }}
+            </td>
+            <td style="padding:0.5rem; font-size:0.72rem; color:#94a3b8;
+                font-family:monospace;">{{ l.ip or '—' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<div class="card" style="margin-top:1rem; background:#f8fafc; font-size:0.82rem; color:#64748b;">
+    <strong>ℹ️ Note:</strong> Audit logs sirf POST/PUT/DELETE requests automatically log karte hain.
+    Total {{ logs|length }} entries dikh rahi hain (last 300 max).
+</div>
+{% endif %}
+{% endblock %}
