@@ -91,6 +91,23 @@
     </p>
 </div>
 {% endif %}
+    {% if online_payments %}
+<h4 style="font-size:0.85rem; color:#334155; margin-top:0.85rem; margin-bottom:0.35rem;">
+    Recent Online Payments
+</h4>
+{% for p in online_payments[:5] %}
+<div style="display:flex; justify-content:space-between; padding:0.35rem 0;
+    border-bottom:1px solid #f1f5f9; font-size:0.82rem;">
+    <div>
+        <div style="color:#334155;">{{ p.month }}</div>
+        <div style="font-size:0.7rem; color:#94a3b8;">
+            {{ p.paid_at.strftime('%d %b') if p.paid_at else '' }}
+        </div>
+    </div>
+    <strong style="color:#10b981;">₹{{ "%.0f"|format(p.amount) }}</strong>
+</div>
+{% endfor %}
+{% endif %}
 
     <h4 style="font-size:0.85rem; color:#334155; margin-top:0.75rem; margin-bottom:0.35rem;">
         Recent Payments
