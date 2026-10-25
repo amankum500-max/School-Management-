@@ -185,8 +185,16 @@
         <div class="section-label">Admissions</div>
 <a href="{{ url_for('admissions.index') }}">Admission Enquiries</a>
 
+{% if session.admin_role == 'super_admin' %}
 <div class="section-label">Admin</div>
+<a href="{{ url_for('admin_users.index') }}">👥 Admin Users</a>
+<a href="{{ url_for('admin_users.audit') }}">📋 Audit Logs</a>
 <a href="{{ url_for('settings.index') }}">Settings</a>
+<a href="{{ url_for('auth.profile') }}">My Profile</a>
+{% else %}
+<div class="section-label">Admin</div>
+<a href="{{ url_for('auth.profile') }}">My Profile</a>
+{% endif %}
         <a href="#">Settings</a>
         <a href="{{ url_for('settings.index') }}">Settings</a>
         <a href="{{ url_for('backup.index') }}">Backup & Export</a>
