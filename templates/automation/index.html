@@ -1,1 +1,278 @@
+{% extends "base.html" %}
+{% block title %}Automation{% endblock %}
+{% block page_title %}🤖 Automated Reminders{% endblock %}
 
+{% block content %}
+
+{% if not configured %}
+<div class="card" style="background:#fef3c7; border-left:4px solid #f59e0b;
+    margin-bottom:1rem; font-size:0.85rem; color:#92400e;">
+    ⚠️ SMS provider configure nahi hai. Pehle
+    <a href="{{ url_for('sms.index') }}" style="color:#92400e;
+    text-decoration:underline;">SMS page</a> pe setup complete karo.
+</div>
+{% endif %}
+
+<!-- Quota -->
+<div class="card" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);
+    color:white; margin-bottom:1rem;">
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+        gap:0.75rem;">
+        <div>
+            <div style="font-size:0.72rem; opacity:0.85;">SMS Sent Today</div>
+            <div style="font-size:1.6rem; font-weight:700;">{{ quota.sent }}</div>
+        </div>
+        <div>
+            <div style="font-size:0.72rem; opacity:0.85;">Daily Limit</div>
+            <div style="font-size:1.6rem; font-weight:700;">{{ quota.limit }}</div>
+        </div>
+        <div>
+            <div style="font-size:0.72rem; opacity:0.85;">Remaining</div>
+            <div style="font-size:1.6rem; font-weight:700;
+                color:{{ '#fef3c7' if quota.remaining < 20 else 'white' }};">
+                {{ quota.remaining }}
+            </div>
+        </div>
+    </div>
+    <div style="margin-top:0.65rem; height:8px; background:rgba(255,255,255,0.2);
+        border-radius:4px; overflow:hidden;">
+        {% set pct = (quota.sent / quota.limit * 100) if quota.limit > 0 else 0 %}
+        <div style="width:{{ pct }}%; height:100%; background:white;"></div>
+    </div>
+</div>
+
+<!-- Settings form -->
+<div class="card" style="margin-bottom:1rem;">
+<form method="POST" action="{{ url_for('automation.save_settings') }}">
+    <h3 style="font-size:1rem; margin-bottom:0.85rem; color:#1e293b;">
+        ⚙️ Configure Automation
+    </h3>
+
+    <div style="display:flex; flex-direction:column; gap:0.75rem;
+        margin-bottom:1rem;">
+        {% set toggles = [
+            ('fee_reminders', 'fee_reminders_enabled', '💰', 'Fee Reminders', 'Daily 9 AM — pending fees wale parents ko SMS'),
+            ('absent_alerts', 'absent_alerts_enabled', '❌', 'Absent Alerts', 'Daily 10 AM — aaj absent students ke parents ko SMS'),
+            ('library_overdue', 'library_overdue_enabled', '📚', 'Library Overdue', 'Har Somwar 10 AM — overdue books wale parents ko'),
+            ('event_reminders', 'event_reminders_enabled', '📅', 'Event Reminders', 'Roz 9 AM — 2 din baad hone wale events ke liye'),
+            ('low_attendance', 'low_attendance_enabled', '📊', 'Low Attendance Alert', 'Har Somwar — 75% se neeche wale students ke parents ko'),
+        ] %}
+        {% for key, setting_key, icon, label, desc in toggles %}
+        <div style="display:flex; gap:0.65rem; padding:0.65rem;
+            background:#f8fafc; border-radius:6px; align-items:start;">
+            <input type="checkbox" name="{{ key }}" id="{{ key }}"
+                {% if settings[key] %}checked{% endif %}
+                style="margin-top:0.25rem; cursor:pointer; width:16px; height:16px;">
+            <label for="{{ key }}" style="flex:1; cursor:pointer;">
+                <div style="font-size:0.9rem; font-weight:600; color:#1e293b;">
+                    {{ icon }} {{ label }}
+                </div>
+                <div style="font-size:0.78rem; color:#64748b; margin-top:0.1rem;">
+                    {{ desc }}
+                </div>
+            </label>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">
+            Daily SMS Limit (safety)
+        </label>
+        <input name="daily_limit" type="number" min="10" max="1000"
+            value="{{ settings.daily_limit }}"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px; max-width:200px;">
+        <small style="color:#94a3b8; font-size:0.72rem; display:block;
+            margin-top:0.2rem;">
+            Is limit ke baad automation rukega — accidental spam se bachne ke liye
+        </small>
+    </div>
+
+    <button type="submit" class="btn">Save Settings</button>
+</form>
+</div>
+
+<!-- Manual triggers -->
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.65rem; color:#1e293b;">
+        ▶️ Manual Trigger (Testing)
+    </h3>
+    <p style="font-size:0.82rem; color:#64748b; margin-bottom:0.75rem;">
+        Abhi hi run karke test karo. Settings enable/disable matter nahi karta
+        manual trigger pe.
+    </p>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+        gap:0.5rem;">
+        {% for task_key, task in task_types.items() %}
+        <div style="display:flex; flex-direction:column; gap:0.35rem;">
+            <button type="button"
+                onclick="previewTask('{{ task_key }}')"
+                style="padding:0.5rem; background:#f1f5f9; color:#334155;
+                border:1px solid #cbd5e1; border-radius:6px; cursor:pointer;
+                font-size:0.82rem; font-weight:600;">
+                {{ task.icon }} {{ task.label }} — Preview
+            </button>
+            <form method="POST"
+                  action="{{ url_for('automation.trigger', task_type=task_key) }}"
+                  onsubmit="return confirm('Run {{ task.label }} now? SMS bhejenge actual recipients ko.');">
+                <button type="submit"
+                    style="width:100%; padding:0.5rem; background:#3b82f6;
+                    color:white; border:none; border-radius:6px; cursor:pointer;
+                    font-size:0.82rem; font-weight:600;">
+                    ▶️ Run Now
+                </button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Preview modal -->
+<div id="previewModal"
+    style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6);
+    z-index:9999; align-items:center; justify-content:center; padding:1rem;"
+    onclick="if(event.target.id==='previewModal') closePreview()">
+    <div onclick="event.stopPropagation()"
+        style="background:white; border-radius:12px; max-width:600px; width:100%;
+        max-height:80vh; overflow:hidden; display:flex; flex-direction:column;">
+        <div style="padding:1rem; border-bottom:1px solid #e2e8f0;
+            display:flex; justify-content:space-between; align-items:center;">
+            <strong style="font-size:1rem; color:#1e293b;" id="previewTitle">
+                Preview
+            </strong>
+            <button onclick="closePreview()"
+                style="background:none; border:none; font-size:1.3rem;
+                cursor:pointer; color:#64748b;">×</button>
+        </div>
+        <div id="previewBody" style="padding:1rem; overflow-y:auto; flex:1;
+            font-size:0.85rem;">
+            Loading...
+        </div>
+    </div>
+</div>
+
+<!-- Run history -->
+<div class="card" style="padding:0; overflow:auto;">
+    <div style="padding:0.75rem 1rem; background:#f1f5f9;
+        border-bottom:1px solid #e2e8f0;">
+        <strong style="font-size:0.95rem; color:#1e293b;">
+            📋 Run History (last 20)
+        </strong>
+    </div>
+    {% if runs %}
+    <table style="width:100%; border-collapse:collapse; font-size:0.82rem;
+        min-width:600px;">
+        <thead>
+            <tr>
+                <th style="padding:0.5rem; text-align:left;">When</th>
+                <th style="padding:0.5rem; text-align:left;">Task</th>
+                <th style="padding:0.5rem; text-align:center;">Trigger</th>
+                <th style="padding:0.5rem; text-align:center;">Status</th>
+                <th style="padding:0.5rem; text-align:right;">Sent</th>
+                <th style="padding:0.5rem; text-align:right;">Failed</th>
+                <th style="padding:0.5rem; text-align:right;">Skipped</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in runs %}
+            <tr style="border-top:1px solid #e2e8f0;">
+                <td style="padding:0.45rem; font-size:0.75rem; color:#64748b;">
+                    {{ r.started_at.strftime('%d %b, %H:%M') if r.started_at else '—' }}
+                </td>
+                <td style="padding:0.45rem; text-transform:capitalize;">
+                    {{ r.task_type }}
+                </td>
+                <td style="padding:0.45rem; text-align:center; font-size:0.72rem;">
+                    <span style="background:{{ '#dbeafe' if r.trigger == 'manual' else '#f1f5f9' }};
+                        color:{{ '#1e40af' if r.trigger == 'manual' else '#64748b' }};
+                        padding:0.1rem 0.4rem; border-radius:3px;">
+                        {{ r.trigger }}
+                    </span>
+                </td>
+                <td style="padding:0.45rem; text-align:center;">
+                    <span style="font-size:0.7rem; padding:0.15rem 0.45rem;
+                        border-radius:3px; font-weight:600;
+                        background:{{ '#d1fae5' if r.status == 'completed' else ('#fef3c7' if r.status == 'skipped' else ('#fee2e2' if r.status == 'failed' else '#dbeafe')) }};
+                        color:{{ '#065f46' if r.status == 'completed' else ('#92400e' if r.status == 'skipped' else ('#991b1b' if r.status == 'failed' else '#1e40af')) }};">
+                        {{ r.status }}
+                    </span>
+                    {% if r.error %}
+                    <div style="font-size:0.65rem; color:#991b1b; margin-top:0.15rem;">
+                        {{ r.error[:40] }}
+                    </div>
+                    {% endif %}
+                </td>
+                <td style="padding:0.45rem; text-align:right; color:#10b981;
+                    font-weight:600;">{{ r.sent }}</td>
+                <td style="padding:0.45rem; text-align:right; color:#ef4444;
+                    font-weight:600;">{{ r.failed }}</td>
+                <td style="padding:0.45rem; text-align:right; color:#94a3b8;">
+                    {{ r.skipped }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="padding:2rem; text-align:center; color:#64748b;">
+        Abhi koi automated run nahi hua. Cron setup karo (niche).
+    </div>
+    {% endif %}
+</div>
+
+<!-- Cron setup info -->
+<div class="card" style="margin-top:1rem; background:#eff6ff;
+    border-left:3px solid #3b82f6; font-size:0.82rem; color:#1e40af;">
+    <strong>🔧 Cron Setup (GitHub Actions)</strong>
+    <p style="margin-top:0.35rem;">
+        Automation trigger karne ke liye external cron chahiye. Hum GitHub Actions
+        use karenge (free). Setup instructions next step mein hain.
+    </p>
+    <p style="margin-top:0.35rem; font-family:monospace; font-size:0.72rem;
+        background:white; padding:0.5rem; border-radius:4px; word-break:break-all;">
+        POST /automation/cron/{task_type}<br>
+        Authorization: Bearer &lt;AUTOMATION_SECRET&gt;
+    </p>
+</div>
+
+<script>
+async function previewTask(taskType) {
+    document.getElementById('previewModal').style.display = 'flex';
+    document.getElementById('previewTitle').textContent =
+        'Preview: ' + taskType;
+    document.getElementById('previewBody').innerHTML = 'Loading...';
+
+    try {
+        const res = await fetch('/automation/preview/' + taskType);
+        const data = await res.json();
+        const el = document.getElementById('previewBody');
+
+        if (data.count === 0) {
+            el.innerHTML = '<p style="text-align:center; color:#64748b; padding:1rem;">Koi recipient nahi milega — sab clear hai! 🎉</p>';
+            return;
+        }
+
+        let html = `<p style="margin-bottom:0.75rem;"><strong>${data.count} recipients</strong> (showing first ${Math.min(data.count, 50)})</p>`;
+        html += '<div style="display:flex; flex-direction:column; gap:0.35rem;">';
+        data.recipients.forEach(r => {
+            html += `<div style="padding:0.4rem 0.6rem; background:#f8fafc;
+                border-radius:4px; font-size:0.8rem;">
+                <strong>${r.name || r.title || '—'}</strong>
+                <span style="color:#64748b;"> • ${r.class_name || ''}${r.section ? '-' + r.section : ''}</span>
+                ${r.phone ? `<span style="color:#94a3b8; float:right; font-family:monospace;">${r.phone}</span>` : ''}
+            </div>`;
+        });
+        html += '</div>';
+        el.innerHTML = html;
+    } catch (err) {
+        document.getElementById('previewBody').innerHTML =
+            '<p style="color:#ef4444;">Error loading preview</p>';
+    }
+}
+
+function closePreview() {
+    document.getElementById('previewModal').style.display = 'none';
+}
+</script>
+{% endblock %}
