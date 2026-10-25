@@ -1,0 +1,92 @@
+{% extends "public/base.html" %}
+{% block title %}Faculty — {{ school.school_name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+
+<div style="text-align:center; margin-bottom:2rem;">
+    <h1 class="section-title" style="display:inline-block;">
+        Meet Our Faculty
+    </h1>
+    <p style="color:#64748b; font-size:0.95rem; max-width:600px; margin:0.5rem auto 0;">
+        Dedicated educators committed to nurturing every child's potential.
+    </p>
+</div>
+
+{% if teachers %}
+<h2 style="font-size:1.15rem; margin-bottom:1rem; color:#1e293b;">
+    👨‍🏫 Teaching Staff
+</h2>
+<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+    gap:1rem; margin-bottom:2rem;">
+
+    {% for t in teachers %}
+    <div class="pub-card" style="text-align:center;">
+        <div style="width:72px; height:72px; background:linear-gradient(135deg,#3b82f6,#8b5cf6);
+            color:white; border-radius:50%; display:flex; align-items:center;
+            justify-content:center; font-size:1.6rem; font-weight:700;
+            margin:0 auto 0.75rem;">
+            {{ t.name[0]|upper }}
+        </div>
+        <h3 style="font-size:1rem; margin-bottom:0.15rem; color:#1e293b;">
+            {{ t.name }}
+        </h3>
+        <p style="font-size:0.78rem; color:#64748b; text-transform:capitalize;
+            margin-bottom:0.35rem;">
+            {{ t.role }}
+        </p>
+        {% if t.subjects %}
+        <div style="display:flex; gap:0.25rem; flex-wrap:wrap;
+            justify-content:center;">
+            {% for s in t.subjects[:3] %}
+            <span style="font-size:0.7rem; background:#eff6ff; color:#1e40af;
+                padding:0.1rem 0.4rem; border-radius:3px;">{{ s }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if t.qualification %}
+        <p style="font-size:0.72rem; color:#94a3b8; margin-top:0.35rem;">
+            {{ t.qualification }}
+        </p>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+</div>
+{% endif %}
+
+{% if others %}
+<h2 style="font-size:1.15rem; margin-bottom:1rem; color:#1e293b;">
+    👥 Support Staff
+</h2>
+<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+    gap:0.75rem;">
+
+    {% for t in others %}
+    <div class="pub-card" style="text-align:center; padding:0.9rem;">
+        <div style="width:50px; height:50px; background:#f1f5f9; color:#64748b;
+            border-radius:50%; display:flex; align-items:center;
+            justify-content:center; font-size:1.2rem; font-weight:700;
+            margin:0 auto 0.5rem;">
+            {{ t.name[0]|upper }}
+        </div>
+        <h4 style="font-size:0.9rem; margin-bottom:0.15rem; color:#1e293b;">
+            {{ t.name }}
+        </h4>
+        <p style="font-size:0.72rem; color:#94a3b8; text-transform:capitalize;">
+            {{ t.role }}
+        </p>
+    </div>
+    {% endfor %}
+
+</div>
+{% endif %}
+
+{% if not teachers and not others %}
+<div class="pub-card" style="text-align:center; padding:2rem; color:#94a3b8;">
+    Faculty information coming soon.
+</div>
+{% endif %}
+
+</div>
+{% endblock %}
