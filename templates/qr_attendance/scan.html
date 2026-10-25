@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+{% block title %}QR Attendance{% endblock %}
+{% block page_title %}📷 QR Attendance Scanner{% endblock %}
+
+{% block content %}
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;"
+     id="mainLayout">
+
+<!-- Scanner side -->
+<div>
+    <div class="card" style="padding:0; overflow:hidden;">
+        <div style="background:#1e293b; padding:0.65rem 1rem; color:white;
+            display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:0.9rem; font-weight:600;">📷 Live Scanner</span>
+            <button id="toggleCamBtn" onclick="stopCamera()"
+                style="background:none; border:1px solid rgba(255,255,255,0.3);
+                color:white; padding:0.25rem 0.6rem; border-radius:4px;
+                cursor:pointer; font-size:0.75rem;">Stop</button>
+        </div>
+        <div style="position:relative; background:#000; aspect-ratio:4/3; overflow:hidden;">
+            <video id="video" autoplay playsinline muted
+                style="width:100%; height:100%; object-fit:cover; display:block;"></video>
+
+            <!-- Aiming overlay -->
+            <div style="position:absolute; top:50%; left:50%;
+                transform:translate(-50%,-50%); width:60%; aspect-ratio:1;
+                border:3px solid rgba(59,130,246,0.8); border-radius:12px;
+                pointer-events:none;"></div>
+
+            <!-- Status overlay -->
+            <div id="statusOverlay"
+                style="position:absolute; top:1rem; left:1rem; right:1rem;
+                background:rgba(0,0,0,0.75); color:white; padding:0.5rem 0.9rem;
+                border-radius:6px; font-size:0.82rem; text-align:center; display:none;"></div>
+        </div>
+
+        <div style="padding:0.75rem; border-top:1px solid #e2e8f0;">
+            <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;">
+                <label style="font-size:0.78rem; color:#64748b;">Mark as:</label>
+                <select id="statusSelect" onchange="setStatus(this.value)"
+                    style="padding:0.35rem 0.6rem; border:1px solid #cbd5e1;
+                    border-radius:5px; font-size:0.82rem;">
+                    <option value="present">✅ Present</option>
+                    <option value="late">⏰ Late</option>
+                    <option value="leave">🌴 Leave</option>
+                    <option value="absent">❌ Absent</option>
+                </select>
+                <span id="lastScanInfo" style="margin-left:auto; font-size:0.75rem;
+                    color:#94a3b8;"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual entry fallback -->
+    <div class="card" style="margin-top:1rem;">
+        <h3 style="font-size:0.88rem; margin-bottom:0.5rem; color:#1e293b;">
+            ⌨️ Manual Entry (camera nahi chal raha?)
+        </h3>
+        <form onsubmit="manualMark(event)" style="display:flex; gap:0.4rem;">
+            <input id="manualInput" placeholder="Student ID / Roll No"
+                style="flex:1; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+            <button type="submit" class="btn"
+                style="font-size:0.82rem; padding:0.5rem 0.9rem;">Mark</button>
+        </form>
+        <p style="font-size:0.72rem; color:#94a3b8; margin-top:0.35rem;">
+            Student ID number daalo (jaise 42)
+        </p>
+    </div>
+</div>
+
+<!-- Live results side -->
+<div>
+    <!-- Live summary -->
+    <div class="card" style="margin-bottom:1rem;">
+        <h3 style="font-size:0.9rem; margin-bottom:0.65rem; color:#1e293b;">
+            📊 Today's Progress
+        </h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+            <div style="background:#d1fae5; padding:0.6rem; border-radius:6px; text-align:center;">
+                <div style="font-size:0.7rem; color:#065f46;">Present</div>
+                <div style="font-size:1.4rem; font-weight:700; color:#065f46;"
+                    id="statPresent">{{ summary.present }}</div>
+            </div>
+            <div style="background:#fee2e2; padding:0.6rem; border-radius:6px; text-align:center;">
+                <div style="font-size:0.7rem; color:#991b1b;">Absent</div>
+                <div style="font-size:1.4rem; font-weight:700; color:#991b1b;"
+                    id="statAbsent">{{ summary.absent }}</div>
+            </div>
+            <div style="background:#fef3c7; padding:0.6rem; border-radius:6px; text-align:center;">
+                <div style="font-size:0.7rem; color:#92400e;">Late</div>
+                <div style="font-size:1.4rem; font-weight:700; color:#92400e;"
+                    id="statLate">{{ summary.late }}</div>
+            </div>
+            <div style="background:#dbeafe; padding:0.6rem; border-radius:6px; text-align:center;">
+                <div style="font-size:0.7rem; color:#1e40af;">Leave</div>
+                <div style="font-size:1.4rem; font-weight:700; color:#1e40af;"
+                    id="statLeave">{{ summary.leave }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scanned students list -->
+    <div class="card" style="max-height:500px; overflow-y:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center;
+            margin-bottom:0.65rem;">
+            <h3 style="font-size:0.9rem; color:#1e293b;">✅ Scanned</h3>
+            <span id="scanCount" style="font-size:0.75rem; color:#94a3b8;">0</span>
+        </div>
+        <div id="scannedList" style="display:flex; flex-direction:column; gap:0.35rem;">
+            <p style="font-size:0.82rem; color:#94a3b8; text-align:center; padding:1rem;">
+                Abhi tak koi scan nahi hua
+            </p>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<!-- jsQR library -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+
+<style>
+    @media (max-width: 768px) {
+        #mainLayout { grid-template-columns: 1fr !important; }
+    }
+</style>
+
+<script>
+let video = document.getElementById('video');
+let canvas = document.createElement('canvas');
+let ctx = canvas.getContext('2d');
+let scanning = false;
+let currentStatus = 'present';
+let scanHistory = new Set();
+let scanCounter = 0;
+
+function setStatus(s) {
+    currentStatus = s;
+}
+
+function showStatus(text, color = '#1e293b', duration = 2000) {
+    const overlay = document.getElementById('statusOverlay');
+    overlay.textContent = text;
+    overlay.style.background = color;
+    overlay.style.display = 'block';
+    if (duration > 0) {
+        setTimeout(() => { overlay.style.display = 'none'; }, duration);
+    }
+}
+
+async function startCamera() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }
+        });
+        video.srcObject = stream;
+        scanning = true;
+        document.getElementById('toggleCamBtn').textContent = 'Stop';
+        document.getElementById('toggleCamBtn').onclick = stopCamera;
+        video.addEventListener('loadedmetadata', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            requestAnimationFrame(tick);
+        });
+        showStatus('Scanner ready — QR dikhao', '#10b981', 1500);
+    } catch (err) {
+        showStatus('Camera access denied — manual entry use karo', '#ef4444', 4000);
+        console.error(err);
+    }
+}
+
+function stopCamera() {
+    scanning = false;
+    if (video.srcObject) {
+        video.srcObject.getTracks().forEach(t => t.stop());
+        video.srcObject = null;
+    }
+    document.getElementById('toggleCamBtn').textContent = 'Start';
+    document.getElementById('toggleCamBtn').onclick = startCamera;
+    showStatus('Scanner stopped', '#64748b', 1000);
+}
+
+function tick() {
+    if (!scanning) return;
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: 'dontInvert'
+        });
+        if (code && code.data) {
+            handleQRScan(code.data);
+        }
+    }
+    requestAnimationFrame(tick);
+}
+
+let lastScanTime = 0;
+
+async function handleQRScan(qrText) {
+    const now = Date.now();
+    if (now - lastScanTime < 2000) return;    // Debounce 2s
+    lastScanTime = now;
+    await markStudent(qrText);
+}
+
+async function markStudent(qrText) {
+    try {
+        const res = await fetch('{{ url_for("qr_attendance.mark") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                qr_text: qrText,
+                status: currentStatus,
+                date: '{{ today }}'
+            })
+        });
+        const data = await res.json();
+
+        if (!data.ok) {
+            showStatus('❌ ' + data.error, '#ef4444', 2500);
+            return;
+        }
+
+        const s = data.student;
+        const statusEmoji = {
+            present: '✅', absent: '❌', late: '⏰', leave: '🌴'
+        }[data.status] || '✓';
+
+        if (data.already_marked) {
+            showStatus(
+                `${statusEmoji} ${s.name} — ${data.previous_status} se ${data.status} update`,
+                '#f59e0b', 2000
+            );
+        } else {
+            showStatus(`${statusEmoji} ${s.name} (${s.class_name}${s.section ? '-' + s.section : ''})`,
+                '#10b981', 2000);
+        }
+
+        // Update summary
+        const sum = data.summary;
+        document.getElementById('statPresent').textContent = sum.present;
+        document.getElementById('statAbsent').textContent = sum.absent;
+        document.getElementById('statLate').textContent = sum.late;
+        document.getElementById('statLeave').textContent = sum.leave;
+
+        // Add to scanned list
+        if (!scanHistory.has(s.id)) {
+            scanHistory.add(s.id);
+            scanCounter++;
+            document.getElementById('scanCount').textContent = scanCounter;
+
+            const list = document.getElementById('scannedList');
+            if (scanCounter === 1) list.innerHTML = '';
+
+            const item = document.createElement('div');
+            item.style.cssText = 'display:flex; justify-content:space-between; ' +
+                'padding:0.4rem 0.6rem; background:#f8fafc; border-radius:5px; ' +
+                'font-size:0.82rem; align-items:center;';
+            item.innerHTML = `
+                <div>
+                    <strong>${s.name}</strong>
+                    <div style="font-size:0.7rem; color:#94a3b8;">
+                        ${s.class_name || '—'}${s.section ? '-' + s.section : ''}
+                        • Roll ${s.roll || '—'}
+                    </div>
+                </div>
+                <span style="font-size:1.1rem;">${statusEmoji}</span>
+            `;
+            list.insertBefore(item, list.firstChild);
+        }
+
+        document.getElementById('lastScanInfo').textContent =
+            `Last: ${s.name}`;
+    } catch (err) {
+        showStatus('Error: ' + err.message, '#ef4444', 3000);
+    }
+}
+
+function manualMark(e) {
+    e.preventDefault();
+    const input = document.getElementById('manualInput');
+    const val = input.value.trim();
+    if (!val) return;
+    // Plain ID bhi chalega (student.id as number)
+    markStudent(val);
+    input.value = '';
+}
+
+// Auto-start camera on load (mobile friendly)
+window.addEventListener('load', () => {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        startCamera();
+    } else {
+        showStatus('Camera unsupported — manual entry use karo', '#f59e0b', 4000);
+    }
+});
+</script>
+
+{% endblock %}
