@@ -1,1 +1,73 @@
+{% extends "base.html" %}
+{% block title %}New Message{% endblock %}
+{% block page_title %}💬 Send Message to Parent{% endblock %}
 
+{% block content %}
+
+<div style="max-width:600px;">
+
+<div style="margin-bottom:1rem;">
+    <a href="{{ url_for('chat.index') }}"
+       style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Inbox</a>
+</div>
+
+{% if not parents %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Koi parent registered nahi. Pehle parents register karein.
+</div>
+{% else %}
+<div class="card">
+<form method="POST">
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Parent *</label>
+        <select name="parent_id" required
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px;">
+            <option value="">Select parent</option>
+            {% for p in parents %}
+            <option value="{{ p.id }}">
+                {{ p.name }} — {{ p.phone }}
+                {% if p.unread %}({{ p.unread }} unread){% endif %}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Related Student (optional)</label>
+        <select name="student_id"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px;">
+            <option value="">— None —</option>
+            <!-- Students filtered by parent would be ideal; keep simple -->
+        </select>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Subject</label>
+        <input name="subject" placeholder="e.g. Fee reminder, PTM invite..."
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px;">
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Message *</label>
+        <textarea name="body" rows="5" required
+            placeholder="Type your message..."
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1;
+            border-radius:6px;"></textarea>
+    </div>
+
+    <div style="display:flex; gap:0.75rem;">
+        <button type="submit" class="btn">Send Message</button>
+        <a href="{{ url_for('chat.index') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">
+            Cancel
+        </a>
+    </div>
+</form>
+</div>
+{% endif %}
+
+</div>
+{% endblock %}
