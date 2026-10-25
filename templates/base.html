@@ -220,9 +220,15 @@
     </a>
     <a href="{{ url_for('auth.profile') }}"
        style="color:#475569; text-decoration:none; font-size:0.88rem;">
-        {{ session.admin_name }}
-    </a>
-    <a href="{{ url_for('auth.logout') }}"
+        <div class="user">
+    <span style="display:inline-block; padding:0.15rem 0.5rem; border-radius:4px;
+        font-size:0.72rem; background:#f1f5f9; color:#475569; margin-right:0.4rem;
+        text-transform:capitalize;">
+        {{ session.admin_role }}
+    </span>
+    <a href="{{ url_for('auth.profile') }}">{{ session.admin_name }}</a>
+    <a href="{{ url_for('auth.logout') }}">Logout</a>
+        </div>
        style="color:#ef4444; text-decoration:none; font-size:0.82rem;">Logout</a>
             </div>
             {% endif %}
