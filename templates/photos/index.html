@@ -1,1 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Student Photos{% endblock %}
+{% block page_title %}📷 Student Photos{% endblock %}
 
+{% block content %}
+
+{% if not configured %}
+<div class="card" style="background:#fef3c7; border-left:4px solid #f59e0b;
+    margin-bottom:1rem; font-size:0.85rem; color:#92400e;">
+    ⚠️ Supabase Storage configure nahi hai. Render Environment mein
+    <code>SUPABASE_URL</code> aur <code>SUPABASE_SERVICE_KEY</code> set karo.
+</div>
+{% endif %}
+
+<!-- Stats -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:0.75rem; margin-bottom:1rem;">
+    <div class="card" style="padding:0.85rem;">
+        <div style="font-size:0.72rem; color:#64748b;">Total Students</div>
+        <div style="font-size:1.5rem; font-weight:700;">{{ stats.total }}</div>
+    </div>
+    <div class="card" style="padding:0.85rem; border-left:3px solid #10b981;">
+        <div style="font-size:0.72rem; color:#64748b;">With Photo</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#10b981;">
+            {{ stats.with_photo }}
+        </div>
+    </div>
+    <div class="card" style="padding:0.85rem; border-left:3px solid #ef4444;">
+        <div style="font-size:0.72rem; color:#64748b;">Without Photo</div>
+        <div style="font-size:1.5rem; font-weight:700; color:#ef4444;">
+            {{ stats.without_photo }}
+        </div>
+    </div>
+</div>
+
+<!-- Progress bar -->
+{% set pct = ((stats.with_photo / stats.total) * 100) if stats.total > 0 else 0 %}
+<div class="card" style="margin-bottom:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center;
+        margin-bottom:0.5rem; font-size:0.85rem;">
+        <span style="color:#64748b;">Photo completion</span>
+        <strong style="color:{{ '#10b981' if pct >= 80 else ('#f59e0b' if pct >= 50 else '#ef4444') }};">
+            {{ pct|round(1) }}%
+        </strong>
+    </div>
+    <div style="height:10px; background:#f1f5f9; border-radius:5px; overflow:hidden;">
+        <div style="width:{{ pct }}%; height:100%;
+            background:linear-gradient(90deg,#10b981,#34d399);"></div>
+    </div>
+</div>
+
+<!-- Actions -->
+<div class="card" style="margin-bottom:1rem;">
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <a href="{{ url_for('photos.bulk') }}" class="btn"
+           style="background:#8b5cf6;">📤 Bulk Upload</a>
+        <a href="{{ url_for('students.list_students') }}" class="btn"
+           style="background:#64748b;">👨‍🎓 Students List</a>
+    </div>
+</div>
+
+<!-- Missing photos -->
+{% if without %}
+<div class="card">
+    <h3 style="font-size:1rem; margin-bottom:0.65rem; color:#1e293b;">
+        🚨 Missing Photos ({{ stats.without_photo }} total, showing {{ without|length }})
+    </h3>
+    <div style="overflow:auto;">
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+        <thead style="background:#f1f5f9;">
+            <tr>
+                <th style="padding:0.5rem; text-align:left;">Student</th>
+                <th style="padding:0.5rem; text-align:left;">Roll</th>
+                <th style="padding:0.5rem; text-align:left;">Class</th>
+                <th style="padding:0.5rem; text-align:right;">Upload</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in without %}
+            <tr style="border-top:1px solid #e2e8f0;">
+                <td style="padding:0.5rem;">
+                    <a href="{{ url_for('students.view_student', student_id=s.id) }}"
+                       style="color:#1e293b; text-decoration:none; font-weight:500;">
+                        {{ s.name }}
+                    </a>
+                </td>
+                <td style="padding:0.5rem; color:#64748b;">{{ s.roll or '—' }}</td>
+                <td style="padding:0.5rem;">
+                    {{ s.class_name or '—' }}{% if s.section %}-{{ s.section }}{% endif %}
+                </td>
+                <td style="padding:0.5rem; text-align:right;">
+                    <form method="POST"
+                          action="{{ url_for('photos.upload', student_id=s.id) }}"
+                          enctype="multipart/form-data"
+                          style="display:inline-flex; gap:0.3rem; align-items:center;">
+                        <input type="file" name="photo" accept="image/*" required
+                            style="font-size:0.72rem; max-width:120px;">
+                        <button type="submit"
+                            style="background:#3b82f6; color:white; border:none;
+                            padding:0.3rem 0.65rem; border-radius:4px;
+                            cursor:pointer; font-size:0.75rem; font-weight:600;">
+                            ↑
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:2rem; color:#10b981;">
+    🎉 Sabhi students ke photos uploaded hain!
+</div>
+{% endif %}
+
+<div class="card" style="margin-top:1rem; background:#eff6ff;
+    border-left:3px solid #3b82f6; font-size:0.82rem; color:#1e40af;">
+    <strong>💡 Tips:</strong>
+    <ul style="margin:0.35rem 0 0 1.2rem; line-height:1.7;">
+        <li>Photos 2 MB se chhoti, JPG/PNG format</li>
+        <li>Bulk upload ke liye filenames: <code>&lt;roll_no&gt;.jpg</code> ya <code>&lt;roll&gt;_&lt;class&gt;.jpg</code></li>
+        <li>Photos ID cards, hall tickets, profiles — sab jagah auto dikhengi</li>
+        <li>Upload ke baad student form mein bhi photo change kar sakte ho</li>
+    </ul>
+</div>
+{% endblock %}
