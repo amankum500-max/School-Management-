@@ -108,6 +108,24 @@
 <div class="card" style="margin-bottom:1rem;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.65rem;">
         <h3 style="font-size:0.95rem; color:#1e293b;">🔔 Alerts & Reminders</h3>
+        {% if pending_leave and pending_leave > 0 %}
+<a href="{{ url_for('leave.index') }}"
+   style="text-decoration:none; color:inherit;">
+    <div class="card" style="background:#fef3c7; border-left:4px solid #f59e0b;
+        margin-bottom:1rem; display:flex; align-items:center; gap:0.75rem;">
+        <div style="font-size:1.5rem;">🌴</div>
+        <div style="flex:1;">
+            <div style="font-size:0.95rem; font-weight:600; color:#92400e;">
+                {{ pending_leave }} leave application{{ 's' if pending_leave > 1 }} pending
+            </div>
+            <div style="font-size:0.78rem; color:#92400e; opacity:0.85;">
+                Approval ke liye review karo
+            </div>
+        </div>
+        <div style="color:#92400e; font-size:1.2rem;">→</div>
+    </div>
+</a>
+{% endif %}
         <a href="{{ url_for('alerts.index') }}"
            style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">View All →</a>
     </div>
