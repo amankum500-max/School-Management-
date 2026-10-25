@@ -1,0 +1,28 @@
+{% extends "parent/base.html" %}
+{% block title %}Alerts{% endblock %}
+
+{% block content %}
+<h2 style="font-size:1.15rem; margin-bottom:0.75rem; color:#1e293b;">
+    🔔 Alerts ({{ items|length }})
+</h2>
+
+{% if not items %}
+<div class="card" style="text-align:center; padding:2rem; color:#10b981;">
+    🎉 Koi alert nahi! Sab clear hai.
+</div>
+{% else %}
+{% for n in items %}
+<a href="{{ n.link }}" style="text-decoration:none; color:inherit;">
+<div class="card" style="border-left:4px solid #f59e0b;">
+    <div style="display:flex; gap:0.75rem; align-items:center;">
+        <div style="font-size:1.5rem;">{{ n.icon }}</div>
+        <div style="flex:1;">
+            <div style="font-size:0.92rem; font-weight:600; color:#1e293b;">{{ n.title }}</div>
+            <div style="font-size:0.78rem; color:#64748b; margin-top:0.1rem;">{{ n.subtitle }}</div>
+        </div>
+    </div>
+</div>
+</a>
+{% endfor %}
+{% endif %}
+{% endblock %}
