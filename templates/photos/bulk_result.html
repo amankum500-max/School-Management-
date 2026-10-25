@@ -1,1 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Upload Result{% endblock %}
+{% block page_title %}📤 Bulk Upload Result{% endblock %}
 
+{% block content %}
+
+<div style="max-width:800px;">
+
+<div class="card" style="text-align:center; margin-bottom:1rem;">
+    <div style="font-size:3rem; margin-bottom:0.5rem;">
+        {{ '✅' if failed == 0 else ('⚠️' if matched > 0 else '❌') }}
+    </div>
+    <h2 style="font-size:1.3rem; margin-bottom:0.35rem;">
+        Upload Complete
+    </h2>
+    <p style="color:#64748b;">
+        <strong style="color:#10b981;">{{ matched }}</strong> uploaded
+        {% if failed %} • <strong style="color:#ef4444;">{{ failed }}</strong> failed{% endif %}
+    </p>
+</div>
+
+{% if details %}
+<div class="card" style="padding:0; overflow:auto; margin-bottom:1rem;">
+<table style="width:100%; border-collapse:collapse; font-size:0.82rem;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.5rem; text-align:left;">File</th>
+            <th style="padding:0.5rem; text-align:center;">Status</th>
+            <th style="padding:0.5rem; text-align:left;">Detail</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for d in details %}
+        <tr style="border-top:1px solid #e2e8f0;">
+            <td style="padding:0.5rem; font-family:monospace; font-size:0.75rem;">
+                {{ d.file }}
+            </td>
+            <td style="padding:0.5rem; text-align:center;">
+                {% if d.status == 'ok' %}
+                <span style="background:#d1fae5; color:#065f46;
+                    padding:0.15rem 0.45rem; border-radius:3px;
+                    font-size:0.7rem; font-weight:600;">OK</span>
+                {% else %}
+                <span style="background:#fee2e2; color:#991b1b;
+                    padding:0.15rem 0.45rem; border-radius:3px;
+                    font-size:0.7rem; font-weight:600;">
+                    {{ d.status|upper }}
+                </span>
+                {% endif %}
+            </td>
+            <td style="padding:0.5rem; font-size:0.75rem; color:#64748b;">
+                {% if d.status == 'ok' %}
+                Student ID: {{ d.student_id }}
+                {% elif d.status == 'no_match' %}
+                Filename se koi student match nahi hua
+                {% elif d.status == 'upload_error' %}
+                {{ d.error }}
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+
+<div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+    <a href="{{ url_for('photos.index') }}" class="btn">← Photos Dashboard</a>
+    <a href="{{ url_for('photos.bulk') }}" class="btn"
+       style="background:#8b5cf6;">Upload More</a>
+</div>
+
+</div>
+{% endblock %}
