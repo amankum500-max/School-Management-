@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Leave Management{% endblock %}
+{% block page_title %}🌴 Leave Management{% endblock %}
+
+{% block content %}
+
+<!-- Pending banner -->
+{% if pending_count > 0 and selected_status != 'pending' %}
+<div class="card" style="background:#fef3c7; border-left:4px solid #f59e0b;
+    margin-bottom:1rem; font-size:0.85rem; color:#92400e;">
+    ⚠️ <strong>{{ pending_count }}</strong> leave application{{ 's' if pending_count > 1 }} approval ke liye pending.
+    <a href="{{ url_for('leave.index', status='pending') }}"
+       style="color:#92400e; text-decoration:underline; margin-left:0.35rem;">
+        Review now →
+    </a>
+</div>
+{% endif %}
+
+<!-- Filters -->
+<div class="card" style="margin-bottom:1rem;">
+<form method="GET" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;">
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block;
+            margin-bottom:0.2rem;">Status</label>
+        <select name="status"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="">All</option>
+            {% for st in ['pending','approved','rejected','cancelled'] %}
+            <option value="{{ st }}" {% if st == selected_status %}selected{% endif %}>
+                {{ st|capitalize }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label style="font-size:0.75rem; color:#64748b; display:block;
+            margin-bottom:0.2rem;">Staff</label>
+        <select name="staff_id"
+            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;
+            max-width:200px;">
+            <option value="">All staff</option>
+            {% for s in staff_list %}
+            <option value="{{ s.id }}" {% if s.id == selected_staff %}selected{% endif %}>
+                {{ s.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn">Filter</button>
+    <a href="{{ url_for('leave.apply') }}" class="btn"
+       style="background:#8b5cf6; margin-left:auto;">+ New Leave Application</a>
+</form>
+</div>
+
+{% if not applications %}
+<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
+    Koi leave application nahi mili.
+</div>
+{% else %}
+<div style="display:flex; flex-direction:column; gap:0.65rem;">
+    {% for a in applications %}
+    {% set status_colors = {
+        'pending': ('#fef3c7', '#92400e', '#f59e0b'),
+        'approved': ('#d1fae5', '#065f46', '#10b981'),
+        'rejected': ('#fee2e2', '#991b1b', '#ef4444'),
+        'cancelled': ('#f1f5f9', '#64748b', '#94a3b8')
+    } %}
+    {% set sc = status_colors.get(a.status, status_colors['pending']) %}
+    <a href="{{ url_for('leave.detail', lid=a.id) }}"
+       style="text-decoration:none; color:inherit;">
+        <div class="card" style="border-left:4px solid {{ sc[2] }};">
+            <div style="display:flex; justify-content:space-between;
+                align-items:start; gap:0.5rem; flex-wrap:wrap;">
+                <div style="flex:1;">
+                    <div style="display:flex; gap:0.5rem; align-items:center;
+                        flex-wrap:wrap; margin-bottom:0.35rem;">
+                        <strong style="font-size:0.98rem; color:#1e293b;">
+                            {{ a.staff_name }}
+                        </strong>
+                        <span style="font-size:0.7rem; background:{{ a.color or '#3b82f6' }};
+                            color:white; padding:0.15rem 0.45rem;
+                            border-radius:3px; font-weight:600;">
+                            {{ a.leave_type or 'Leave' }}
+                        </span>
+                        <span style="font-size:0.7rem; padding:0.15rem 0.45rem;
+                            border-radius:3px; font-weight:600;
+                            background:{{ sc[0] }}; color:{{ sc[1] }};
+                            text-transform:uppercase;">
+                            {{ a.status }}
+                        </span>
+                    </div>
+                    <div style="font-size:0.85rem; color:#475569;">
+                        {{ a.from_date.strftime('%d %b %Y') }} → {{ a.to_date.strftime('%d %b %Y') }}
+                        <strong>({{ a.days }} day{{ 's' if a.days != 1 }})</strong>
+                    </div>
+                    {% if a.reason %}
+                    <div style="font-size:0.82rem; color:#64748b; margin-top:0.25rem;">
+                        "{{ a.reason[:100] }}{% if a.reason|length > 100 %}...{% endif %}"
+                    </div>
+                    {% endif %}
+                </div>
+                <div style="text-align:right; font-size:0.72rem; color:#94a3b8;">
+                    Applied {{ a.applied_at.strftime('%d %b') if a.applied_at else '' }}
+                </div>
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
