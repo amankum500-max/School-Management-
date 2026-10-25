@@ -37,6 +37,8 @@
             <td style="padding:0.7rem; font-size:0.8rem;">{{ e.subjects|join(', ') }}</td>
             <td style="padding:0.7rem; text-align:right;">{{ e.max_marks }}</td>
             <td style="padding:0.7rem; text-align:right; white-space:nowrap;">
+                <a href="{{ url_for('hall_tickets.manage', exam_id=e.id) }}"
+   style="color:#8b5cf6; text-decoration:none; margin-right:0.5rem;">Ticket</a>
                 <a href="{{ url_for('exams.marks_entry', exam_id=e.id) }}"
                    style="color:#3b82f6; text-decoration:none; margin-right:0.5rem;">Marks</a>
                 <a href="{{ url_for('exams.merit', exam_id=e.id) }}"
