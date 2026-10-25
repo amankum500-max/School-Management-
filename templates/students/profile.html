@@ -76,6 +76,52 @@
         </div>
     </div>
 </div>
+    <div class="card" style="max-width:800px; margin-top:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+        <h3 style="font-size:1rem;">🩺 Medical</h3>
+        <a href="{{ url_for('medical.record', student_id=student.id) }}"
+           style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">
+            {{ 'View/Edit →' if medical else 'Add Record →' }}
+        </a>
+    </div>
+    {% if medical %}
+    <div style="font-size:0.85rem; display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+        {% if medical.blood_group %}
+        <div>
+            <span style="color:#64748b;">Blood:</span>
+            <span style="background:#fee2e2; color:#991b1b; padding:0.15rem 0.5rem;
+                border-radius:3px; font-weight:700; font-size:0.75rem;">
+                {{ medical.blood_group }}
+            </span>
+        </div>
+        {% endif %}
+        {% if medical.allergies %}
+        <div style="grid-column:1/-1;">
+            <span style="color:#64748b;">Allergies:</span>
+            <strong style="color:#991b1b;">{{ medical.allergies }}</strong>
+        </div>
+        {% endif %}
+        {% if medical.chronic_conditions %}
+        <div style="grid-column:1/-1;">
+            <span style="color:#64748b;">Conditions:</span>
+            <span style="color:#475569;">{{ medical.chronic_conditions }}</span>
+        </div>
+        {% endif %}
+        {% if medical.emergency_contact_phone %}
+        <div style="grid-column:1/-1;">
+            <span style="color:#64748b;">Emergency:</span>
+            {{ medical.emergency_contact_name or '' }}
+            • <a href="tel:{{ medical.emergency_contact_phone }}"
+                 style="color:#3b82f6; text-decoration:none; font-weight:600;">
+                {{ medical.emergency_contact_phone }}
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <p style="color:#94a3b8; font-size:0.85rem;">Koi medical record nahi.</p>
+    {% endif %}
+    </div>
 {% endif %}
     {% if books %}
 <div class="card" style="max-width:800px; margin-top:1rem;">
