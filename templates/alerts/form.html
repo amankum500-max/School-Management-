@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}New Custom Alert{% endblock %}
+{% block page_title %}New Custom Alert{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:600px;">
+<form method="POST">
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Title *</label>
+        <input name="title" required placeholder="e.g. PTM tomorrow at 10 AM"
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+    </div>
+
+    <div style="margin-bottom:1rem;">
+        <label style="font-size:0.85rem; color:#334155;">Message</label>
+        <textarea name="message" rows="3" placeholder="Detailed note..."
+            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;"></textarea>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Type</label>
+            <select name="alert_type"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="info">Info (blue)</option>
+                <option value="success">Success (green)</option>
+                <option value="warning">Warning (yellow)</option>
+                <option value="danger">Danger (red)</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Target Audience</label>
+            <select name="target"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+                <option value="admin">Admin only</option>
+                <option value="parents">Parents</option>
+                <option value="public">Public</option>
+                <option value="all">Everyone</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Expires On (optional)</label>
+            <input name="expires_at" type="date"
+                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <small style="color:#94a3b8; font-size:0.72rem;">
+                Blank = never expires
+            </small>
+        </div>
+        <div>
+            <label style="font-size:0.85rem; color:#334155;">Status</label>
+            <div style="padding:0.6rem 0;">
+                <label style="font-size:0.85rem; color:#334155;">
+                    <input type="checkbox" name="is_active" checked>
+                    Activate immediately
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div style="background:#eff6ff; padding:0.65rem 0.9rem; border-radius:6px;
+        font-size:0.82rem; color:#1e40af; margin-bottom:1rem;">
+        <strong>💡 Note:</strong> Custom alerts dashboard pe top pe dikhte hain.
+        Expires date ke baad automatic hide ho jate hain.
+    </div>
+
+    <div style="display:flex; gap:0.75rem;">
+        <button type="submit" class="btn">Create Alert</button>
+        <a href="{{ url_for('alerts.index') }}"
+           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+    </div>
+</form>
+</div>
+{% endblock %}
