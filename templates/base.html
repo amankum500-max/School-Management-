@@ -94,6 +94,21 @@
             text-decoration: none;
             font-size: 0.85rem;
         }
+        <header class="topbar">
+    <div style="display:flex; align-items:center; gap:0.75rem;">
+        <button class="menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+        {% if help_topic %}
+        <a href="{{ url_for('help.topic', slug=help_slug) }}"
+           title="Help: {{ help_topic.title }}"
+           style="display:inline-flex; align-items:center; justify-content:center;
+           width:26px; height:26px; border-radius:50%; background:#eff6ff;
+           color:#3b82f6; text-decoration:none; font-size:0.85rem; font-weight:700;
+           border:1px solid #bfdbfe;">
+            ?
+        </a>
+        {% endif %}
+    </div>
 
         /* Content */
         .content { padding: 1.5rem; flex: 1; }
