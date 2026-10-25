@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Admin Users{% endblock %}
+{% block page_title %}Admin Users{% endblock %}
+
+{% block content %}
+
+<div class="card" style="background:#eff6ff; border-left:3px solid #3b82f6;
+    font-size:0.85rem; color:#1e40af; margin-bottom:1rem;">
+    <strong>ℹ️ Roles:</strong>
+    <ul style="margin:0.35rem 0 0 1.2rem; line-height:1.7;">
+        <li><strong>Super Admin</strong> — sab kuch, admin users manage kar sakta hai</li>
+        <li><strong>Admin</strong> — sab modules, par admin users nahi</li>
+        <li><strong>Accountant</strong> — fees, bills, salary, expenses, reports</li>
+        <li><strong>Viewer</strong> — sirf dekh sakta hai (edit restrictions manual)</li>
+    </ul>
+</div>
+
+<!-- Add new -->
+<div class="card" style="margin-bottom:1rem;">
+    <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#1e293b;">
+        ➕ Create Admin User
+    </h3>
+    <form method="POST" action="{{ url_for('admin_users.add') }}"
+          style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr auto; gap:0.5rem;
+          align-items:end;">
+        <div>
+            <label style="font-size:0.72rem; color:#64748b; display:block; margin-bottom:0.2rem;">
+                Username *
+            </label>
+            <input name="username" required placeholder="e.g. principal"
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+        </div>
+        <div>
+            <label style="font-size:0.72rem; color:#64748b; display:block; margin-bottom:0.2rem;">
+                Full Name
+            </label>
+            <input name="full_name" placeholder="Principal Sharma"
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+        </div>
+        <div>
+            <label style="font-size:0.72rem; color:#64748b; display:block; margin-bottom:0.2rem;">
+                Password *
+            </label>
+            <input name="password" type="password" required minlength="6"
+                placeholder="min 6 chars"
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+        </div>
+        <div>
+            <label style="font-size:0.72rem; color:#64748b; display:block; margin-bottom:0.2rem;">
+                Role *
+            </label>
+            <select name="role" required
+                style="width:100%; padding:0.5rem; border:1px solid #cbd5e1;
+                border-radius:5px; font-size:0.85rem;">
+                {% for r in roles %}
+                <option value="{{ r }}">{{ r.replace('_', ' ')|title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn" style="padding:0.5rem 1rem; font-size:0.85rem;">
+            Create
+        </button>
+    </form>
+</div>
+
+<!-- Existing -->
+<div class="card" style="padding:0; overflow:auto;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:800px;">
+    <thead style="background:#f1f5f9;">
+        <tr>
+            <th style="padding:0.6rem; text-align:left;">Name</th>
+            <th style="padding:0.6rem; text-align:left;">Username</th>
+            <th style="padding:0.6rem; text-align:left;">Role</th>
+            <th style="padding:0.6rem; text-align:center;">Status</th>
+            <th style="padding:0.6rem; text-align:left;">Last Login</th>
+            <th style="padding:0.6rem; text-align:right;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for a in admins %}
+        {% set is_self = (a.id == current_id) %}
+        <tr style="border-top:1px solid #e2e8f0;
+            {{ 'background:#f8fafc;' if is_self }}">
+            <td style="padding:0.55rem;">
+                <strong>{{ a.full_name or a.username }}</strong>
+                {% if is_self %}
+                <span style="font-size:0.68rem; background:#dbeafe; color:#1e40af;
+                    padding:0.1rem 0.35rem; border-radius:3px; margin-left:0.3rem;">
+                    YOU
+                </span>
+                {% endif %}
+            </td>
+            <td style="padding:0.55rem; font-family:monospace; font-size:0.82rem;">
+                {{ a.username }}
+            </td>
+            <td style="padding:0.55rem;">
+                {% set role_bg = {
+                    'super_admin': ('#ede9fe', '#5b21b6'),
+                    'admin': ('#dbeafe', '#1e40af'),
+                    'accountant': ('#d1fae5', '#065f46'),
+                    'viewer': ('#f1f5f9', '#475569')
+                } %}
+                {% set rb = role_bg.get(a.role, role_bg['viewer']) %}
+                <span style="font-size:0.72rem; padding:0.15rem 0.45rem; border-radius:3px;
+                    background:{{ rb[0] }}; color:{{ rb[1] }}; font-weight:600;
+                    text-transform:capitalize;">
+                    {{ a.role.replace('_', ' ') }}
+                </span>
+            </td>
+            <td style="padding:0.55rem; text-align:center;">
+                <span style="font-size:0.72rem; padding:0.15rem 0.45rem; border-radius:3px;
+                    background:{{ '#d1fae5' if a.is_active else '#fee2e2' }};
+                    color:{{ '#065f46' if a.is_active else '#991b1b' }};">
+                    {{ 'Active' if a.is_active else 'Inactive' }}
+                </span>
+            </td>
+            <td style="padding:0.55rem; font-size:0.78rem; color:#64748b;">
+                {{ a.last_login.strftime('%d %b, %I:%M %p') if a.last_login else 'Never' }}
+            </td>
+            <td style="padding:0.55rem; text-align:right; white-space:nowrap;">
+                {% if not is_self %}
+                <button type="button"
+                    onclick="document.getElementById('edit-{{ a.id }}').style.display='table-row';"
+                    style="background:none; border:none; color:#f59e0b; cursor:pointer;
+                    font-size:0.8rem; margin-right:0.3rem;">Edit</button>
+                <form method="POST" action="{{ url_for('admin_users.remove', aid=a.id) }}"
+                      onsubmit="return confirm('Delete {{ a.username }}?');"
+                      style="display:inline; margin-right:0.3rem;">
+                    <button style="background:none; border:none; color:#ef4444;
+                        cursor:pointer; font-size:0.8rem;">Delete</button>
+                </form>
+                {% else %}
+                <span style="color:#94a3b8; font-size:0.75rem;">—</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% if not is_self %}
+        <tr id="edit-{{ a.id }}" style="display:none; background:#f8fafc;">
+            <td colspan="6" style="padding:0.6rem;">
+                <form method="POST" action="{{ url_for('admin_users.edit', aid=a.id) }}"
+                      style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                    <input name="full_name" value="{{ a.full_name or '' }}"
+                        placeholder="Full name"
+                        style="padding:0.4rem; border:1px solid #cbd5e1; border-radius:4px;
+                        font-size:0.82rem; width:150px;">
+                    <select name="role"
+                        style="padding:0.4rem; border:1px solid #cbd5e1; border-radius:4px;
+                        font-size:0.82rem;">
+                        {% for r in roles %}
+                        <option value="{{ r }}" {% if r == a.role %}selected{% endif %}>
+                            {{ r.replace('_', ' ')|title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <label style="font-size:0.82rem; display:flex; align-items:center; gap:0.3rem;">
+                        <input type="checkbox" name="is_active" {% if a.is_active %}checked{% endif %}>
+                        Active
+                    </label>
+                    <button type="submit" class="btn"
+                        style="padding:0.4rem 0.8rem; font-size:0.8rem;">Save</button>
+                    <form method="POST" action="{{ url_for('admin_users.reset', aid=a.id) }}"
+                          style="display:flex; gap:0.3rem; align-items:center; margin-left:auto;">
+                        <input name="new_password" type="password" minlength="6" required
+                            placeholder="new password"
+                            style="padding:0.4rem; border:1px solid #cbd5e1; border-radius:4px;
+                            font-size:0.82rem; width:130px;">
+                        <button type="submit"
+                            style="background:#64748b; color:white; border:none;
+                            padding:0.4rem 0.7rem; border-radius:4px; cursor:pointer;
+                            font-size:0.8rem;">Reset PW</button>
+                    </form>
+                </form>
+            </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}
