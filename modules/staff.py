@@ -79,3 +79,13 @@ def remove(staff_id):
     delete_staff(staff_id)
     flash("Staff delete ho gaya", "success")
     return redirect(url_for("staff.index"))
+from database import get_staff_salary_history
+
+@staff_bp.route("/<int:staff_id>")
+@login_required
+def view(staff_id):
+    m = get_staff(staff_id)
+    if not m:
+        abort(404)
+    salary_history = get_staff_salary_history(staff_id, 12)
+    return render_template("staff/profile.html", m=m, salary_history=salary_history)
