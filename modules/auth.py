@@ -79,3 +79,25 @@ def profile():
             return redirect(url_for("auth.profile"))
 
     return render_template("profile.html", admin=admin)
+    def verify_admin(username, password):
+    row = get_admin_by_username(username)
+    if not row:
+        return None
+    # row = id, username, password_hash, full_name, role, is_active
+    if not row[5]:        # is_active False
+        return None
+    if check_password_hash(row[2], password):
+        return {"id": row[0], "username": row[1],
+                "full_name": row[3], "role": row[4] or "admin"}
+    return None
+    def get_admin_by_username(username):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, username, password_hash, full_name, role, is_active
+        FROM admins WHERE username=%s;
+    """, (username,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    return row
