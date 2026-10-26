@@ -252,3 +252,65 @@ def child_detail(student_id):
         # ... existing ...
         online_payments=online_payments    # ← NEW
     )
+@parent_bp.route("/messages")
+@parent_required
+def messages_list():
+    parent_id = session.get("parent_id")
+    threads = get_parent_threads(parent_id)
+    unread = count_unread_threads_for_parent(parent_id)
+    return render_template("parent/messages_list.html",
+                           threads=threads, unread=unread)
+
+
+@parent_bp.route("/messages/new", methods=["GET", "POST"])
+@parent_required
+def messages_new():
+    parent_id = session.get("parent_id")
+    children = get_children_for_parent(session["parent_phone"])
+
+    if request.method == "POST":
+        student_id = request.form.get("student_id", type=int)
+        subject = request.form.get("subject", "").strip()
+        body = request.form.get("body", "").strip()
+
+        if not body:
+            flash("Message khaali nahi ho sakta", "error")
+            return redirect(url_for("parent.messages_new"))
+
+        parent = get_parent_info(parent_id)
+        pname = parent["name"] if parent else "Parent"
+
+        tid = create_message_thread(
+            parent_id, student_id, subject, body, pname
+        )
+        flash("Message sent", "success")
+        return redirect(url_for("parent.messages_thread", thread_id=tid))
+
+    return render_template("parent/messages_new.html",
+                           children=children)
+
+
+@parent_bp.route("/messages/<int:thread_id>", methods=["GET", "POST"])
+@parent_required
+def messages_thread(thread_id):
+    thread = get_thread(thread_id)
+    if not thread:
+        abort(404)
+    # Security — must be parent's own thread
+    if thread["parent_id"] != session.get("parent_id"):
+        abort(403)
+
+    if request.method == "POST":
+        body = request.form.get("body", "").strip()
+        if body:
+            parent = get_parent_info(session["parent_id"])
+            pname = parent["name"] if parent else "Parent"
+            post_message(thread_id, "parent", session["parent_id"],
+                         pname, body)
+        return redirect(url_for("parent.messages_thread",
+                                thread_id=thread_id))
+
+    mark_thread_read(thread_id, "parent")
+    messages = get_thread_messages(thread_id)
+    return render_template("parent/messages_thread.html",
+                           thread=thread, messages=messages)
