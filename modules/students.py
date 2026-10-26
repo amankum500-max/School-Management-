@@ -22,6 +22,14 @@ def list_students():
          "parent_phone": r[5], "status": r[6]}
         for r in rows
     ]
+    @students_bp.route("/")
+@login_required
+def list_students():
+    search = request.args.get("q", "").strip()
+    class_name = request.args.get("class", "").strip()
+    status = request.args.get("status", "active")
+    rows = get_students(search or None, class_name or None, status)
+    ...
     return render_template(
         "students/list.html",
         students=students,
