@@ -131,3 +131,27 @@ def view_student(student_id):
     return render_template("students/profile.html",
                            student=student, transport=transport,
                            library_hist=library_hist, medical=medical)
+from database import get_student_discounts, compute_student_discount
+
+@students_bp.route("/<int:student_id>")
+@login_required
+def view_student(student_id):
+    row = get_student(student_id)
+    if not row:
+        abort(404)
+    keys = ["id","name","roll_no","class_name","section","gender","dob",
+            "parent_name","parent_phone","address","admission_date","status","created_at"]
+    student = dict(zip(keys, row))
+    transport = get_student_transport(student_id)
+    library_hist = get_student_library_history(student_id)
+    medical = get_medical_record(student_id)
+    hostel_info = get_student_hostel(student_id)
+
+    # NEW — discounts
+    discounts = get_student_discounts(student_id, active_only=True)
+
+    return render_template("students/profile.html",
+                           student=student, transport=transport,
+                           library_hist=library_hist, medical=medical,
+                           hostel_info=hostel_info,
+                           discounts=discounts)
