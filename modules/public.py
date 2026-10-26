@@ -3,6 +3,10 @@ from flask import (
     url_for, flash, abort
 )
 from database import (
+    get_settings, get_notices, create_enquiry,
+    get_upcoming_events                    # ← NEW
+)
+from database import (
     get_settings, get_notices, create_enquiry
 )
 
@@ -17,7 +21,13 @@ def home():
         for r in get_notices(public_only=True, limit=6)
     ]
     return render_template("public/home.html", school=s, notices=notices)
-
+@public_bp.route("/")
+def home():
+    s = get_settings()
+    notices = [...]
+    events = get_upcoming_events(days=30, limit=5)   # ← NEW
+    return render_template("public/home.html",
+                           school=s, notices=notices, events=events)
 @public_bp.route("/about")
 def about():
     return render_template("public/about.html", school=get_settings())
