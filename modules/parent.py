@@ -224,3 +224,24 @@ def homework_list():
 
     return render_template("parent/homework.html",
                            children=children, selected=selected, homework=hw)
+    from database import get_student_fee_dues, get_online_payments_for_student
+
+@parent_bp.route("/child/<int:student_id>")
+@parent_required
+def child_detail(student_id):
+    children = get_children_for_parent(session["parent_phone"])
+    if student_id not in [c["id"] for c in children]:
+        abort(403)
+
+    row = get_student(student_id)
+    # ... existing code ...
+    pending = pending_amount_for_student(student_id, month)
+    online_payments = get_online_payments_for_student(student_id, limit=10)  # ← NEW
+    
+    return render_template(
+        "parent/child_detail.html",
+        student=student,
+        month=month,
+        # ... existing ...
+        online_payments=online_payments    # ← NEW
+    )
