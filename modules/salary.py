@@ -92,3 +92,20 @@ def remove(rid):
         else:
             flash("Sirf pending records delete ho sakte hain", "error")
     return redirect(url_for("salary.index", month=rec["month"] if rec else ""))
+from database import get_staff_attendance_for_salary
+
+@salary_bp.route("/<int:rid>/edit", methods=["GET", "POST"])
+@login_required
+def edit(rid):
+    rec = get_salary_record(rid)
+    if not rec:
+        abort(404)
+    # ...existing checks...
+
+    # NEW — attendance deduction info
+    deduction_info = get_staff_attendance_for_salary(rec["staff_id"], rec["month"])
+
+    if request.method == "POST":
+        # ...existing...
+    return render_template("salary/edit.html", rec=rec,
+                           deduction_info=deduction_info)   # ← NEW
