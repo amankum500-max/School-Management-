@@ -22,6 +22,10 @@ def parent_required(f):
             return redirect(url_for("parent.login"))
         return f(*args, **kwargs)
     return wrapper
+    from database import (
+    ...,
+    get_upcoming_events
+)
 
 # ---------- Auth ----------
 @parent_bp.route("/register", methods=["GET", "POST"])
@@ -91,6 +95,26 @@ def dashboard():
         cards.append({**c, "attendance_percent": att["percent"], "pending_fees": pending})
 
     return render_template("parent/dashboard.html", children=cards, month=month)
+    @parent_bp.route("/events")
+@parent_required
+def events():
+    children = get_children_for_parent(session["parent_phone"])
+    if not children:
+        return render_template("parent/events.html", events=[], selected=None)
+
+    child_id = request.args.get("child_id", type=int)
+    selected = None
+    if child_id:
+        for c in children:
+            if c["id"] == child_id:
+                selected = c
+                break
+    if not selected:
+        selected = children[0]
+
+    evs = get_upcoming_events(days=60, class_name=selected["class_name"] or "", limit=30)
+    return render_template("parent/events.html",
+                           events=evs, children=children, selected=selected)
 
 # ---------- Child detail ----------
 @parent_bp.route("/child/<int:student_id>")
