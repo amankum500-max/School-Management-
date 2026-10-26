@@ -1,3 +1,10 @@
+from database import (
+    ...,
+    create_message_thread, get_parent_threads,
+    get_thread, get_thread_messages, post_message,
+    mark_thread_read, count_unread_threads_for_parent,
+    get_parent_info,
+)
 from datetime import datetime
 from flask import (
     Blueprint, render_template, request, redirect,
