@@ -162,3 +162,41 @@ def notices():
         reverse=True
     )
     return render_template("parent/notices.html", notices=notices_list)
+    @parent_bp.route("/homework")
+@parent_required
+def homework_list():
+    children = get_children_for_parent(session["parent_phone"])
+    if not children:
+        return render_template("parent/homework.html", children=[], selected_id=None)
+
+    # Query string se child_id, ya pehla child
+    child_id = request.args.get("child_id", type=int)
+    selected = None
+    if child_id:
+        for c in children:
+            if c["id"] == child_id:
+                selected = c
+                break
+    if not selected and children:
+        selected = children[0]
+
+    hw = []
+    if selected:
+        hw = get_homework_for_class(selected["class_name"] or "",
+                                    selected["section"] or "")
+
+    from datetime import date
+    today = date.today()
+    for h in hw:
+        if h["due_date"]:
+            if h["due_date"] < today:
+                h["status"] = "overdue"
+            elif h["due_date"] == today:
+                h["status"] = "today"
+            else:
+                h["status"] = "upcoming"
+        else:
+            h["status"] = "no_due"
+
+    return render_template("parent/homework.html",
+                           children=children, selected=selected, homework=hw)
