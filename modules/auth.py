@@ -101,3 +101,27 @@ def profile():
     cur.close()
     conn.close()
     return row
+@auth_bp.route("/login", methods=["GET", "POST"])
+def login():
+    if "admin_id" in session:
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        admin = verify_admin(username, password)
+        if admin:
+            session["admin_id"] = admin["id"]
+            session["admin_name"] = admin["full_name"] or admin["username"]
+            session["admin_username"] = admin["username"]
+            session["admin_role"] = admin["role"]
+
+            # last_login + audit
+            from database import update_admin_last_login, log_audit
+            update_admin_last_login(admin["id"])
+            log_audit(admin["id"], admin["username"], "login", "POST", "/login")
+
+            return redirect(url_for("dashboard"))
+        flash("Galat username ya password", "error")
+
+    return render_template("login.html")
