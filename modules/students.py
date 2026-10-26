@@ -92,3 +92,18 @@ def view_student(student_id):
     transport = get_student_transport(student_id)    # ← NEW
     return render_template("students/profile.html",
                            student=student, transport=transport)
+    from database import get_student_library_history    # import section mein
+
+@students_bp.route("/<int:student_id>")
+@login_required
+def view_student(student_id):
+    row = get_student(student_id)
+    if not row:
+        abort(404)
+    keys = [...]
+    student = dict(zip(keys, row))
+    transport = get_student_transport(student_id)
+    library_hist = get_student_library_history(student_id)    # ← NEW
+    return render_template("students/profile.html",
+                           student=student, transport=transport,
+                           library_hist=library_hist)
