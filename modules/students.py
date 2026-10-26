@@ -78,3 +78,17 @@ def remove_student(student_id):
     delete_student(student_id)
     flash("Student delete ho gaya", "success")
     return redirect(url_for("students.list_students"))
+    from database import get_student_transport
+
+@students_bp.route("/<int:student_id>")
+@login_required
+def view_student(student_id):
+    row = get_student(student_id)
+    if not row:
+        abort(404)
+    keys = ["id","name","roll_no","class_name","section","gender","dob",
+            "parent_name","parent_phone","address","admission_date","status","created_at"]
+    student = dict(zip(keys, row))
+    transport = get_student_transport(student_id)    # ← NEW
+    return render_template("students/profile.html",
+                           student=student, transport=transport)
