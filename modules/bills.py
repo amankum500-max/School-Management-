@@ -151,3 +151,39 @@ def delete_month():
     return {"created": created, "skipped": skipped, "error": None,
             "total_students": len(student_ids), "total_amount": base_total,
             "total_discounted": total_discounted}
+    def get_bill(bill_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT b.id, b.student_id, b.month, b.total_amount,
+               b.base_amount, b.discount_amount, b.discount_items,
+               b.items, b.generated_at,
+               s.name, s.roll_no, s.class_name, s.section,
+               s.parent_name, s.parent_phone, s.address,
+               COALESCE((SELECT SUM(amount) FROM fee_payments
+                         WHERE student_id=b.student_id AND month=b.month), 0) AS paid
+        FROM bills b
+        JOIN students s ON s.id = b.student_id
+        WHERE b.id=%s;
+    """, (bill_id,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not row:
+        return None
+    items = row[8]
+    if isinstance(items, str):
+        items = _json.loads(items)
+    discount_items = row[6]
+    if isinstance(discount_items, str):
+        discount_items = _json.loads(discount_items)
+    return {
+        "id": row[0], "student_id": row[1], "month": row[2],
+        "total": float(row[3] or 0), "base": float(row[4] or 0),
+        "discount": float(row[5] or 0), "discount_items": discount_items or [],
+        "items": items or [],
+        "generated_at": row[9], "student_name": row[10], "roll": row[11],
+        "class_name": row[12], "section": row[13],
+        "parent_name": row[14], "phone": row[15], "address": row[16],
+        "paid": float(row[17] or 0)
+    }
