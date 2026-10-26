@@ -1,0 +1,164 @@
+from datetime import datetime
+from flask import (
+    Blueprint, render_template, request, redirect,
+    url_for, flash, session, abort
+)
+from database import (
+    create_parent, verify_parent, phone_exists_in_students,
+    get_children_for_parent, get_student,
+    get_attendance_summary, get_attendance_calendar,
+    get_payments, pending_amount_for_student,
+    get_exams_for_class, get_student_marks_report,
+    get_notices_for_class
+)
+
+parent_bp = Blueprint("parent", __name__, url_prefix="/parent")
+
+def parent_required(f):
+    from functools import wraps
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if "parent_id" not in session:
+            return redirect(url_for("parent.login"))
+        return f(*args, **kwargs)
+    return wrapper
+
+# ---------- Auth ----------
+@parent_bp.route("/register", methods=["GET", "POST"])
+def register():
+    if "parent_id" in session:
+        return redirect(url_for("parent.dashboard"))
+
+    if request.method == "POST":
+        phone = request.form.get("phone", "").strip()
+        password = request.form.get("password", "")
+        name = request.form.get("name", "").strip()
+
+        if len(password) < 6:
+            flash("Password kam se kam 6 characters ka hona chahiye", "error")
+            return redirect(url_for("parent.register"))
+
+        if not phone_exists_in_students(phone):
+            flash("Ye phone number kisi student ke parent ke roop mein registered nahi hai. School office se sampark karo.", "error")
+            return redirect(url_for("parent.register"))
+
+        try:
+            create_parent(phone, password, name)
+            flash("Account ban gaya. Ab login karo.", "success")
+            return redirect(url_for("parent.login"))
+        except Exception as e:
+            flash(f"Error: Ye phone already registered hai, ya kuch galat hua.", "error")
+            return redirect(url_for("parent.register"))
+
+    return render_template("parent/register.html")
+
+@parent_bp.route("/login", methods=["GET", "POST"])
+def login():
+    if "parent_id" in session:
+        return redirect(url_for("parent.dashboard"))
+
+    if request.method == "POST":
+        phone = request.form.get("phone", "").strip()
+        password = request.form.get("password", "")
+        p = verify_parent(phone, password)
+        if p:
+            session["parent_id"] = p["id"]
+            session["parent_phone"] = p["phone"]
+            session["parent_name"] = p["name"] or p["phone"]
+            return redirect(url_for("parent.dashboard"))
+        flash("Galat phone ya password", "error")
+    return render_template("parent/login.html")
+
+@parent_bp.route("/logout")
+def logout():
+    for k in ["parent_id", "parent_phone", "parent_name"]:
+        session.pop(k, None)
+    return redirect(url_for("parent.login"))
+
+# ---------- Dashboard ----------
+@parent_bp.route("/")
+@parent_required
+def dashboard():
+    children = get_children_for_parent(session["parent_phone"])
+    if not children:
+        flash("Koi student record nahi mila aapke phone se.", "error")
+
+    month = datetime.now().strftime("%Y-%m")
+    cards = []
+    for c in children:
+        att = get_attendance_summary(c["id"], month)
+        pending = pending_amount_for_student(c["id"], month)
+        cards.append({**c, "attendance_percent": att["percent"], "pending_fees": pending})
+
+    return render_template("parent/dashboard.html", children=cards, month=month)
+
+# ---------- Child detail ----------
+@parent_bp.route("/child/<int:student_id>")
+@parent_required
+def child_detail(student_id):
+    # Verify ye child is parent's
+    children = get_children_for_parent(session["parent_phone"])
+    child_ids = [c["id"] for c in children]
+    if student_id not in child_ids:
+        abort(403)
+
+    row = get_student(student_id)
+    if not row:
+        abort(404)
+    keys = ["id","name","roll_no","class_name","section","gender","dob",
+            "parent_name","parent_phone","address","admission_date","status","created_at"]
+    student = dict(zip(keys, row))
+
+    month = request.args.get("month") or datetime.now().strftime("%Y-%m")
+    att_summary = get_attendance_summary(student_id, month)
+    att_calendar = get_attendance_calendar(student_id, month)
+    pending = pending_amount_for_student(student_id, month)
+    payments = [
+        {"id": r[0], "fee_type": r[5], "amount": r[6], "month": r[7],
+         "mode": r[8], "receipt_no": r[9], "paid_at": r[10]}
+        for r in get_payments(student_id=student_id, limit=50)
+    ]
+
+    exams = get_exams_for_class(student["class_name"]) if student["class_name"] else []
+    exam_results = []
+    for e in exams:
+        marks = get_student_marks_report(e["id"], student_id)
+        if not marks:
+            continue
+        total = sum(v for v in marks.values() if v is not None)
+        max_total = e["max_marks"] * len(e["subjects"])
+        percent = round((total / max_total) * 100, 1) if max_total else 0
+        exam_results.append({
+            "exam": e, "marks": marks, "total": total,
+            "max_total": max_total, "percent": percent
+        })
+
+    return render_template(
+        "parent/child_detail.html",
+        student=student,
+        month=month,
+        att_summary=att_summary,
+        att_calendar=att_calendar,
+        pending_fees=pending,
+        payments=payments,
+        exam_results=exam_results
+    )
+
+# ---------- Notices ----------
+@parent_bp.route("/notices")
+@parent_required
+def notices():
+    children = get_children_for_parent(session["parent_phone"])
+    if not children:
+        return render_template("parent/notices.html", notices=[], classes=[])
+    # Combine notices for all children's classes (dedupe)
+    all_notices = {}
+    for c in children:
+        for n in get_notices_for_class(c["class_name"] or ""):
+            all_notices[n["id"]] = n
+    notices_list = sorted(
+        all_notices.values(),
+        key=lambda x: (x["priority"] == "urgent", x["priority"] == "high", x["created_at"]),
+        reverse=True
+    )
+    return render_template("parent/notices.html", notices=notices_list)
