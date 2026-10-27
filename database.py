@@ -3556,3 +3556,16 @@ def bulk_mark_staff_attendance(date_str, status, staff_ids=None):
     finally:
         cur.close()
         conn.close()
+def delete_staff_attendance(staff_id, date_str):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM staff_attendance WHERE staff_id=%s AND date=%s;", (staff_id, date_str))
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
