@@ -2604,3 +2604,23 @@ def checkout_student(student_id):
     finally:
         cur.close()
         conn.close()
+def get_room_inmates(room_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT s.id, s.name, s.roll_no, s.class_name, s.section, s.parent_phone, a.check_in
+            FROM hostel_allocations a
+            JOIN students s ON s.id = a.student_id
+            WHERE a.room_id=%s AND a.status='active'
+            ORDER BY s.name;
+        """, (room_id,))
+        rows = cur.fetchall()
+        return [{
+            "id": r[0], "name": r[1], "roll_no": r[2],
+            "class_name": r[3], "section": r[4],
+            "parent_phone": r[5], "check_in": r[6]
+        } for r in rows]
+    finally:
+        cur.close()
+        conn.close()
