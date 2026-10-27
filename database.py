@@ -3138,7 +3138,7 @@ def get_testimonials(limit=10):
     finally:
         cur.close()
         conn.close()
-def get_gallery(limit=20):
+def get_gallery(limit=200):
     conn = get_conn()
     cur = conn.cursor()
     try:
