@@ -5074,15 +5074,15 @@ def get_online_payments_for_student(student_id, limit=10):
              "purpose": r[3], "payment_id": r[4], "status": r[5],
              "created_at": r[6], "paid_at": r[7]} for r in rows]
     def get_all_admins():
-        conn = get_conn()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT id, username, full_name, role, is_active, created_at
-            FROM admins ORDER BY id;
-        """)
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
-        return [{"id": r[0], "username": r[1], "full_name": r[2],
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, username, full_name, role, is_active, created_at
+        FROM admins ORDER BY id;
+    """)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [{"id": r[0], "username": r[1], "full_name": r[2],
              "role": r[3], "is_active": r[4], "created_at": r[5]}
             for r in rows]
