@@ -3070,3 +3070,49 @@ def get_annual_expense_summary(year):
     finally:
         cur.close()
         conn.close()
+def create_enquiry(data):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO enquiries (student_name, parent_name, phone, email, class_interested, message, status)
+            VALUES (%s, %s, %s, %s, %s, %s, 'new') RETURNING id;
+        """, (
+            data.get("student_name"), 
+            data.get("parent_name"), 
+            data.get("phone"), 
+            data.get("email"), 
+            data.get("class_interested"), 
+            data.get("message")
+        ))
+        eid = cur.fetchone()[0]
+        conn.commit()
+        return eid
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
+
+def get_enquiries(status=None):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        q = "SELECT id, student_name, parent_name, phone, email, class_interested, message, status, created_at FROM enquiries"
+        params = []
+        if status:
+            q += " WHERE status=%s"
+            params.append(status)
+        q += " ORDER BY created_at DESC;"
+        
+        cur.execute(q, tuple(params))
+        rows = cur.fetchall()
+        return [{
+            "id": r[0], "student_name": r[1], "parent_name": r[2], 
+            "phone": r[3], "email": r[4], "class_interested": r[5], 
+            "message": r[6], "status": r[7], "created_at": r[8]
+        } for r in rows]
+    finally:
+        cur.close()
+        conn.close()
