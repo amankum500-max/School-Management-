@@ -5092,3 +5092,19 @@ def reset_teacher_password(teacher_id, new_password):
     cur.close()
     conn.close()
     return res[0] if res else None
+    # ============================================================
+# PHASE 44: STAFF ADVANCES (Missing Function)
+# ============================================================
+def get_total_advance_outstanding():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT
+            COALESCE(SUM(remaining_amount), 0) AS outstanding,
+            COUNT(*) FILTER (WHERE status='active') AS active_count
+        FROM staff_advances WHERE status='active';
+    """)
+    r = cur.fetchone()
+    cur.close()
+    conn.close()
+    return {"outstanding": float(r[0] or 0), "active_count": r[1] or 0}
