@@ -4693,3 +4693,131 @@ def get_all_routes_with_stops():
     cur.close()
     conn.close()
     return routes
+    # ============================================================
+# PHASE 26: STUDENT PROMOTION
+# ============================================================
+CLASS_SEQUENCE = [
+    "Nursery", "LKG", "UKG",
+    "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"
+]
+
+def get_next_class(current_class):
+    if not current_class:
+        return None
+    c = str(current_class).strip()
+    if c in CLASS_SEQUENCE:
+        idx = CLASS_SEQUENCE.index(c)
+        if idx + 1 < len(CLASS_SEQUENCE):
+            return CLASS_SEQUENCE[idx + 1]
+        return "ALUMNI"
+    return None
+
+def get_class_roster(class_name, section=None):
+    conn = get_conn()
+    cur = conn.cursor()
+    q = """
+        SELECT id, name, roll_no, class_name, section, gender,
+               parent_phone, status
+        FROM students
+        WHERE status='active' AND class_name=%s
+    """
+    params = [class_name]
+    if section:
+        q += " AND section=%s"
+        params.append(section)
+    q += " ORDER BY section, roll_no, name;"
+    cur.execute(q, tuple(params))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [{"id": r[0], "name": r[1], "roll": r[2],
+             "class_name": r[3], "section": r[4],
+             "gender": r[5], "phone": r[6], "status": r[7]}
+            for r in rows]
+
+def promote_students(student_ids, to_class, action, new_academic_year=None):
+    if not student_ids:
+        return {"updated": 0}
+    conn = get_conn()
+    cur = conn.cursor()
+    updated = 0
+
+    try:
+        if action == "promote":
+            cur.execute("""
+                UPDATE students SET
+                    class_name=%s,
+                    status='active'
+                WHERE id = ANY(%s);
+            """, (to_class, student_ids))
+            updated = cur.rowcount
+        elif action == "repeat":
+            cur.execute("""
+                UPDATE students SET status='active' WHERE id = ANY(%s);
+            """, (student_ids,))
+            updated = cur.rowcount
+        elif action == "archive":
+            cur.execute("""
+                UPDATE students SET status='inactive' WHERE id = ANY(%s);
+            """, (student_ids,))
+            updated = cur.rowcount
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        cur.close()
+        conn.close()
+        raise e
+
+    cur.close()
+    conn.close()
+    return {"updated": updated}
+
+def log_promotion(from_class, to_class, academic_year, total, promoted, repeated, archived, admin_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO promotion_logs
+        (from_class, to_class, academic_year, total_students,
+         promoted, repeated, archived, performed_by)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id;
+    """, (from_class, to_class, academic_year, total,
+          promoted, repeated, archived, admin_id))
+    lid = cur.fetchone()[0]
+    conn.commit()
+    cur.close()
+    conn.close()
+    return lid
+
+def get_promotion_logs(limit=50):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, from_class, to_class, academic_year, total_students,
+               promoted, repeated, archived, created_at
+        FROM promotion_logs ORDER BY created_at DESC LIMIT %s;
+    """, (limit,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [{"id": r[0], "from_class": r[1], "to_class": r[2],
+             "academic_year": r[3], "total": r[4],
+             "promoted": r[5], "repeated": r[6], "archived": r[7],
+             "created_at": r[8]}
+            for r in rows]
+
+def get_class_count_summary():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT COALESCE(class_name, 'Unassigned') AS c,
+               COUNT(*) FILTER (WHERE status='active') AS active,
+               COUNT(*) FILTER (WHERE status='inactive') AS inactive
+        FROM students
+        GROUP BY class_name
+        ORDER BY class_name NULLS LAST;
+    """)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [{"class_name": r[0], "active": r[1], "inactive": r[2]}
+            for r in rows]
