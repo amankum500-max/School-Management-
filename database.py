@@ -5034,3 +5034,61 @@ def get_teacher_homework(staff_id, limit=30):
              "section": r[3] or '', "subject": r[4],
              "due_date": r[5], "created_at": r[6]}
             for r in rows]
+    # ============================================================
+# PHASE 27: TEACHERS ADMIN (Create, Manage Logins)
+# ============================================================
+def create_teacher(staff_id, username, password):
+    conn = get_conn()
+    cur = conn.cursor()
+    pwd_hash = generate_password_hash(password)
+    try:
+        cur.execute("""
+            INSERT INTO teachers (staff_id, username, password_hash)
+            VALUES (%s, %s, %s) RETURNING id;
+        """, (staff_id, username, pwd_hash))
+        tid = cur.fetchone()[0]
+        conn.commit()
+        return tid
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
+
+def get_all_teachers():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT t.id, t.username, t.last_login,
+               s.id AS staff_id, s.name, s.role, s.phone
+        FROM teachers t
+        JOIN staff s ON s.id = t.staff_id
+        ORDER BY s.name;
+    """)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [{"id": r[0], "username": r[1], "last_login": r[2],
+             "staff_id": r[3], "name": r[4], "role": r[5], "phone": r[6]}
+            for r in rows]
+
+def delete_teacher(teacher_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM teachers WHERE id=%s;", (teacher_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def reset_teacher_password(teacher_id, new_password):
+    conn = get_conn()
+    cur = conn.cursor()
+    pwd_hash = generate_password_hash(new_password)
+    cur.execute("UPDATE teachers SET password_hash=%s WHERE id=%s RETURNING id;",
+                (pwd_hash, teacher_id))
+    res = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
+    return res[0] if res else None
