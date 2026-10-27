@@ -4949,3 +4949,88 @@ def get_class_count_summary():
     conn.close()
     return [{"class_name": r[0], "active": r[1], "inactive": r[2]}
             for r in rows]
+# ============================================================
+# PHASE 27: TEACHER PORTAL
+# ============================================================
+def get_teacher_by_username(username):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT t.id, t.staff_id, t.username, t.password_hash,
+               s.name, s.role, s.phone, s.email
+        FROM teachers t
+        JOIN staff s ON s.id = t.staff_id
+        WHERE t.username=%s;
+    """, (username,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    return row
+
+def verify_teacher(username, password):
+    row = get_teacher_by_username(username)
+    if not row:
+        return None
+    if check_password_hash(row[3], password):
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute("UPDATE teachers SET last_login=NOW() WHERE id=%s;", (row[0],))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return {"id": row[0], "staff_id": row[1], "username": row[2],
+                "name": row[4], "role": row[5]}
+    return None
+
+def get_teacher_classes(staff_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT DISTINCT class_name, section
+        FROM timetable
+        WHERE staff_id=%s
+        ORDER BY class_name, section;
+    """, (staff_id,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [{"class_name": r[0], "section": r[1] or ''} for r in rows]
+
+def get_teacher_today_schedule(staff_id):
+    from datetime import date
+    weekday = date.today().isoweekday()
+    if weekday > 6:
+        return []
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT period_no, class_name, section, subject
+        FROM timetable
+        WHERE staff_id=%s AND day_of_week=%s
+        ORDER BY period_no;
+    """, (staff_id, weekday))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [{"period_no": r[0], "class_name": r[1],
+             "section": r[2] or '', "subject": r[3]} for r in rows]
+
+def get_teacher_homework(staff_id, limit=30):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT DISTINCT h.id, h.title, h.class_name, h.section,
+               h.subject, h.due_date, h.created_at
+        FROM homework h
+        WHERE h.class_name IN (
+            SELECT DISTINCT class_name FROM timetable WHERE staff_id=%s
+        )
+        ORDER BY h.created_at DESC LIMIT %s;
+    """, (staff_id, limit))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [{"id": r[0], "title": r[1], "class_name": r[2],
+             "section": r[3] or '', "subject": r[4],
+             "due_date": r[5], "created_at": r[6]}
+            for r in rows]
