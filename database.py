@@ -2624,3 +2624,24 @@ def get_room_inmates(room_id):
     finally:
         cur.close()
         conn.close()
+def get_hostel_inmates(hostel_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT s.id, s.name, s.roll_no, s.class_name, s.section, s.parent_phone, r.room_no
+            FROM hostel_allocations a
+            JOIN students s ON s.id = a.student_id
+            JOIN hostel_rooms r ON r.id = a.room_id
+            WHERE r.hostel_id = %s AND a.status='active'
+            ORDER BY r.room_no, s.name;
+        """, (hostel_id,))
+        rows = cur.fetchall()
+        return [{
+            "id": r[0], "name": r[1], "roll_no": r[2],
+            "class_name": r[3], "section": r[4],
+            "parent_phone": r[5], "room_no": r[6]
+        } for r in rows]
+    finally:
+        cur.close()
+        conn.close()
