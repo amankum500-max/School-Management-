@@ -2553,3 +2553,35 @@ def delete_hostel_room(room_id):
     finally:
         cur.close()
         conn.close()
+def allocate_room(student_id, room_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO hostel_allocations (student_id, room_id, status) VALUES (%s,%s,'active');", (student_id, room_id))
+        cur.execute("UPDATE hostel_rooms SET occupied = occupied + 1 WHERE id=%s;", (room_id,))
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
+def vacate_room(student_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT room_id FROM hostel_allocations WHERE student_id=%s AND status='active';", (student_id,))
+        row = cur.fetchone()
+        if row:
+            cur.execute("UPDATE hostel_allocations SET status='vacated' WHERE student_id=%s AND status='active';", (student_id,))
+            cur.execute("UPDATE hostel_rooms SET occupied = GREATEST(occupied - 1, 0) WHERE id=%s;", (row[0],))
+            conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        return False
+    finally:
+        cur.close()
+        conn.close()
