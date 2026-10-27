@@ -2465,3 +2465,13 @@ def get_audit_logs(limit=100):
     finally:
         cur.close()
         conn.close()
+def get_hostel(hostel_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, name, warden_name, warden_phone, capacity FROM hostels WHERE id=%s;", (hostel_id,))
+        row = cur.fetchone()
+        return {"id": row[0], "name": row[1], "warden_name": row[2], "warden_phone": row[3], "capacity": row[4]} if row else None
+    finally:
+        cur.close()
+        conn.close()
