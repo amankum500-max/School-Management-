@@ -5580,6 +5580,270 @@ def get_computed_alerts():
             "link": get_url("homework.index"),
             "count": hw_count
         })
+        # ============================================================
+# PHASE 29: ALERTS & NOTIFICATIONS
+# ============================================================
+from datetime import date
+
+
+def _to_bool(val, default=False):
+    """Safely convert form/JSON value to boolean."""
+    if val is None:
+        return default
+    if isinstance(val, bool):
+        return val
+    return str(val).strip().lower() in ("on", "true", "1", "yes", "y")
+
+
+def create_custom_alert(data, admin_id):
+    if not data or not data.get("title"):
+        raise ValueError("Alert title is required")
+
+    conn = get_conn()
+    cur = None
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO custom_alerts
+            (title, message, alert_type, target, is_active, expires_at, created_by)
+            VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id;
+        """, (
+            data["title"].strip(),
+            (data.get("message") or "").strip() or None,
+            data.get("alert_type") or "info",
+            data.get("target") or "admin",
+            _to_bool(data.get("is_active"), default=True),
+            data.get("expires_at") or None,
+            admin_id
+        ))
+        aid = cur.fetchone()[0]
+        conn.commit()
+        return aid
+    finally:
+        try:
+            if cur: cur.close()
+        except Exception:
+            pass
+        conn.close()
+
+
+def get_custom_alerts(active_only=True, limit=20):
+    conn = get_conn()
+    cur = None
+    try:
+        cur = conn.cursor()
+        q = """
+            SELECT id, title, message, alert_type, target, is_active,
+                   expires_at, created_at
+            FROM custom_alerts
+        """
+        if active_only:
+            q += " WHERE is_active=TRUE AND (expires_at IS NULL OR expires_at >= CURRENT_DATE)"
+        q += " ORDER BY created_at DESC LIMIT %s;"
+        cur.execute(q, (limit,))
+        rows = cur.fetchall()
+        return [{"id": r[0], "title": r[1], "message": r[2], "alert_type": r[3],
+                 "target": r[4], "is_active": r[5], "expires_at": r[6],
+                 "created_at": r[7]}
+                for r in rows]
+    finally:
+        try:
+            if cur: cur.close()
+        except Exception:
+            pass
+        conn.close()
+
+
+def toggle_custom_alert(aid, is_active):
+    conn = get_conn()
+    cur = None
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE custom_alerts SET is_active=%s WHERE id=%s;",
+                    (_to_bool(is_active), aid))
+        conn.commit()
+    finally:
+        try:
+            if cur: cur.close()
+        except Exception:
+            pass
+        conn.close()
+
+
+def delete_custom_alert(aid):
+    conn = get_conn()
+    cur = None
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM custom_alerts WHERE id=%s;", (aid,))
+        conn.commit()
+    finally:
+        try:
+            if cur: cur.close()
+        except Exception:
+            pass
+        conn.close()
+
+
+def get_computed_alerts():
+    from flask import url_for
+
+    conn = get_conn()
+    cur = None
+    try:
+        cur = conn.cursor()
+        today = date.today()
+        month = today.strftime("%Y-%m")
+
+        def get_url(endpoint, **kwargs):
+            try:
+                return url_for(endpoint, **kwargs)
+            except Exception:
+                return "#"
+
+        alerts = []
+
+        # 1) Fee defaulters
+        cur.execute("""
+            SELECT COUNT(*) FROM (
+                SELECT s.id
+                FROM students s
+                LEFT JOIN (
+                    SELECT class_name, SUM(amount) AS total
+                    FROM fee_structure GROUP BY class_name
+                ) fs ON fs.class_name = s.class_name
+                LEFT JOIN (
+                    SELECT student_id, SUM(amount) AS paid
+                    FROM fee_payments WHERE month=%s GROUP BY student_id
+                ) fp ON fp.student_id = s.id
+                WHERE s.status='active'
+                  AND COALESCE(fs.total,0) > COALESCE(fp.paid,0)
+            ) t;
+        """, (month,))
+        fd_count = cur.fetchone()[0] or 0
+        if fd_count > 0:
+            alerts.append({
+                "type": "danger", "icon": "💰",
+                "title": f"{fd_count} students ki fees pending",
+                "message": f"{month} ke liye fee defaulters hain",
+                "link": get_url("reports.defaulters", month=month),
+                "count": fd_count
+            })
+
+        # 2) Low attendance
+        cur.execute("""
+            SELECT COUNT(*) FROM (
+                SELECT student_id,
+                    ROUND((COUNT(*) FILTER (WHERE status='present') * 100.0 /
+                           NULLIF(COUNT(*),0))::numeric, 1) AS pct,
+                    COUNT(*) AS total
+                FROM attendance
+                WHERE TO_CHAR(date, 'YYYY-MM')=%s
+                GROUP BY student_id
+                HAVING COUNT(*) >= 5
+                  AND (COUNT(*) FILTER (WHERE status='present') * 100.0 /
+                       NULLIF(COUNT(*),0)) < 75
+            ) t;
+        """, (month,))
+        att_count = cur.fetchone()[0] or 0
+        if att_count > 0:
+            alerts.append({
+                "type": "warning", "icon": "📊",
+                "title": f"{att_count} students ki attendance <75%",
+                "message": f"{month} mein low attendance wale students",
+                "link": get_url("reports.attendance", month=month),
+                "count": att_count
+            })
+
+        # 3) Overdue library
+        cur.execute("SELECT COUNT(*) FROM book_issues WHERE status='issued' AND due_date < CURRENT_DATE;")
+        lib_count = cur.fetchone()[0] or 0
+        if lib_count > 0:
+            alerts.append({
+                "type": "danger", "icon": "📚",
+                "title": f"{lib_count} overdue library books",
+                "message": "Books due date cross kar chuki hain",
+                "link": get_url("library.active_issues", overdue="1"),
+                "count": lib_count
+            })
+
+        # 4) Pending salaries
+        cur.execute("SELECT COUNT(*) FROM salary_records WHERE month=%s AND status='pending';", (month,))
+        sal_count = cur.fetchone()[0] or 0
+        if sal_count > 0:
+            alerts.append({
+                "type": "warning", "icon": "💵",
+                "title": f"{sal_count} pending salaries",
+                "message": f"{month} ke salary records pending hain",
+                "link": get_url("salary.index", month=month),
+                "count": sal_count
+            })
+
+        # 5) Upcoming events
+        cur.execute("""
+            SELECT COUNT(*) FROM events
+            WHERE COALESCE(end_date, start_date) >= CURRENT_DATE
+              AND start_date <= CURRENT_DATE + INTERVAL '7 days'
+              AND is_public = TRUE;
+        """)
+        evt_count = cur.fetchone()[0] or 0
+        if evt_count > 0:
+            alerts.append({
+                "type": "info", "icon": "📅",
+                "title": f"{evt_count} events in next 7 days",
+                "message": "Upcoming school events",
+                "link": get_url("events.index"),
+                "count": evt_count
+            })
+
+        # 6) New enquiries
+        cur.execute("""
+            SELECT COUNT(*) FROM enquiries
+            WHERE status='new' AND created_at > NOW() - INTERVAL '7 days';
+        """)
+        enq_count = cur.fetchone()[0] or 0
+        if enq_count > 0:
+            alerts.append({
+                "type": "success", "icon": "🎓",
+                "title": f"{enq_count} new admission enquiries",
+                "message": "In enquiries ka follow-up karo",
+                "link": get_url("admissions.index", status="new"),
+                "count": enq_count
+            })
+
+        # 7) New homework
+        cur.execute("SELECT COUNT(*) FROM homework WHERE created_at > NOW() - INTERVAL '3 days';")
+        hw_count = cur.fetchone()[0] or 0
+        if hw_count > 0:
+            alerts.append({
+                "type": "info", "icon": "📝",
+                "title": f"{hw_count} homework assigned recently",
+                "message": "Last 3 days ka homework",
+                "link": get_url("homework.index"),
+                "count": hw_count
+            })
+
+        return alerts
+    finally:
+        try:
+            if cur: cur.close()
+        except Exception:
+            pass
+        conn.close()
+
+
+def count_active_alerts():
+    """Total active alerts = computed + custom (safe, never raises)."""
+    total = 0
+    try:
+        total += len(get_computed_alerts())
+    except Exception:
+        pass
+    try:
+        total += len(get_custom_alerts(active_only=True, limit=100))
+    except Exception:
+        pass
+    return total
 
     cur.close()
     conn.close()
@@ -5587,4 +5851,5 @@ def get_computed_alerts():
 
 def count_active_alerts():
     return len(get_computed_alerts())
+    
     
