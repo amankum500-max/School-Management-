@@ -2970,3 +2970,44 @@ def get_annual_academic_summary(year):
     finally:
         cur.close()
         conn.close()
+def get_annual_attendance_summary(year):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        year_str = str(year)
+        
+        cur.execute("""
+            SELECT
+                COUNT(*) FILTER (WHERE status='present') AS present,
+                COUNT(*) FILTER (WHERE status='absent') AS absent,
+                COUNT(*) FILTER (WHERE status='late') AS late,
+                COUNT(*) FILTER (WHERE status='leave') AS leave_c,
+                COUNT(*) AS total
+            FROM attendance
+            WHERE TO_CHAR(date, 'YYYY') = %s;
+        """, (year_str,))
+        row = cur.fetchone()
+
+        if not row or row[4] == 0:
+            return {
+                "year": year, "present": 0, "absent": 0,
+                "late": 0, "leave": 0, "total": 0, "percent": 0
+            }
+
+        present = row[0] or 0
+        late = row[2] or 0
+        total = row[4] or 0
+        percent = round(((present + late * 0.5) / total) * 100, 1) if total > 0 else 0
+
+        return {
+            "year": year,
+            "present": present,
+            "absent": row[1] or 0,
+            "late": late,
+            "leave": row[3] or 0,
+            "total": total,
+            "percent": percent
+        }
+    finally:
+        cur.close()
+        conn.close()
