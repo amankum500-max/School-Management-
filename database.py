@@ -3359,3 +3359,45 @@ def toggle_testimonial_public(testimonial_id, is_active):
         conn.close()
 
         conn.close()
+def create_online_payment(student_id, amount, month=None, purpose=None, razorpay_order_id=None):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO online_payments (student_id, amount, month, purpose, razorpay_order_id, status)
+            VALUES (%s, %s, %s, %s, %s, 'pending') RETURNING id;
+        """, (student_id, amount, month, purpose, razorpay_order_id))
+        pid = cur.fetchone()[0]
+        conn.commit()
+        return pid
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
+
+def update_online_payment_status(payment_id, status, razorpay_payment_id=None):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        if status == 'paid':
+            cur.execute("""
+                UPDATE online_payments 
+                SET status=%s, razorpay_payment_id=%s, paid_at=NOW() 
+                WHERE id=%s;
+            """, (status, razorpay_payment_id, payment_id))
+        else:
+            cur.execute("""
+                UPDATE online_payments 
+                SET status=%s 
+                WHERE id=%s;
+            """, (status, payment_id))
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
