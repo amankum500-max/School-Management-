@@ -3594,6 +3594,191 @@ def get_online_payments_for_student(student_id, limit=10):
     return [{"id": r[0], "amount": float(r[1] or 0), "month": r[2],
              "purpose": r[3], "payment_id": r[4], "status": r[5],
              "created_at": r[6], "paid_at": r[7]} for r in rows]
+    # ============================================================
+# PHASE 45: PARENT-ADMIN CHAT
+# ============================================================
+def create_message_thread(parent_id, student_id, subject, first_message, parent_name):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO message_threads
+            (parent_id, student_id, subject, last_message_by, unread_by_admin)
+            VALUES (%s, %s, %s, 'parent', 1) RETURNING id;
+        """, (parent_id, student_id, subject or "General"))
+        tid = cur.fetchone()[0]
+
+        cur.execute("""
+            INSERT INTO messages
+            (thread_id, sender_type, sender_id, sender_name, body)
+            VALUES (%s, 'parent', %s, %s, %s);
+        """, (tid, parent_id, parent_name, first_message))
+
+        conn.commit()
+        return tid
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
+
+
+def get_thread(thread_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT t.id, t.parent_id, t.student_id, t.subject, t.status,
+               t.last_message_at, t.last_message_by,
+               t.unread_by_parent, t.unread_by_admin, t.created_at,
+               p.name AS parent_name, p.phone AS parent_phone,
+               s.name AS student_name, s.class_name, s.section
+        FROM message_threads t
+        LEFT JOIN parents p ON p.id = t.parent_id
+        LEFT JOIN students s ON s.id = t.student_id
+        WHERE t.id=%s;
+    """, (thread_id,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not row:
+        return None
+    return {
+        "id": row[0], "parent_id": row[1], "student_id": row[2],
+        "subject": row[3], "status": row[4],
+        "last_message_at": row[5], "last_message_by": row[6],
+        "unread_by_parent": row[7] or 0, "unread_by_admin": row[8] or 0,
+        "created_at": row[9],
+        "parent_name": row[10], "parent_phone": row[11],
+        "student_name": row[12], "class_name": row[13], "section": row[14]
+    }
+
+
+def get_thread_messages(thread_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, sender_type, sender_id, sender_name, body,
+               is_read, created_at
+        FROM messages
+        WHERE thread_id=%s
+        ORDER BY created_at ASC;
+    """, (thread_id,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [{
+        "id": r[0], "sender_type": r[1], "sender_id": r[2],
+        "sender_name": r[3], "body": r[4], "is_read": r[5],
+        "created_at": r[6]
+    } for r in rows]
+
+
+def post_message(thread_id, sender_type, sender_id, sender_name, body):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO messages
+            (thread_id, sender_type, sender_id, sender_name, body)
+            VALUES (%s, %s, %s, %s, %s) RETURNING id;
+        """, (thread_id, sender_type, sender_id, sender_name, body))
+        mid = cur.fetchone()[0]
+
+        if sender_type == "parent":
+            cur.execute("""
+                UPDATE message_threads SET
+                    last_message_at=NOW(),
+                    last_message_by='parent',
+                    unread_by_admin = unread_by_admin + 1,
+                    status = CASE WHEN status='closed' THEN 'open' ELSE status END
+                WHERE id=%s;
+            """, (thread_id,))
+        else:
+            cur.execute("""
+                UPDATE message_threads SET
+                    last_message_at=NOW(),
+                    last_message_by='admin',
+                    unread_by_parent = unread_by_parent + 1
+                WHERE id=%s;
+            """, (thread_id,))
+
+        conn.commit()
+        return mid
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
+
+
+def mark_thread_read(thread_id, viewer_type):
+    conn = get_conn()
+    cur = conn.cursor()
+    if viewer_type == "parent":
+        cur.execute("UPDATE message_threads SET unread_by_parent=0 WHERE id=%s;", (thread_id,))
+    else:
+        cur.execute("UPDATE message_threads SET unread_by_admin=0 WHERE id=%s;", (thread_id,))
+    
+    cur.execute("""
+        UPDATE messages SET is_read=TRUE
+        WHERE thread_id=%s AND sender_type != %s;
+    """, (thread_id, viewer_type))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def get_parent_threads(parent_id, limit=50):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT t.id, t.subject, t.status, t.last_message_at, t.last_message_by,
+               t.unread_by_parent,
+               s.name AS student_name, s.class_name, s.section,
+               (SELECT body FROM messages WHERE thread_id=t.id
+                ORDER BY created_at DESC LIMIT 1) AS last_msg
+        FROM message_threads t
+        LEFT JOIN students s ON s.id = t.student_id
+        WHERE t.parent_id=%s
+        ORDER BY t.last_message_at DESC LIMIT %s;
+    """, (parent_id, limit))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [{
+        "id": r[0], "subject": r[1], "status": r[2],
+        "last_message_at": r[3], "last_message_by": r[4],
+        "unread_by_parent": r[5] or 0,
+        "student_name": r[6], "class_name": r[7], "section": r[8],
+        "last_msg": (r[9] or "")[:80]
+    } for r in rows]
+
+
+def count_unread_threads_for_parent(parent_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT COUNT(*) FROM message_threads
+        WHERE parent_id=%s AND unread_by_parent > 0;
+    """, (parent_id,))
+    n = cur.fetchone()[0] or 0
+    cur.close()
+    conn.close()
+    return n
+
+
+def get_parent_info(parent_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id, phone, name FROM parents WHERE id=%s;", (parent_id,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not row:
+        return None
+    return {"id": row[0], "phone": row[1], "name": row[2] or row[1]}
 def get_student_hostel(student_id):
     conn = get_conn()
     cur = conn.cursor()
