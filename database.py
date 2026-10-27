@@ -2675,3 +2675,25 @@ def get_hostel_stats():
     finally:
         cur.close()
         conn.close()
+def get_student_by_qr_data(qr_data):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        qr_data = str(qr_data).strip()
+        # QR code mein ya toh Student ID hoti hai ya Roll Number
+        cur.execute("""
+            SELECT id, name, roll_no, class_name, section, parent_phone
+            FROM students
+            WHERE (id::text = %s OR roll_no = %s) AND status='active'
+            LIMIT 1;
+        """, (qr_data, qr_data))
+        row = cur.fetchone()
+        if not row:
+            return None
+        return {
+            "id": row[0], "name": row[1], "roll_no": row[2],
+            "class_name": row[3], "section": row[4], "parent_phone": row[5]
+        }
+    finally:
+        cur.close()
+        conn.close()
