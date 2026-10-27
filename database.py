@@ -2446,3 +2446,22 @@ def toggle_admin_status(admin_id, is_active):
     finally:
         cur.close()
         conn.close()
+def get_audit_logs(limit=100):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, admin_id, admin_username, action, method, path, details, created_at
+            FROM audit_logs
+            ORDER BY created_at DESC
+            LIMIT %s;
+        """, (limit,))
+        rows = cur.fetchall()
+        return [{
+            "id": r[0], "admin_id": r[1], "admin_username": r[2], 
+            "action": r[3], "method": r[4], "path": r[5], 
+            "details": r[6], "created_at": r[7]
+        } for r in rows]
+    finally:
+        cur.close()
+        conn.close()
