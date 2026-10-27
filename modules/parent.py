@@ -466,3 +466,22 @@ def online_exam_result(attempt_id):
     return render_template("parent/online_exam_result.html",
                            attempt=attempt, answers=answers,
                            percent=percent)
+    from database import get_student_year_report, get_current_academic_year, get_academic_year_options
+
+@parent_bp.route("/report-card/<int:student_id>")
+@parent_required
+def report_card(student_id):
+    # Verify ownership
+    children = get_children_for_parent(session["parent_phone"])
+    if student_id not in [c["id"] for c in children]:
+        abort(403)
+
+    ay = request.args.get("ay") or get_current_academic_year()
+    report = get_student_year_report(student_id, ay)
+    if not report:
+        flash("Report card data available nahi hai.", "error")
+        return redirect(url_for("parent.child_detail", student_id=student_id))
+
+    return render_template("parent/report_card.html",
+                           r=report,
+                           ay_options=get_academic_year_options())
