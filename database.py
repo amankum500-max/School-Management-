@@ -2347,7 +2347,7 @@ def checkout_visitor(visitor_id):
     conn = get_conn(); cur = conn.cursor()
     cur.execute("UPDATE visitors SET check_out=NOW(), status='out' WHERE id=%s;", (visitor_id,))
     conn.commit(); cur.close(); conn.close()
-    def get_admin_by_id(admin_id):
+def get_admin_by_id(admin_id):
     conn = get_conn()
     cur = conn.cursor()
     cur.execute("""
