@@ -2347,6 +2347,9 @@ def checkout_visitor(visitor_id):
     conn = get_conn(); cur = conn.cursor()
     cur.execute("UPDATE visitors SET check_out=NOW(), status='out' WHERE id=%s;", (visitor_id,))
     conn.commit(); cur.close(); conn.close()
+    # ============================================================
+# ADMIN USERS MANAGEMENT (Clean & Fixed)
+# ============================================================
 def get_admin_by_id(admin_id):
     conn = get_conn()
     cur = conn.cursor()
@@ -2380,21 +2383,6 @@ def create_admin_user(username, password, full_name, role="admin"):
         cur.close()
         conn.close()
 
-def delete_admin(admin_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM admins WHERE id=%s;", (admin_id,))
-    conn.commit()
-    cur.close()
-    conn.close()
-
-def toggle_admin_status(admin_id, is_active):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("UPDATE admins SET is_active=%s WHERE id=%s;", (_to_bool(is_active), admin_id))
-    conn.commit()
-    cur.close()
-    conn.close()
 def update_admin_user(admin_id, username, full_name, role):
     conn = get_conn()
     cur = conn.cursor()
@@ -2413,6 +2401,7 @@ def update_admin_user(admin_id, username, full_name, role):
     finally:
         cur.close()
         conn.close()
+
 def delete_admin_user(admin_id):
     conn = get_conn()
     cur = conn.cursor()
@@ -2425,6 +2414,7 @@ def delete_admin_user(admin_id):
     finally:
         cur.close()
         conn.close()
+
 def reset_admin_password(admin_id, new_password):
     conn = get_conn()
     cur = conn.cursor()
@@ -2437,6 +2427,19 @@ def reset_admin_password(admin_id, new_password):
         res = cur.fetchone()
         conn.commit()
         return res[0] if res else None
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
+
+def toggle_admin_status(admin_id, is_active):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE admins SET is_active=%s WHERE id=%s;", (_to_bool(is_active), admin_id))
+        conn.commit()
     except Exception:
         conn.rollback()
         raise
