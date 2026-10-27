@@ -2347,3 +2347,17 @@ def checkout_visitor(visitor_id):
     conn = get_conn(); cur = conn.cursor()
     cur.execute("UPDATE visitors SET check_out=NOW(), status='out' WHERE id=%s;", (visitor_id,))
     conn.commit(); cur.close(); conn.close()
+    def get_admin_by_id(admin_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, username, full_name, role, is_active, created_at
+        FROM admins WHERE id=%s;
+    """, (admin_id,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not row:
+        return None
+    return {"id": row[0], "username": row[1], "full_name": row[2],
+            "role": row[3], "is_active": row[4], "created_at": row[5]}
