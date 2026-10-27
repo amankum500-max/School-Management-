@@ -2869,3 +2869,36 @@ def get_annual_report_data(year):
     finally:
         cur.close()
         conn.close()
+def get_annual_financial_summary(year):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        year_str = str(year)
+        
+        # Fees collected in the year
+        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM fee_payments WHERE month LIKE %s;", (f"{year_str}-%",))
+        fees_collected = float(cur.fetchone()[0] or 0)
+        
+        # Salaries paid in the year
+        cur.execute("SELECT COALESCE(SUM(net_amount), 0) FROM salary_records WHERE status='paid' AND month LIKE %s;", (f"{year_str}-%",))
+        salaries_paid = float(cur.fetchone()[0] or 0)
+        
+        # Expenses in the year (expense_date is a date column)
+        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE TO_CHAR(expense_date, 'YYYY') = %s;", (year_str,))
+        expenses_total = float(cur.fetchone()[0] or 0)
+        
+        total_outflow = salaries_paid + expenses_total
+        net_profit = fees_collected - total_outflow
+        
+        return {
+            "year": year,
+            "fees_collected": fees_collected,
+            "salaries_paid": salaries_paid,
+            "expenses_total": expenses_total,
+            "total_outflow": total_outflow,
+            "net_profit": net_profit,
+            "profit": net_profit >= 0
+        }
+    finally:
+        cur.close()
+        conn.close()
