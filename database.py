@@ -5242,3 +5242,137 @@ def get_students_with_allergies():
     return [{"id": r[0], "name": r[1], "class_name": r[2],
              "section": r[3], "blood_group": r[4], "allergies": r[5]}
             for r in rows]
+    # ============================================================
+# PHASE 28: MEDICAL RECORDS & VACCINATIONS
+# ============================================================
+def save_medical_record(student_id, data, admin_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO medical_records
+        (student_id, blood_group, allergies, chronic_conditions, medications,
+         emergency_contact_name, emergency_contact_phone,
+         doctor_name, doctor_phone, insurance_info, notes, updated_by)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        ON CONFLICT (student_id) DO UPDATE SET
+            blood_group=EXCLUDED.blood_group,
+            allergies=EXCLUDED.allergies,
+            chronic_conditions=EXCLUDED.chronic_conditions,
+            medications=EXCLUDED.medications,
+            emergency_contact_name=EXCLUDED.emergency_contact_name,
+            emergency_contact_phone=EXCLUDED.emergency_contact_phone,
+            doctor_name=EXCLUDED.doctor_name,
+            doctor_phone=EXCLUDED.doctor_phone,
+            insurance_info=EXCLUDED.insurance_info,
+            notes=EXCLUDED.notes,
+            updated_by=EXCLUDED.updated_by,
+            last_updated=NOW()
+        RETURNING id;
+    """, (
+        student_id,
+        data.get("blood_group") or None,
+        data.get("allergies") or None,
+        data.get("chronic_conditions") or None,
+        data.get("medications") or None,
+        data.get("emergency_contact_name") or None,
+        data.get("emergency_contact_phone") or None,
+        data.get("doctor_name") or None,
+        data.get("doctor_phone") or None,
+        data.get("insurance_info") or None,
+        data.get("notes") or None,
+        admin_id
+    ))
+    rid = cur.fetchone()[0]
+    conn.commit()
+    cur.close()
+    conn.close()
+    return rid
+
+def delete_medical_record(student_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM medical_records WHERE student_id=%s;", (student_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def get_vaccinations(student_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, vaccine_name, date_given, dose_no, notes, created_at
+        FROM vaccinations WHERE student_id=%s
+        ORDER BY date_given DESC;
+    """, (student_id,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [{"id": r[0], "vaccine_name": r[1], "date_given": r[2],
+             "dose_no": r[3], "notes": r[4], "created_at": r[5]}
+            for r in rows]
+
+def add_vaccination(student_id, vaccine_name, date_given, dose_no, notes):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO vaccinations (student_id, vaccine_name, date_given, dose_no, notes)
+        VALUES (%s,%s,%s,%s,%s) RETURNING id;
+    """, (student_id, vaccine_name, date_given, dose_no or None, notes or None))
+    vid = cur.fetchone()[0]
+    conn.commit()
+    cur.close()
+    conn.close()
+    return vid
+
+def delete_vaccination(vid):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM vaccinations WHERE id=%s;", (vid,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def count_students_with_medical():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM medical_records;")
+    n = cur.fetchone()[0]
+    cur.close()
+    conn.close()
+    return n
+
+def get_students_missing_medical(limit=50):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT s.id, s.name, s.roll_no, s.class_name, s.section
+        FROM students s
+        LEFT JOIN medical_records m ON m.student_id = s.id
+        WHERE s.status='active' AND m.id IS NULL
+        ORDER BY s.class_name, s.section, s.roll_no
+        LIMIT %s;
+    """, (limit,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [{"id": r[0], "name": r[1], "roll": r[2],
+             "class_name": r[3], "section": r[4]} for r in rows]
+
+def get_students_with_allergies():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT s.id, s.name, s.class_name, s.section,
+               m.blood_group, m.allergies
+        FROM medical_records m
+        JOIN students s ON s.id = m.student_id
+        WHERE s.status='active'
+          AND m.allergies IS NOT NULL AND m.allergies != ''
+        ORDER BY s.class_name, s.roll_no;
+    """)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [{"id": r[0], "name": r[1], "class_name": r[2],
+             "section": r[3], "blood_group": r[4], "allergies": r[5]}
+            for r in rows]
