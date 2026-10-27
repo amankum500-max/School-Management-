@@ -3528,3 +3528,31 @@ def mark_staff_attendance(staff_id, date_str, status, check_in=None, check_out=N
     finally:
         cur.close()
         conn.close()
+def bulk_mark_staff_attendance(date_str, status, staff_ids=None):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        if staff_ids:
+            # Agar specific staff ki list aayi hai
+            for sid in staff_ids:
+                cur.execute("""
+                    INSERT INTO staff_attendance (staff_id, date, status)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (staff_id, date) DO UPDATE SET status=EXCLUDED.status;
+                """, (sid, date_str, status))
+        else:
+            # Agar sabhi active staff ki attendance lagani hai
+            cur.execute("""
+                INSERT INTO staff_attendance (staff_id, date, status)
+                SELECT id, %s, %s FROM staff WHERE status='active'
+                ON CONFLICT (staff_id, date) DO UPDATE SET status=EXCLUDED.status;
+            """, (date_str, status))
+            
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
