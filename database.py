@@ -3457,3 +3457,30 @@ def mark_online_payment_failed(payment_id):
     finally:
         cur.close()
         conn.close()
+def get_online_payments_summary():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT 
+                COUNT(*) FILTER (WHERE status='paid') AS paid_count,
+                COALESCE(SUM(amount) FILTER (WHERE status='paid'), 0) AS total_paid,
+                COUNT(*) FILTER (WHERE status='pending') AS pending_count,
+                COALESCE(SUM(amount) FILTER (WHERE status='pending'), 0) AS total_pending,
+                COUNT(*) AS total_transactions
+            FROM online_payments;
+        """)
+        row = cur.fetchone()
+        return {
+            "paid_count": row[0] or 0,
+            "total_paid": float(row[1] or 0),
+            "pending_count": row[2] or 0,
+            "total_pending": float(row[3] or 0),
+            "total_transactions": row[4] or 0
+        }
+    except Exception:
+        # Agar table na ho toh default values return kare
+        return {"paid_count": 0, "total_paid": 0.0, "pending_count": 0, "total_pending": 0.0, "total_transactions": 0}
+    finally:
+        cur.close()
+        conn.close()
