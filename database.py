@@ -3530,6 +3530,31 @@ def get_library_stats():
     return {"total_books": r[0] or 0, "total_copies": r[1] or 0,
             "issued_count": r[2] or 0, "overdue_count": r[3] or 0,
             "total_fine_collected": float(r[4] or 0)}
+    # ============================================================
+# MISSING FUNCTIONS FOR AUTH (Phase 30)
+# ============================================================
+def update_admin_last_login(admin_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("UPDATE admins SET last_login=NOW() WHERE id=%s;", (admin_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def log_audit(admin_id, username, action, method=None, path=None, details=None):
+    try:
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO audit_logs 
+            (admin_id, admin_username, action, method, path, details) 
+            VALUES (%s, %s, %s, %s, %s, %s);
+        """, (admin_id, username, action, method, path, details))
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception:
+        pass  # Audit log fail ho toh user ka action block na ho
 
 
 # ============================================================
