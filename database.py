@@ -3401,3 +3401,24 @@ def update_online_payment_status(payment_id, status, razorpay_payment_id=None):
     finally:
         cur.close()
         conn.close()
+def get_online_payment_by_order(order_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, student_id, amount, month, purpose, razorpay_order_id, razorpay_payment_id, status, created_at, paid_at
+            FROM online_payments 
+            WHERE razorpay_order_id=%s LIMIT 1;
+        """, (order_id,))
+        row = cur.fetchone()
+        if not row:
+            return None
+        return {
+            "id": row[0], "student_id": row[1], "amount": float(row[2] or 0),
+            "month": row[3], "purpose": row[4], "order_id": row[5],
+            "payment_id": row[6], "status": row[7], "created_at": row[8],
+            "paid_at": row[9]
+        }
+    finally:
+        cur.close()
+        conn.close()
