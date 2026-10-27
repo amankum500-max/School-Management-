@@ -3138,3 +3138,55 @@ def get_testimonials(limit=10):
     finally:
         cur.close()
         conn.close()
+def get_gallery(limit=20):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, title, image_url, description, created_at
+            FROM gallery
+            ORDER BY created_at DESC
+            LIMIT %s;
+        """, (limit,))
+        rows = cur.fetchall()
+        return [{
+            "id": r[0], "title": r[1], "image_url": r[2], 
+            "description": r[3], "created_at": r[4]
+        } for r in rows]
+    except Exception:
+        # Agar table na ho toh app crash na ho
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+def add_gallery_item(title, image_url, description=""):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO gallery (title, image_url, description)
+            VALUES (%s, %s, %s) RETURNING id;
+        """, (title, image_url, description))
+        gid = cur.fetchone()[0]
+        conn.commit()
+        return gid
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
+
+def delete_gallery_item(item_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM gallery WHERE id=%s;", (item_id,))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
