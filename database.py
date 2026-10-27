@@ -2929,3 +2929,44 @@ def get_annual_student_summary(year):
     finally:
         cur.close()
         conn.close()
+def get_annual_academic_summary(year):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        year_str = str(year)
+
+        # 1. Total Exams in the year
+        cur.execute("SELECT COUNT(*) FROM exams WHERE TO_CHAR(exam_date, 'YYYY') = %s;", (year_str,))
+        total_exams = cur.fetchone()[0] or 0
+
+        # 2. Overall Attendance Percentage for the year
+        cur.execute("""
+            SELECT
+                COUNT(*) FILTER (WHERE status='present') AS present,
+                COUNT(*) FILTER (WHERE status IN ('present','absent','late','leave')) AS total
+            FROM attendance
+            WHERE TO_CHAR(date, 'YYYY') = %s;
+        """, (year_str,))
+        row = cur.fetchone()
+        present = row[0] or 0
+        total_att = row[1] or 0
+        att_percent = round((present / total_att * 100), 1) if total_att > 0 else 0
+
+        # 3. Total Marks Recorded (Academic activity)
+        cur.execute("""
+            SELECT COUNT(*)
+            FROM marks m
+            JOIN exams e ON e.id = m.exam_id
+            WHERE TO_CHAR(e.exam_date, 'YYYY') = %s;
+        """, (year_str,))
+        total_marks_entries = cur.fetchone()[0] or 0
+
+        return {
+            "year": year,
+            "total_exams": total_exams,
+            "overall_attendance_percent": att_percent,
+            "total_marks_entries": total_marks_entries
+        }
+    finally:
+        cur.close()
+        conn.close()
