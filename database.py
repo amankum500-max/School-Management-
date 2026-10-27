@@ -2902,3 +2902,30 @@ def get_annual_financial_summary(year):
     finally:
         cur.close()
         conn.close()
+def get_annual_student_summary(year):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        year_str = str(year)
+        
+        # Total active students currently
+        cur.execute("SELECT COUNT(*) FROM students WHERE status='active';")
+        total_active = cur.fetchone()[0] or 0
+        
+        # New admissions in the given year
+        cur.execute("SELECT COUNT(*) FROM students WHERE TO_CHAR(admission_date, 'YYYY') = %s;", (year_str,))
+        new_admissions = cur.fetchone()[0] or 0
+        
+        # Gender breakdown (optional but good for reports)
+        cur.execute("SELECT gender, COUNT(*) FROM students WHERE status='active' GROUP BY gender;")
+        gender_counts = {row[0] or 'Unknown': row[1] for row in cur.fetchall()}
+
+        return {
+            "year": year,
+            "total_active_students": total_active,
+            "new_admissions": new_admissions,
+            "gender_distribution": gender_counts
+        }
+    finally:
+        cur.close()
+        conn.close()
