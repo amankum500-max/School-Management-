@@ -3,7 +3,7 @@ from flask import (
     Blueprint, render_template, request, redirect,
     url_for, flash, session, abort
 )
-from modules.auth import login_required, role_required
+from modules.auth import login_required
 from database import (
     generate_salary_for_month, get_salary_records,
     get_salary_record, update_salary_adjustments,
@@ -50,7 +50,6 @@ def edit(rid):
         flash("Paid record edit nahi ho sakta", "error")
         return redirect(url_for("salary.index", month=rec["month"]))
 
-    # NEW — attendance deduction info
     deduction_info = get_staff_attendance_for_salary(rec["staff_id"], rec["month"])
 
     if request.method == "POST":
