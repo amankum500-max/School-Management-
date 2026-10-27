@@ -3247,3 +3247,50 @@ def get_public_events(limit=5):
     finally:
         cur.close()
         conn.close()
+def get_enquiry(enquiry_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, student_name, parent_name, phone, email, class_interested, message, status, created_at
+            FROM enquiries WHERE id=%s;
+        """, (enquiry_id,))
+        row = cur.fetchone()
+        if not row:
+            return None
+        return {
+            "id": row[0], "student_name": row[1], "parent_name": row[2], 
+            "phone": row[3], "email": row[4], "class_interested": row[5], 
+            "message": row[6], "status": row[7], "created_at": row[8]
+        }
+    finally:
+        cur.close()
+        conn.close()
+
+def update_enquiry_status(enquiry_id, status):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE enquiries SET status=%s WHERE id=%s;", (status, enquiry_id))
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
+
+def delete_enquiry(enquiry_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM enquiries WHERE id=%s;", (enquiry_id,))
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
