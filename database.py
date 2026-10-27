@@ -5587,3 +5587,4 @@ def get_computed_alerts():
 
 def count_active_alerts():
     return len(get_computed_alerts())
+    
