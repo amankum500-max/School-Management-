@@ -3011,3 +3011,62 @@ def get_annual_attendance_summary(year):
     finally:
         cur.close()
         conn.close()
+def get_annual_fee_defaulters_summary(year):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        year_str = str(year)
+        cur.execute("""
+            SELECT COUNT(*), COALESCE(SUM(pending), 0) FROM (
+                SELECT b.student_id, MAX(b.total_amount) - COALESCE((SELECT SUM(amount) FROM fee_payments WHERE student_id=b.student_id AND month LIKE %s), 0) AS pending
+                FROM bills b
+                WHERE b.month LIKE %s
+                GROUP BY b.student_id
+            ) t WHERE pending > 0;
+        """, (f"{year_str}-%", f"{year_str}-%"))
+        row = cur.fetchone()
+        return {
+            "year": year,
+            "total_defaulters": row[0] or 0,
+            "total_pending_amount": float(row[1] or 0)
+        }
+    finally:
+        cur.close()
+        conn.close()
+
+def get_annual_fee_collection_summary(year):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        year_str = str(year)
+        cur.execute("""
+            SELECT COALESCE(SUM(amount), 0), COUNT(*) FROM fee_payments WHERE month LIKE %s;
+        """, (f"{year_str}-%",))
+        row = cur.fetchone()
+        return {
+            "year": year,
+            "total_collected": float(row[0] or 0),
+            "total_transactions": row[1] or 0
+        }
+    finally:
+        cur.close()
+        conn.close()
+
+def get_annual_expense_summary(year):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        year_str = str(year)
+        cur.execute("""
+            SELECT category, SUM(amount) FROM expenses WHERE TO_CHAR(expense_date, 'YYYY') = %s GROUP BY category ORDER BY 2 DESC;
+        """, (year_str,))
+        rows = cur.fetchall()
+        cats = [{"category": r[0], "amount": float(r[1] or 0)} for r in rows]
+        return {
+            "year": year,
+            "total_expense": sum(c["amount"] for c in cats),
+            "categories": cats
+        }
+    finally:
+        cur.close()
+        conn.close()
