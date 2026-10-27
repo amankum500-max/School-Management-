@@ -2697,3 +2697,20 @@ def get_student_by_qr_data(qr_data):
     finally:
         cur.close()
         conn.close()
+def get_today_attendance_status(student_id, date_str=None):
+    if not date_str:
+        date_str = date.today().isoformat()
+    
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT status FROM attendance 
+            WHERE student_id=%s AND date=%s 
+            LIMIT 1;
+        """, (student_id, date_str))
+        row = cur.fetchone()
+        return row[0] if row else None
+    finally:
+        cur.close()
+        conn.close()
