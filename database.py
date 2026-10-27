@@ -2425,3 +2425,21 @@ def delete_admin_user(admin_id):
     finally:
         cur.close()
         conn.close()
+def reset_admin_password(admin_id, new_password):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        pwd_hash = generate_password_hash(new_password)
+        cur.execute("""
+            UPDATE admins SET password_hash=%s 
+            WHERE id=%s RETURNING id;
+        """, (pwd_hash, admin_id))
+        res = cur.fetchone()
+        conn.commit()
+        return res[0] if res else None
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
