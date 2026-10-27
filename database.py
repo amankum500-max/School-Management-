@@ -3324,3 +3324,20 @@ def delete_testimonial(testimonial_id):
     finally:
         cur.close()
         conn.close()
+def toggle_testimonial_public(testimonial_id, is_active):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            UPDATE testimonials 
+            SET is_active=%s 
+            WHERE id=%s;
+        """, (is_active, testimonial_id))
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
