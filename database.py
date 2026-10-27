@@ -3177,6 +3177,22 @@ def add_gallery_item(title, image_url, description=""):
     finally:
         cur.close()
         conn.close()
+def create_gallery_item(title, image_url, description="", category="General"):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO gallery (title, image_url, description, category)
+            VALUES (%s, %s, %s, %s) RETURNING id;
+        """, (title, image_url, description, category))
+        gid = cur.fetchone()[0]
+        conn.commit()
+        return gid
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
 
 def delete_gallery_item(item_id):
     conn = get_conn()
@@ -3341,20 +3357,5 @@ def toggle_testimonial_public(testimonial_id, is_active):
     finally:
         cur.close()
         conn.close()
-def create_gallery_item(title, image_url, description="", category="General"):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            INSERT INTO gallery (title, image_url, description, category)
-            VALUES (%s, %s, %s, %s) RETURNING id;
-        """, (title, image_url, description, category))
-        gid = cur.fetchone()[0]
-        conn.commit()
-        return gid
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
+
         conn.close()
