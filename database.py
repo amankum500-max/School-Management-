@@ -2585,3 +2585,22 @@ def vacate_room(student_id):
     finally:
         cur.close()
         conn.close()
+def checkout_student(student_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT room_id FROM hostel_allocations WHERE student_id=%s AND status='active';", (student_id,))
+        row = cur.fetchone()
+        if row:
+            room_id = row[0]
+            cur.execute("UPDATE hostel_allocations SET status='vacated' WHERE student_id=%s AND status='active';", (student_id,))
+            cur.execute("UPDATE hostel_rooms SET occupied = GREATEST(occupied - 1, 0) WHERE id=%s;", (room_id,))
+            conn.commit()
+            return True
+        return False
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
