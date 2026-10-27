@@ -1,5 +1,11 @@
 from database import (
     ...,
+    get_student_attempts, get_or_create_attempt, get_attempt,
+    get_online_exam, get_exam_questions, submit_attempt,
+    get_attempt_answers,
+)
+from database import (
+    ...,
     create_message_thread, get_parent_threads,
     get_thread, get_thread_messages, post_message,
     mark_thread_read, count_unread_threads_for_parent,
@@ -314,3 +320,149 @@ def messages_thread(thread_id):
     messages = get_thread_messages(thread_id)
     return render_template("parent/messages_thread.html",
                            thread=thread, messages=messages)
+    # ---------- Online Exams (Parent/Student) ----------
+@parent_bp.route("/online-exams")
+@parent_required
+def online_exams_list():
+    children = get_children_for_parent(session["parent_phone"])
+    if not children:
+        return render_template("parent/online_exams_list.html",
+                               children=[], selected=None, exams=[])
+
+    child_id = request.args.get("child_id", type=int)
+    selected = None
+    for c in children:
+        if child_id and c["id"] == child_id:
+            selected = c
+            break
+    if not selected and children:
+        selected = children[0]
+
+    exams = get_student_attempts(selected["id"], selected["class_name"] or "")
+
+    return render_template("parent/online_exams_list.html",
+                           children=children, selected=selected, exams=exams)
+
+
+@parent_bp.route("/online-exams/<int:exam_id>/start")
+@parent_required
+def online_exam_start(exam_id):
+    exam = get_online_exam(exam_id)
+    if not exam or not exam["is_published"]:
+        abort(404)
+
+    # Ensure this exam belongs to one of parent's children
+    children = get_children_for_parent(session["parent_phone"])
+    valid_children = [c for c in children if c["class_name"] == exam["class_name"]]
+    if not valid_children:
+        abort(403)
+
+    student_id = request.args.get("child_id", type=int)
+    if not student_id:
+        student_id = valid_children[0]["id"]
+    elif student_id not in [c["id"] for c in valid_children]:
+        abort(403)
+
+    attempt = get_or_create_attempt(exam_id, student_id)
+    if attempt["status"] == "submitted":
+        flash("Ye exam already submit ho chuka hai", "error")
+        return redirect(url_for("parent.online_exam_result",
+                                attempt_id=attempt["id"]))
+
+    return redirect(url_for("parent.online_exam_take",
+                            attempt_id=attempt["id"]))
+
+
+@parent_bp.route("/online-exams/take/<int:attempt_id>")
+@parent_required
+def online_exam_take(attempt_id):
+    attempt = get_attempt(attempt_id)
+    if not attempt:
+        abort(404)
+
+    # Security check
+    children = get_children_for_parent(session["parent_phone"])
+    if attempt["student_id"] not in [c["id"] for c in children]:
+        abort(403)
+
+    if attempt["status"] == "submitted":
+        return redirect(url_for("parent.online_exam_result",
+                                attempt_id=attempt_id))
+
+    exam = get_online_exam(attempt["exam_id"])
+    if not exam:
+        abort(404)
+
+    questions = get_exam_questions(exam["id"], shuffle=exam["shuffle_questions"])
+
+    # Calculate time remaining
+    from datetime import datetime
+    now = datetime.now(attempt["started_at"].tzinfo) if attempt["started_at"].tzinfo else datetime.now()
+    elapsed_seconds = (now - attempt["started_at"]).total_seconds()
+    total_seconds = exam["duration"] * 60
+    remaining_seconds = max(int(total_seconds - elapsed_seconds), 0)
+
+    return render_template("parent/online_exam_take.html",
+                           attempt=attempt, exam=exam,
+                           questions=questions,
+                           remaining_seconds=remaining_seconds)
+
+
+@parent_bp.route("/online-exams/submit/<int:attempt_id>", methods=["POST"])
+@parent_required
+def online_exam_submit(attempt_id):
+    attempt = get_attempt(attempt_id)
+    if not attempt:
+        abort(404)
+
+    children = get_children_for_parent(session["parent_phone"])
+    if attempt["student_id"] not in [c["id"] for c in children]:
+        abort(403)
+
+    if attempt["status"] == "submitted":
+        return redirect(url_for("parent.online_exam_result",
+                                attempt_id=attempt_id))
+
+    # Collect answers from form
+    answers = {}
+    for key, val in request.form.items():
+        if key.startswith("q_"):
+            try:
+                qid = int(key[2:])
+                answers[qid] = val.upper() if val else None
+            except ValueError:
+                continue
+
+    result = submit_attempt(attempt_id, answers)
+    if result:
+        flash(f"Exam submit ho gaya! Score: {result['score']}/{result['total_marks']}",
+              "success")
+    else:
+        flash("Submission failed", "error")
+
+    return redirect(url_for("parent.online_exam_result",
+                            attempt_id=attempt_id))
+
+
+@parent_bp.route("/online-exams/result/<int:attempt_id>")
+@parent_required
+def online_exam_result(attempt_id):
+    attempt = get_attempt(attempt_id)
+    if not attempt:
+        abort(404)
+
+    children = get_children_for_parent(session["parent_phone"])
+    if attempt["student_id"] not in [c["id"] for c in children]:
+        abort(403)
+
+    if attempt["status"] == "in_progress":
+        return redirect(url_for("parent.online_exam_take",
+                                attempt_id=attempt_id))
+
+    answers = get_attempt_answers(attempt_id)
+    percent = round((attempt["score"] / attempt["total_marks"]) * 100, 1) \
+              if attempt["total_marks"] > 0 else 0
+
+    return render_template("parent/online_exam_result.html",
+                           attempt=attempt, answers=answers,
+                           percent=percent)
