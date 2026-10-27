@@ -2736,3 +2736,35 @@ def get_class_students_for_qr(class_name, section=None):
     finally:
         cur.close()
         conn.close()
+def get_todays_attendance_summary(date_str=None):
+    if not date_str:
+        date_str = date.today().isoformat()
+
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT
+                COUNT(*) FILTER (WHERE status='present') AS present,
+                COUNT(*) FILTER (WHERE status='absent') AS absent,
+                COUNT(*) FILTER (WHERE status='late') AS late,
+                COUNT(*) FILTER (WHERE status='leave') AS leave_c,
+                COUNT(*) AS total
+            FROM attendance
+            WHERE date=%s;
+        """, (date_str,))
+        row = cur.fetchone()
+
+        if not row:
+            return {"present": 0, "absent": 0, "late": 0, "leave": 0, "total": 0}
+
+        return {
+            "present": row[0] or 0,
+            "absent": row[1] or 0,
+            "late": row[2] or 0,
+            "leave": row[3] or 0,
+            "total": row[4] or 0
+        }
+    finally:
+        cur.close()
+        conn.close()
