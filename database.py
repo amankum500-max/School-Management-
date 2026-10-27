@@ -5057,3 +5057,19 @@ def get_student_discounts(student_id, active_only=True):
     rows = cur.fetchall()
     cur.close(); conn.close()
     return [{"id": r[0], "student_id": r[1], "discount_type_id": r[2], "custom_value": float(r[3]) if r[3] else None, "from_date": r[4], "to_date": r[5], "reason": r[6], "is_active": r[7], "created_at": r[8], "name": r[9], "category": r[10], "dtype": r[11], "master_value": float(r[12] or 0), "effective_value": float(r[3]) if r[3] else float(r[12] or 0)} for r in rows]
+def get_online_payments_for_student(student_id, limit=10):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, amount, month, purpose, razorpay_payment_id,
+               status, created_at, paid_at
+        FROM online_payments
+        WHERE student_id=%s AND status='paid'
+        ORDER BY paid_at DESC LIMIT %s;
+    """, (student_id, limit))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [{"id": r[0], "amount": float(r[1] or 0), "month": r[2],
+             "purpose": r[3], "payment_id": r[4], "status": r[5],
+             "created_at": r[6], "paid_at": r[7]} for r in rows]
