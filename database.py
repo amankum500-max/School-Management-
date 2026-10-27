@@ -2645,3 +2645,33 @@ def get_hostel_inmates(hostel_id):
     finally:
         cur.close()
         conn.close()
+def get_hostel_stats():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Hostels count
+        cur.execute("SELECT COUNT(*) FROM hostels;")
+        total_hostels = cur.fetchone()[0] or 0
+        
+        # Rooms count and capacity
+        cur.execute("SELECT COUNT(*), COALESCE(SUM(capacity), 0), COALESCE(SUM(occupied), 0) FROM hostel_rooms;")
+        row = cur.fetchone()
+        total_rooms = row[0] or 0
+        total_capacity = row[1] or 0
+        total_occupied = row[2] or 0
+        
+        # Active students in hostel
+        cur.execute("SELECT COUNT(*) FROM hostel_allocations WHERE status='active';")
+        total_students = cur.fetchone()[0] or 0
+        
+        return {
+            "total_hostels": total_hostels,
+            "total_rooms": total_rooms,
+            "total_capacity": total_capacity,
+            "total_occupied": total_occupied,
+            "available_beds": total_capacity - total_occupied,
+            "total_students": total_students
+        }
+    finally:
+        cur.close()
+        conn.close()
