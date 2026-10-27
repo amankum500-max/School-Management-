@@ -2140,5 +2140,5 @@ def get_student_year_report(student_id, academic_year):
         cur.close(); conn.close(); return None
     student = {"id": srow[0], "name": srow[1], "roll": srow[2], "class_name": srow[3], "section": srow[4], "gender": srow[5], "dob": srow[6], "parent_name": srow[7], "parent_phone": srow[8], "address": srow[9], "admission_date": srow[10], "photo_url": srow[11]}
     class_name = student["class_name"]
-    cur.execute("SELECT id, name, exam_date, subjects, max_marks FROM exams WHERE class_name=%s
+    cur.execute("SELECT id, name, exam_date, subjects, max_marks FROM exams WHERE class_name=%s,
 
