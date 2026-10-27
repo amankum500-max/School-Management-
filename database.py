@@ -3116,3 +3116,25 @@ def get_enquiries(status=None):
     finally:
         cur.close()
         conn.close()
+def get_testimonials(limit=10):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, name, role, message, rating, is_active, created_at
+            FROM testimonials
+            WHERE is_active = TRUE
+            ORDER BY created_at DESC
+            LIMIT %s;
+        """, (limit,))
+        rows = cur.fetchall()
+        return [{
+            "id": r[0], "name": r[1], "role": r[2], "message": r[3],
+            "rating": r[4], "is_active": r[5], "created_at": r[6]
+        } for r in rows]
+    except Exception:
+        # Agar database mein table nahi hai toh app crash na ho, khali list return kare
+        return []
+    finally:
+        cur.close()
+        conn.close()
