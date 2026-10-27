@@ -2413,3 +2413,15 @@ def update_admin_user(admin_id, username, full_name, role):
     finally:
         cur.close()
         conn.close()
+def delete_admin_user(admin_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM admins WHERE id=%s;", (admin_id,))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
