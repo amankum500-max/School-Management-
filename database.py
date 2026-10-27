@@ -3578,7 +3578,22 @@ def get_medical_record(student_id):
             "doctor_name","doctor_phone","insurance_info","notes","last_updated"]
     return dict(zip(keys, row))
 
-
+def get_online_payments_for_student(student_id, limit=10):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, amount, month, purpose, razorpay_payment_id,
+               status, created_at, paid_at
+        FROM online_payments
+        WHERE student_id=%s AND status='paid'
+        ORDER BY paid_at DESC LIMIT %s;
+    """, (student_id, limit))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [{"id": r[0], "amount": float(r[1] or 0), "month": r[2],
+             "purpose": r[3], "payment_id": r[4], "status": r[5],
+             "created_at": r[6], "paid_at": r[7]} for r in rows]
 def get_student_hostel(student_id):
     conn = get_conn()
     cur = conn.cursor()
