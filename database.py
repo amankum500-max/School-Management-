@@ -2541,3 +2541,15 @@ def get_hostel_room(room_id):
     finally:
         cur.close()
         conn.close()
+def delete_hostel_room(room_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM hostel_rooms WHERE id=%s;", (room_id,))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
