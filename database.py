@@ -2768,3 +2768,104 @@ def get_todays_attendance_summary(date_str=None):
     finally:
         cur.close()
         conn.close()
+        # ============================================================
+# AUTOMATION & ANNUAL REPORTS (Missing Functions)
+# ============================================================
+def get_automation_jobs():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, job_name, job_type, target, message, schedule_time, status, last_run 
+            FROM automation_jobs 
+            ORDER BY created_at DESC;
+        """)
+        rows = cur.fetchall()
+        return [{
+            "id": r[0], "job_name": r[1], "job_type": r[2], "target": r[3],
+            "message": r[4], "schedule_time": r[5], "status": r[6], "last_run": r[7]
+        } for r in rows]
+    except Exception:
+        return [] # Table na ho toh empty list return kare
+    finally:
+        cur.close()
+        conn.close()
+
+def add_automation_job(job_name, job_type, target, message, schedule_time):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO automation_jobs (job_name, job_type, target, message, schedule_time, status)
+            VALUES (%s, %s, %s, %s, %s, 'active') RETURNING id;
+        """, (job_name, job_type, target, message, schedule_time))
+        jid = cur.fetchone()[0]
+        conn.commit()
+        return jid
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cur.close()
+        conn.close()
+
+def delete_automation_job(job_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM automation_jobs WHERE id=%s;", (job_id,))
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
+def toggle_automation_job(job_id, status):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE automation_jobs SET status=%s WHERE id=%s;", (status, job_id))
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
+def get_annual_report_data(year):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Total Students
+        cur.execute("SELECT COUNT(*) FROM students WHERE status='active';")
+        total_students = cur.fetchone()[0] or 0
+        
+        # Total Fees Collected
+        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM fee_payments WHERE month LIKE %s;", (f"{year}%",))
+        total_fees = float(cur.fetchone()[0] or 0)
+        
+        # Total Salaries Paid
+        cur.execute("SELECT COALESCE(SUM(net_amount), 0) FROM salary_records WHERE status='paid' AND month LIKE %s;", (f"{year}%",))
+        total_salaries = float(cur.fetchone()[0] or 0)
+
+        # Total Expenses
+        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE TO_CHAR(expense_date, 'YYYY') = %s;", (str(year),))
+        total_expenses = float(cur.fetchone()[0] or 0)
+
+        return {
+            "total_students": total_students,
+            "total_fees": total_fees,
+            "total_salaries": total_salaries,
+            "total_expenses": total_expenses,
+            "net_profit": total_fees - (total_salaries + total_expenses)
+        }
+    except Exception:
+        return {"total_students": 0, "total_fees": 0, "total_salaries": 0, "total_expenses": 0, "net_profit": 0}
+    finally:
+        cur.close()
+        conn.close()
