@@ -3832,7 +3832,205 @@ def get_student_discounts(student_id, active_only=True):
              "master_value": float(r[12] or 0),
              "effective_value": float(r[3]) if r[3] else float(r[12] or 0)}
             for r in rows]
+def get_student_attempts(student_id, class_name=None):
+    conn = get_conn()
+    cur = conn.cursor()
+    q = """
+        SELECT e.id, e.title, e.subject, e.duration_minutes, e.total_marks,
+               e.start_date, e.end_date,
+               (SELECT id FROM online_exam_attempts a
+                WHERE a.exam_id=e.id AND a.student_id=%s) AS attempt_id,
+               (SELECT status FROM online_exam_attempts a
+                WHERE a.exam_id=e.id AND a.student_id=%s) AS attempt_status,
+               (SELECT score FROM online_exam_attempts a
+                WHERE a.exam_id=e.id AND a.student_id=%s) AS score,
+               (SELECT COUNT(*) FROM online_exam_questions
+                WHERE exam_id=e.id) AS q_count
+        FROM online_exams e
+        WHERE e.is_published=TRUE AND e.class_name=%s
+        ORDER BY e.start_date DESC NULLS LAST, e.created_at DESC;
+    """
+    cur.execute(q, (student_id, student_id, student_id, class_name))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [{"exam_id": r[0], "title": r[1], "subject": r[2],
+             "duration": r[3], "total_marks": r[4],
+             "start_date": r[5], "end_date": r[6],
+             "attempt_id": r[7], "attempt_status": r[8],
+             "score": r[9], "q_count": r[10] or 0} for r in rows]
 
+
+def get_or_create_attempt(exam_id, student_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, started_at, submitted_at, score, total_marks, status
+        FROM online_exam_attempts WHERE exam_id=%s AND student_id=%s;
+    """, (exam_id, student_id))
+    row = cur.fetchone()
+    if row:
+        cur.close()
+        conn.close()
+        return {"id": row[0], "started_at": row[1], "submitted_at": row[2],
+                "score": row[3] or 0, "total_marks": row[4] or 0,
+                "status": row[5], "created_new": False}
+
+    cur.execute("""
+        INSERT INTO online_exam_attempts (exam_id, student_id)
+        VALUES (%s, %s) RETURNING id, started_at;
+    """, (exam_id, student_id))
+    r = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {"id": r[0], "started_at": r[1], "submitted_at": None,
+            "score": 0, "total_marks": 0, "status": "in_progress",
+            "created_new": True}
+
+
+def get_attempt(attempt_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT a.id, a.exam_id, a.student_id, a.started_at, a.submitted_at,
+               a.score, a.total_marks, a.status,
+               e.title, e.duration_minutes, e.class_name, e.subject,
+               s.name AS student_name, s.roll_no, s.class_name AS s_class, s.section
+        FROM online_exam_attempts a
+        JOIN online_exams e ON e.id = a.exam_id
+        JOIN students s ON s.id = a.student_id
+        WHERE a.id=%s;
+    """, (attempt_id,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not row:
+        return None
+    return {
+        "id": row[0], "exam_id": row[1], "student_id": row[2],
+        "started_at": row[3], "submitted_at": row[4],
+        "score": row[5] or 0, "total_marks": row[6] or 0,
+        "status": row[7], "exam_title": row[8], "duration": row[9],
+        "exam_class": row[10], "subject": row[11],
+        "student_name": row[12], "roll": row[13],
+        "class_name": row[14], "section": row[15]
+    }
+
+
+def get_online_exam(eid):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, title, class_name, subject, duration_minutes,
+               total_marks, instructions, start_date, end_date,
+               is_published, shuffle_questions, created_at
+        FROM online_exams WHERE id=%s;
+    """, (eid,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not row:
+        return None
+    keys = ["id","title","class_name","subject","duration","total_marks",
+            "instructions","start_date","end_date","is_published",
+            "shuffle_questions","created_at"]
+    return dict(zip(keys, row))
+
+
+def get_exam_questions(eid, shuffle=False):
+    import random as _r
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, question_no, question_text,
+               option_a, option_b, option_c, option_d,
+               correct_option, marks
+        FROM online_exam_questions
+        WHERE exam_id=%s ORDER BY question_no;
+    """, (eid,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    qs = [{"id": r[0], "q_no": r[1], "text": r[2],
+           "a": r[3], "b": r[4], "c": r[5], "d": r[6],
+           "correct": r[7], "marks": r[8] or 1} for r in rows]
+    if shuffle:
+        _r.shuffle(qs)
+    return qs
+
+
+def submit_attempt(attempt_id, answers_dict):
+    from datetime import datetime as _dt
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT q.id, q.correct_option, q.marks
+        FROM online_exam_questions q
+        JOIN online_exam_attempts a ON a.exam_id = q.exam_id
+        WHERE a.id=%s;
+    """, (attempt_id,))
+    questions = {r[0]: {"correct": r[1], "marks": r[2] or 1} for r in cur.fetchall()}
+
+    if not questions:
+        cur.close()
+        conn.close()
+        return None
+
+    total_score = 0
+    total_marks = 0
+    for qid, qinfo in questions.items():
+        selected = answers_dict.get(qid) or answers_dict.get(str(qid))
+        is_correct = (selected == qinfo["correct"])
+        if is_correct:
+            total_score += qinfo["marks"]
+        total_marks += qinfo["marks"]
+
+        cur.execute("""
+            INSERT INTO online_exam_answers
+            (attempt_id, question_id, selected_option, is_correct)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (attempt_id, question_id) DO UPDATE SET
+                selected_option=EXCLUDED.selected_option,
+                is_correct=EXCLUDED.is_correct;
+        """, (attempt_id, qid, selected, is_correct))
+
+    cur.execute("""
+        UPDATE online_exam_attempts SET
+            submitted_at=NOW(), score=%s, total_marks=%s, status='submitted'
+        WHERE id=%s AND status='in_progress' RETURNING id;
+    """, (total_score, total_marks, attempt_id))
+    res = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
+    if not res:
+        return None
+    return {"score": total_score, "total_marks": total_marks}
+
+
+def get_attempt_answers(attempt_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT a.question_id, a.selected_option, a.is_correct,
+               q.question_no, q.question_text,
+               q.option_a, q.option_b, q.option_c, q.option_d,
+               q.correct_option, q.marks
+        FROM online_exam_answers a
+        JOIN online_exam_questions q ON q.id = a.question_id
+        WHERE a.attempt_id=%s
+        ORDER BY q.question_no;
+    """, (attempt_id,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [{"qid": r[0], "selected": r[1], "is_correct": r[2],
+             "q_no": r[3], "text": r[4],
+             "a": r[5], "b": r[6], "c": r[7], "d": r[8],
+             "correct": r[9], "marks": r[10] or 1}
+            for r in rows]
 # ============================================================
 # CONTINUED IN PART 2
 # ============================================================
