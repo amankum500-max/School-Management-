@@ -3,11 +3,12 @@ from flask import (
     Blueprint, render_template, request, redirect,
     url_for, flash, session, abort
 )
-from modules.auth import login_required
+from modules.auth import login_required, role_required
 from database import (
     generate_salary_for_month, get_salary_records,
     get_salary_record, update_salary_adjustments,
-    mark_salary_paid, delete_salary_record, get_salary_summary
+    mark_salary_paid, delete_salary_record, get_salary_summary,
+    get_staff_attendance_for_salary
 )
 
 salary_bp = Blueprint("salary", __name__, url_prefix="/salary")
@@ -49,6 +50,9 @@ def edit(rid):
         flash("Paid record edit nahi ho sakta", "error")
         return redirect(url_for("salary.index", month=rec["month"]))
 
+    # NEW — attendance deduction info
+    deduction_info = get_staff_attendance_for_salary(rec["staff_id"], rec["month"])
+
     if request.method == "POST":
         bonus = request.form.get("bonus") or 0
         deductions = request.form.get("deductions") or 0
@@ -56,7 +60,7 @@ def edit(rid):
         flash("Adjustments update ho gaye", "success")
         return redirect(url_for("salary.index", month=rec["month"]))
 
-    return render_template("salary/edit.html", rec=rec)
+    return render_template("salary/edit.html", rec=rec, deduction_info=deduction_info)
 
 @salary_bp.route("/<int:rid>/pay", methods=["POST"])
 @login_required
@@ -92,20 +96,3 @@ def remove(rid):
         else:
             flash("Sirf pending records delete ho sakte hain", "error")
     return redirect(url_for("salary.index", month=rec["month"] if rec else ""))
-from database import get_staff_attendance_for_salary
-
-@salary_bp.route("/<int:rid>/edit", methods=["GET", "POST"])
-@login_required
-def edit(rid):
-    rec = get_salary_record(rid)
-    if not rec:
-        abort(404)
-    # ...existing checks...
-
-    # NEW — attendance deduction info
-    deduction_info = get_staff_attendance_for_salary(rec["staff_id"], rec["month"])
-
-    if request.method == "POST":
-        # ...existing...
-    return render_template("salary/edit.html", rec=rec,
-                           deduction_info=deduction_info)   # ← NEW
