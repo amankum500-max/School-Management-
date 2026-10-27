@@ -2395,3 +2395,21 @@ def toggle_admin_status(admin_id, is_active):
     conn.commit()
     cur.close()
     conn.close()
+def update_admin_user(admin_id, username, full_name, role):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            UPDATE admins 
+            SET username=%s, full_name=%s, role=%s 
+            WHERE id=%s RETURNING id;
+        """, (username, full_name, role, admin_id))
+        res = cur.fetchone()
+        conn.commit()
+        return res[0] if res else None
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
