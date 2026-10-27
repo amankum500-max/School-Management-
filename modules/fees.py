@@ -125,7 +125,17 @@ def defaulters():
         ],
         total_pending=sum(r[6]-r[7] for r in rows)
     )
-
+@fees_bp.route("/bulk-receipts")
+@login_required
+def bulk_receipts():
+    month = request.args.get("month") or datetime.now().strftime("%Y-%m")
+    class_name = request.args.get("class", "").strip()
+    receipts = get_receipts_for_bulk_print(month, class_name or None)
+    from database import get_classes_list
+    return render_template("fees/bulk_receipts.html",
+                           receipts=receipts, month=month,
+                           classes=get_classes_list(),
+                           selected_class=class_name)
 # ---------- Delete payment ----------
 @fees_bp.route("/payment/<int:pid>/delete", methods=["POST"])
 @login_required
