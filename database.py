@@ -2361,3 +2361,37 @@ def get_admin_by_id(admin_id):
         return None
     return {"id": row[0], "username": row[1], "full_name": row[2],
             "role": row[3], "is_active": row[4], "created_at": row[5]}
+
+def create_admin_user(username, password, full_name, role="admin"):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO admins (username, password_hash, full_name, role, is_active)
+            VALUES (%s, %s, %s, %s, TRUE) RETURNING id;
+        """, (username, generate_password_hash(password), full_name, role))
+        uid = cur.fetchone()[0]
+        conn.commit()
+        return uid
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
+
+def delete_admin(admin_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM admins WHERE id=%s;", (admin_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def toggle_admin_status(admin_id, is_active):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("UPDATE admins SET is_active=%s WHERE id=%s;", (_to_bool(is_active), admin_id))
+    conn.commit()
+    cur.close()
+    conn.close()
