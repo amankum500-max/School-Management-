@@ -3484,3 +3484,47 @@ def get_online_payments_summary():
     finally:
         cur.close()
         conn.close()
+def get_staff_attendance_for_date(date_str):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT s.id, s.name, s.role, sa.status, sa.check_in, sa.check_out
+            FROM staff s
+            LEFT JOIN staff_attendance sa ON sa.staff_id = s.id AND sa.date = %s
+            WHERE s.status = 'active'
+            ORDER BY s.role, s.name;
+        """, (date_str,))
+        rows = cur.fetchall()
+        return [{
+            "staff_id": r[0],
+            "name": r[1],
+            "role": r[2],
+            "status": r[3] or "unmarked",
+            "check_in": r[4],
+            "check_out": r[5]
+        } for r in rows]
+    finally:
+        cur.close()
+        conn.close()
+
+def mark_staff_attendance(staff_id, date_str, status, check_in=None, check_out=None):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO staff_attendance (staff_id, date, status, check_in, check_out)
+            VALUES (%s, %s, %s, %s, %s)
+            ON CONFLICT (staff_id, date) DO UPDATE SET
+                status=EXCLUDED.status,
+                check_in=EXCLUDED.check_in,
+                check_out=EXCLUDED.check_out;
+        """, (staff_id, date_str, status, check_in, check_out))
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
