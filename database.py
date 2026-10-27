@@ -2714,3 +2714,25 @@ def get_today_attendance_status(student_id, date_str=None):
     finally:
         cur.close()
         conn.close()
+def get_class_students_for_qr(class_name, section=None):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        q = "SELECT id, name, roll_no, class_name, section FROM students WHERE status='active' AND class_name=%s"
+        params = [class_name]
+        
+        if section:
+            q += " AND section=%s"
+            params.append(section)
+            
+        q += " ORDER BY section, roll_no, name;"
+        cur.execute(q, tuple(params))
+        rows = cur.fetchall()
+        
+        return [{
+            "id": r[0], "name": r[1], "roll_no": r[2], 
+            "class_name": r[3], "section": r[4]
+        } for r in rows]
+    finally:
+        cur.close()
+        conn.close()
