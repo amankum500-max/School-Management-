@@ -3190,3 +3190,60 @@ def delete_gallery_item(item_id):
     finally:
         cur.close()
         conn.close()
+def get_gallery_categories():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Agar gallery table mein category column hai
+        cur.execute("SELECT DISTINCT category FROM gallery WHERE category IS NOT NULL AND category != '';")
+        rows = cur.fetchall()
+        return [r[0] for r in rows]
+    except Exception:
+        # Agar column nahi hai toh default categories return kare
+        return ["Events", "Sports", "Academics", "Campus", "Other"]
+    finally:
+        cur.close()
+        conn.close()
+
+def get_public_notices(limit=5):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, title, content, created_at
+            FROM notices
+            WHERE is_public = TRUE AND published = TRUE
+            ORDER BY created_at DESC
+            LIMIT %s;
+        """, (limit,))
+        rows = cur.fetchall()
+        return [{
+            "id": r[0], "title": r[1], "content": r[2], "created_at": r[3]
+        } for r in rows]
+    except Exception:
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+def get_public_events(limit=5):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, title, description, event_date, venue
+            FROM events
+            WHERE is_public = TRUE AND event_date >= CURRENT_DATE
+            ORDER BY event_date ASC
+            LIMIT %s;
+        """, (limit,))
+        rows = cur.fetchall()
+        return [{
+            "id": r[0], "title": r[1], "description": r[2], 
+            "event_date": r[3], "venue": r[4]
+        } for r in rows]
+    except Exception:
+        return []
+    finally:
+        cur.close()
+        conn.close()
