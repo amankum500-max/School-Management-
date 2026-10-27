@@ -2522,3 +2522,22 @@ def create_hostel_room(hostel_id, room_no, floor, room_type, monthly_fee, capaci
     finally:
         cur.close()
         conn.close()
+def get_hostel_room(room_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, hostel_id, room_no, floor, room_type, monthly_fee, capacity, occupied
+            FROM hostel_rooms WHERE id=%s;
+        """, (room_id,))
+        row = cur.fetchone()
+        if not row:
+            return None
+        return {
+            "id": row[0], "hostel_id": row[1], "room_no": row[2], 
+            "floor": row[3], "room_type": row[4], "monthly_fee": float(row[5] or 0), 
+            "capacity": row[6], "occupied": row[7]
+        }
+    finally:
+        cur.close()
+        conn.close()
