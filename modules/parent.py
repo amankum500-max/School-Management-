@@ -1,44 +1,46 @@
-from database import (
-    ...,
-    get_student_attempts, get_or_create_attempt, get_attempt,
-    get_online_exam, get_exam_questions, submit_attempt,
-    get_attempt_answers,
-)
-from database import (
-    ...,
-    create_message_thread, get_parent_threads,
-    get_thread, get_thread_messages, post_message,
-    mark_thread_read, count_unread_threads_for_parent,
-    get_parent_info,
-)
-from datetime import datetime
+from datetime import datetime, date
+from functools import wraps
 from flask import (
     Blueprint, render_template, request, redirect,
     url_for, flash, session, abort
 )
+
+# Saare database functions ek jagah import kiye hain
 from database import (
     create_parent, verify_parent, phone_exists_in_students,
     get_children_for_parent, get_student,
     get_attendance_summary, get_attendance_calendar,
     get_payments, pending_amount_for_student,
     get_exams_for_class, get_student_marks_report,
-    get_notices_for_class
+    get_notices_for_class, get_homework_for_class,
+    get_upcoming_events, get_student_fee_dues,
+    get_online_payments_for_student,
+    
+    # Chat / Messages
+    create_message_thread, get_parent_threads,
+    get_thread, get_thread_messages, post_message,
+    mark_thread_read, count_unread_threads_for_parent,
+    get_parent_info,
+    
+    # Online Exams
+    get_student_attempts, get_or_create_attempt, get_attempt,
+    get_online_exam, get_exam_questions, submit_attempt,
+    get_attempt_answers,
+    
+    # Report Card
+    get_student_year_report, get_current_academic_year, 
+    get_academic_year_options
 )
 
 parent_bp = Blueprint("parent", __name__, url_prefix="/parent")
 
 def parent_required(f):
-    from functools import wraps
     @wraps(f)
     def wrapper(*args, **kwargs):
         if "parent_id" not in session:
             return redirect(url_for("parent.login"))
         return f(*args, **kwargs)
     return wrapper
-    from database import (
-    ...,
-    get_upcoming_events
-)
 
 # ---------- Auth ----------
 @parent_bp.route("/register", methods=["GET", "POST"])
@@ -56,15 +58,15 @@ def register():
             return redirect(url_for("parent.register"))
 
         if not phone_exists_in_students(phone):
-            flash("Ye phone number kisi student ke parent ke roop mein registered nahi hai. School office se sampark karo.", "error")
+            flash("Ye phone number kisi student ke parent ke roop mein registered nahi hai.", "error")
             return redirect(url_for("parent.register"))
 
         try:
             create_parent(phone, password, name)
             flash("Account ban gaya. Ab login karo.", "success")
             return redirect(url_for("parent.login"))
-        except Exception as e:
-            flash(f"Error: Ye phone already registered hai, ya kuch galat hua.", "error")
+        except Exception:
+            flash("Error: Ye phone already registered hai.", "error")
             return redirect(url_for("parent.register"))
 
     return render_template("parent/register.html")
@@ -92,7 +94,7 @@ def logout():
         session.pop(k, None)
     return redirect(url_for("parent.login"))
 
-# ---------- Dashboard ----------
+# ---------- Dashboard & Events ----------
 @parent_bp.route("/")
 @parent_required
 def dashboard():
@@ -108,7 +110,8 @@ def dashboard():
         cards.append({**c, "attendance_percent": att["percent"], "pending_fees": pending})
 
     return render_template("parent/dashboard.html", children=cards, month=month)
-    @parent_bp.route("/events")
+
+@parent_bp.route("/events")
 @parent_required
 def events():
     children = get_children_for_parent(session["parent_phone"])
@@ -116,27 +119,17 @@ def events():
         return render_template("parent/events.html", events=[], selected=None)
 
     child_id = request.args.get("child_id", type=int)
-    selected = None
-    if child_id:
-        for c in children:
-            if c["id"] == child_id:
-                selected = c
-                break
-    if not selected:
-        selected = children[0]
-
+    selected = next((c for c in children if c["id"] == child_id), children[0])
+    
     evs = get_upcoming_events(days=60, class_name=selected["class_name"] or "", limit=30)
-    return render_template("parent/events.html",
-                           events=evs, children=children, selected=selected)
+    return render_template("parent/events.html", events=evs, children=children, selected=selected)
 
-# ---------- Child detail ----------
+# ---------- Child Detail (Combined Fees + Payments) ----------
 @parent_bp.route("/child/<int:student_id>")
 @parent_required
 def child_detail(student_id):
-    # Verify ye child is parent's
     children = get_children_for_parent(session["parent_phone"])
-    child_ids = [c["id"] for c in children]
-    if student_id not in child_ids:
+    if student_id not in [c["id"] for c in children]:
         abort(403)
 
     row = get_student(student_id)
@@ -150,11 +143,14 @@ def child_detail(student_id):
     att_summary = get_attendance_summary(student_id, month)
     att_calendar = get_attendance_calendar(student_id, month)
     pending = pending_amount_for_student(student_id, month)
+    
     payments = [
         {"id": r[0], "fee_type": r[5], "amount": r[6], "month": r[7],
          "mode": r[8], "receipt_no": r[9], "paid_at": r[10]}
         for r in get_payments(student_id=student_id, limit=50)
     ]
+    
+    online_payments = get_online_payments_for_student(student_id, limit=10)
 
     exams = get_exams_for_class(student["class_name"]) if student["class_name"] else []
     exam_results = []
@@ -172,101 +168,62 @@ def child_detail(student_id):
 
     return render_template(
         "parent/child_detail.html",
-        student=student,
-        month=month,
-        att_summary=att_summary,
-        att_calendar=att_calendar,
-        pending_fees=pending,
-        payments=payments,
+        student=student, month=month,
+        att_summary=att_summary, att_calendar=att_calendar,
+        pending_fees=pending, payments=payments,
+        online_payments=online_payments,
         exam_results=exam_results
     )
 
-# ---------- Notices ----------
+# ---------- Notices & Homework ----------
 @parent_bp.route("/notices")
 @parent_required
 def notices():
     children = get_children_for_parent(session["parent_phone"])
     if not children:
-        return render_template("parent/notices.html", notices=[], classes=[])
-    # Combine notices for all children's classes (dedupe)
+        return render_template("parent/notices.html", notices=[])
+    
     all_notices = {}
     for c in children:
         for n in get_notices_for_class(c["class_name"] or ""):
             all_notices[n["id"]] = n
+            
     notices_list = sorted(
         all_notices.values(),
         key=lambda x: (x["priority"] == "urgent", x["priority"] == "high", x["created_at"]),
         reverse=True
     )
     return render_template("parent/notices.html", notices=notices_list)
-    @parent_bp.route("/homework")
+
+@parent_bp.route("/homework")
 @parent_required
 def homework_list():
     children = get_children_for_parent(session["parent_phone"])
     if not children:
         return render_template("parent/homework.html", children=[], selected_id=None)
 
-    # Query string se child_id, ya pehla child
     child_id = request.args.get("child_id", type=int)
-    selected = None
-    if child_id:
-        for c in children:
-            if c["id"] == child_id:
-                selected = c
-                break
-    if not selected and children:
-        selected = children[0]
+    selected = next((c for c in children if c["id"] == child_id), children[0])
 
-    hw = []
-    if selected:
-        hw = get_homework_for_class(selected["class_name"] or "",
-                                    selected["section"] or "")
-
-    from datetime import date
+    hw = get_homework_for_class(selected["class_name"] or "", selected["section"] or "")
     today = date.today()
+    
     for h in hw:
         if h["due_date"]:
-            if h["due_date"] < today:
-                h["status"] = "overdue"
-            elif h["due_date"] == today:
-                h["status"] = "today"
-            else:
-                h["status"] = "upcoming"
+            h["status"] = "overdue" if h["due_date"] < today else ("today" if h["due_date"] == today else "upcoming")
         else:
             h["status"] = "no_due"
 
-    return render_template("parent/homework.html",
-                           children=children, selected=selected, homework=hw)
-    from database import get_student_fee_dues, get_online_payments_for_student
+    return render_template("parent/homework.html", children=children, selected=selected, homework=hw)
 
-@parent_bp.route("/child/<int:student_id>")
-@parent_required
-def child_detail(student_id):
-    children = get_children_for_parent(session["parent_phone"])
-    if student_id not in [c["id"] for c in children]:
-        abort(403)
-
-    row = get_student(student_id)
-    # ... existing code ...
-    pending = pending_amount_for_student(student_id, month)
-    online_payments = get_online_payments_for_student(student_id, limit=10)  # ← NEW
-    
-    return render_template(
-        "parent/child_detail.html",
-        student=student,
-        month=month,
-        # ... existing ...
-        online_payments=online_payments    # ← NEW
-    )
+# ---------- Messages (Chat) ----------
 @parent_bp.route("/messages")
 @parent_required
 def messages_list():
     parent_id = session.get("parent_id")
     threads = get_parent_threads(parent_id)
     unread = count_unread_threads_for_parent(parent_id)
-    return render_template("parent/messages_list.html",
-                           threads=threads, unread=unread)
-
+    return render_template("parent/messages_list.html", threads=threads, unread=unread)
 
 @parent_bp.route("/messages/new", methods=["GET", "POST"])
 @parent_required
@@ -286,24 +243,17 @@ def messages_new():
         parent = get_parent_info(parent_id)
         pname = parent["name"] if parent else "Parent"
 
-        tid = create_message_thread(
-            parent_id, student_id, subject, body, pname
-        )
+        tid = create_message_thread(parent_id, student_id, subject, body, pname)
         flash("Message sent", "success")
         return redirect(url_for("parent.messages_thread", thread_id=tid))
 
-    return render_template("parent/messages_new.html",
-                           children=children)
-
+    return render_template("parent/messages_new.html", children=children)
 
 @parent_bp.route("/messages/<int:thread_id>", methods=["GET", "POST"])
 @parent_required
 def messages_thread(thread_id):
     thread = get_thread(thread_id)
-    if not thread:
-        abort(404)
-    # Security — must be parent's own thread
-    if thread["parent_id"] != session.get("parent_id"):
+    if not thread or thread["parent_id"] != session.get("parent_id"):
         abort(403)
 
     if request.method == "POST":
@@ -311,38 +261,26 @@ def messages_thread(thread_id):
         if body:
             parent = get_parent_info(session["parent_id"])
             pname = parent["name"] if parent else "Parent"
-            post_message(thread_id, "parent", session["parent_id"],
-                         pname, body)
-        return redirect(url_for("parent.messages_thread",
-                                thread_id=thread_id))
+            post_message(thread_id, "parent", session["parent_id"], pname, body)
+        return redirect(url_for("parent.messages_thread", thread_id=thread_id))
 
     mark_thread_read(thread_id, "parent")
     messages = get_thread_messages(thread_id)
-    return render_template("parent/messages_thread.html",
-                           thread=thread, messages=messages)
-    # ---------- Online Exams (Parent/Student) ----------
+    return render_template("parent/messages_thread.html", thread=thread, messages=messages)
+
+# ---------- Online Exams ----------
 @parent_bp.route("/online-exams")
 @parent_required
 def online_exams_list():
     children = get_children_for_parent(session["parent_phone"])
     if not children:
-        return render_template("parent/online_exams_list.html",
-                               children=[], selected=None, exams=[])
+        return render_template("parent/online_exams_list.html", children=[], selected=None, exams=[])
 
     child_id = request.args.get("child_id", type=int)
-    selected = None
-    for c in children:
-        if child_id and c["id"] == child_id:
-            selected = c
-            break
-    if not selected and children:
-        selected = children[0]
-
+    selected = next((c for c in children if c["id"] == child_id), children[0])
     exams = get_student_attempts(selected["id"], selected["class_name"] or "")
 
-    return render_template("parent/online_exams_list.html",
-                           children=children, selected=selected, exams=exams)
-
+    return render_template("parent/online_exams_list.html", children=children, selected=selected, exams=exams)
 
 @parent_bp.route("/online-exams/<int:exam_id>/start")
 @parent_required
@@ -351,137 +289,81 @@ def online_exam_start(exam_id):
     if not exam or not exam["is_published"]:
         abort(404)
 
-    # Ensure this exam belongs to one of parent's children
     children = get_children_for_parent(session["parent_phone"])
     valid_children = [c for c in children if c["class_name"] == exam["class_name"]]
     if not valid_children:
         abort(403)
 
-    student_id = request.args.get("child_id", type=int)
-    if not student_id:
-        student_id = valid_children[0]["id"]
-    elif student_id not in [c["id"] for c in valid_children]:
-        abort(403)
-
+    student_id = request.args.get("child_id", type=int) or valid_children[0]["id"]
     attempt = get_or_create_attempt(exam_id, student_id)
+    
     if attempt["status"] == "submitted":
         flash("Ye exam already submit ho chuka hai", "error")
-        return redirect(url_for("parent.online_exam_result",
-                                attempt_id=attempt["id"]))
+        return redirect(url_for("parent.online_exam_result", attempt_id=attempt["id"]))
 
-    return redirect(url_for("parent.online_exam_take",
-                            attempt_id=attempt["id"]))
-
+    return redirect(url_for("parent.online_exam_take", attempt_id=attempt["id"]))
 
 @parent_bp.route("/online-exams/take/<int:attempt_id>")
 @parent_required
 def online_exam_take(attempt_id):
     attempt = get_attempt(attempt_id)
-    if not attempt:
-        abort(404)
-
-    # Security check
-    children = get_children_for_parent(session["parent_phone"])
-    if attempt["student_id"] not in [c["id"] for c in children]:
+    if not attempt or attempt["student_id"] not in [c["id"] for c in get_children_for_parent(session["parent_phone"])]:
         abort(403)
 
     if attempt["status"] == "submitted":
-        return redirect(url_for("parent.online_exam_result",
-                                attempt_id=attempt_id))
+        return redirect(url_for("parent.online_exam_result", attempt_id=attempt_id))
 
     exam = get_online_exam(attempt["exam_id"])
-    if not exam:
-        abort(404)
-
     questions = get_exam_questions(exam["id"], shuffle=exam["shuffle_questions"])
 
-    # Calculate time remaining
-    from datetime import datetime
     now = datetime.now(attempt["started_at"].tzinfo) if attempt["started_at"].tzinfo else datetime.now()
     elapsed_seconds = (now - attempt["started_at"]).total_seconds()
-    total_seconds = exam["duration"] * 60
-    remaining_seconds = max(int(total_seconds - elapsed_seconds), 0)
+    remaining_seconds = max(int(exam["duration"] * 60 - elapsed_seconds), 0)
 
-    return render_template("parent/online_exam_take.html",
-                           attempt=attempt, exam=exam,
-                           questions=questions,
-                           remaining_seconds=remaining_seconds)
-
+    return render_template("parent/online_exam_take.html", attempt=attempt, exam=exam,
+                           questions=questions, remaining_seconds=remaining_seconds)
 
 @parent_bp.route("/online-exams/submit/<int:attempt_id>", methods=["POST"])
 @parent_required
 def online_exam_submit(attempt_id):
     attempt = get_attempt(attempt_id)
-    if not attempt:
-        abort(404)
+    if not attempt or attempt["status"] == "submitted":
+        return redirect(url_for("parent.online_exam_result", attempt_id=attempt_id))
 
-    children = get_children_for_parent(session["parent_phone"])
-    if attempt["student_id"] not in [c["id"] for c in children]:
-        abort(403)
-
-    if attempt["status"] == "submitted":
-        return redirect(url_for("parent.online_exam_result",
-                                attempt_id=attempt_id))
-
-    # Collect answers from form
-    answers = {}
-    for key, val in request.form.items():
-        if key.startswith("q_"):
-            try:
-                qid = int(key[2:])
-                answers[qid] = val.upper() if val else None
-            except ValueError:
-                continue
-
+    answers = {int(k[2:]): v.upper() for k, v in request.form.items() if k.startswith("q_") and v}
     result = submit_attempt(attempt_id, answers)
+    
     if result:
-        flash(f"Exam submit ho gaya! Score: {result['score']}/{result['total_marks']}",
-              "success")
-    else:
-        flash("Submission failed", "error")
-
-    return redirect(url_for("parent.online_exam_result",
-                            attempt_id=attempt_id))
-
+        flash(f"Exam submit ho gaya! Score: {result['score']}/{result['total_marks']}", "success")
+    return redirect(url_for("parent.online_exam_result", attempt_id=attempt_id))
 
 @parent_bp.route("/online-exams/result/<int:attempt_id>")
 @parent_required
 def online_exam_result(attempt_id):
     attempt = get_attempt(attempt_id)
-    if not attempt:
-        abort(404)
-
-    children = get_children_for_parent(session["parent_phone"])
-    if attempt["student_id"] not in [c["id"] for c in children]:
+    if not attempt or attempt["student_id"] not in [c["id"] for c in get_children_for_parent(session["parent_phone"])]:
         abort(403)
 
     if attempt["status"] == "in_progress":
-        return redirect(url_for("parent.online_exam_take",
-                                attempt_id=attempt_id))
+        return redirect(url_for("parent.online_exam_take", attempt_id=attempt_id))
 
     answers = get_attempt_answers(attempt_id)
-    percent = round((attempt["score"] / attempt["total_marks"]) * 100, 1) \
-              if attempt["total_marks"] > 0 else 0
+    percent = round((attempt["score"] / attempt["total_marks"]) * 100, 1) if attempt["total_marks"] > 0 else 0
 
-    return render_template("parent/online_exam_result.html",
-                           attempt=attempt, answers=answers,
-                           percent=percent)
-    from database import get_student_year_report, get_current_academic_year, get_academic_year_options
+    return render_template("parent/online_exam_result.html", attempt=attempt, answers=answers, percent=percent)
 
+# ---------- Report Card ----------
 @parent_bp.route("/report-card/<int:student_id>")
 @parent_required
 def report_card(student_id):
-    # Verify ownership
-    children = get_children_for_parent(session["parent_phone"])
-    if student_id not in [c["id"] for c in children]:
+    if student_id not in [c["id"] for c in get_children_for_parent(session["parent_phone"])]:
         abort(403)
 
     ay = request.args.get("ay") or get_current_academic_year()
     report = get_student_year_report(student_id, ay)
+    
     if not report:
         flash("Report card data available nahi hai.", "error")
         return redirect(url_for("parent.child_detail", student_id=student_id))
 
-    return render_template("parent/report_card.html",
-                           r=report,
-                           ay_options=get_academic_year_options())
+    return render_template("parent/report_card.html", r=report, ay_options=get_academic_year_options())
