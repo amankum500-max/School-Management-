@@ -2475,3 +2475,21 @@ def get_hostel(hostel_id):
     finally:
         cur.close()
         conn.close()
+def update_hostel(hostel_id, name, warden_name, warden_phone, capacity):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            UPDATE hostels SET 
+                name=%s, warden_name=%s, warden_phone=%s, capacity=%s 
+            WHERE id=%s RETURNING id;
+        """, (name, warden_name, warden_phone, capacity, hostel_id))
+        res = cur.fetchone()
+        conn.commit()
+        return res[0] if res else None
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
