@@ -4,8 +4,6 @@ from flask import (
     Blueprint, render_template, request, redirect,
     url_for, flash, session, abort
 )
-
-# Saare database functions ek jagah import kiye hain
 from database import (
     create_parent, verify_parent, phone_exists_in_students,
     get_children_for_parent, get_student,
@@ -15,19 +13,13 @@ from database import (
     get_notices_for_class, get_homework_for_class,
     get_upcoming_events, get_student_fee_dues,
     get_online_payments_for_student,
-    
-    # Chat / Messages
     create_message_thread, get_parent_threads,
     get_thread, get_thread_messages, post_message,
     mark_thread_read, count_unread_threads_for_parent,
     get_parent_info,
-    
-    # Online Exams
     get_student_attempts, get_or_create_attempt, get_attempt,
     get_online_exam, get_exam_questions, submit_attempt,
     get_attempt_answers,
-    
-    # Report Card
     get_student_year_report, get_current_academic_year, 
     get_academic_year_options
 )
@@ -124,7 +116,7 @@ def events():
     evs = get_upcoming_events(days=60, class_name=selected["class_name"] or "", limit=30)
     return render_template("parent/events.html", events=evs, children=children, selected=selected)
 
-# ---------- Child Detail (Combined Fees + Payments) ----------
+# ---------- Child Detail ----------
 @parent_bp.route("/child/<int:student_id>")
 @parent_required
 def child_detail(student_id):
