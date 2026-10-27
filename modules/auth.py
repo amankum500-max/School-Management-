@@ -3,7 +3,11 @@ from flask import (
     Blueprint, render_template, request, redirect,
     url_for, session, flash
 )
-from database import verify_admin
+# Database se zaroori functions import kar rahe hain
+from database import (
+    verify_admin, get_admin, update_admin_profile, 
+    change_admin_password, update_admin_last_login, log_audit
+)
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -15,6 +19,19 @@ def login_required(f):
         return f(*args, **kwargs)
     return wrapper
 
+def role_required(*allowed_roles):
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            if "admin_id" not in session:
+                return redirect(url_for("auth.login"))
+            if session.get("admin_role") not in allowed_roles:
+                flash("Aapko is page ka access nahi hai", "error")
+                return redirect(url_for("dashboard"))
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
+
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if "admin_id" in session:
@@ -23,10 +40,20 @@ def login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
+        
+        # Ye function database.py se aa raha hai
         admin = verify_admin(username, password)
+        
         if admin:
             session["admin_id"] = admin["id"]
             session["admin_name"] = admin["full_name"] or admin["username"]
+            session["admin_username"] = admin["username"]
+            session["admin_role"] = admin["role"]
+
+            # last_login + audit
+            update_admin_last_login(admin["id"])
+            log_audit(admin["id"], admin["username"], "login", "POST", "/login")
+
             return redirect(url_for("dashboard"))
         flash("Galat username ya password", "error")
 
@@ -36,9 +63,6 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for("auth.login"))
-    from database import (
-    get_admin, update_admin_profile, change_admin_password
-)
 
 @auth_bp.route("/profile", methods=["GET", "POST"])
 @login_required
@@ -50,6 +74,7 @@ def profile():
 
     if request.method == "POST":
         action = request.form.get("action")
+        
         if action == "profile":
             full_name = request.form.get("full_name", "").strip()
             username = request.form.get("username", "").strip()
@@ -79,49 +104,3 @@ def profile():
             return redirect(url_for("auth.profile"))
 
     return render_template("profile.html", admin=admin)
-    def verify_admin(username, password):
-    row = get_admin_by_username(username)
-    if not row:
-        return None
-    # row = id, username, password_hash, full_name, role, is_active
-    if not row[5]:        # is_active False
-        return None
-    if check_password_hash(row[2], password):
-        return {"id": row[0], "username": row[1],
-                "full_name": row[3], "role": row[4] or "admin"}
-    return None
-    def get_admin_by_username(username):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT id, username, password_hash, full_name, role, is_active
-        FROM admins WHERE username=%s;
-    """, (username,))
-    row = cur.fetchone()
-    cur.close()
-    conn.close()
-    return row
-@auth_bp.route("/login", methods=["GET", "POST"])
-def login():
-    if "admin_id" in session:
-        return redirect(url_for("dashboard"))
-
-    if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "")
-        admin = verify_admin(username, password)
-        if admin:
-            session["admin_id"] = admin["id"]
-            session["admin_name"] = admin["full_name"] or admin["username"]
-            session["admin_username"] = admin["username"]
-            session["admin_role"] = admin["role"]
-
-            # last_login + audit
-            from database import update_admin_last_login, log_audit
-            update_admin_last_login(admin["id"])
-            log_audit(admin["id"], admin["username"], "login", "POST", "/login")
-
-            return redirect(url_for("dashboard"))
-        flash("Galat username ya password", "error")
-
-    return render_template("login.html")
