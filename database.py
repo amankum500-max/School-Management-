@@ -4451,3 +4451,117 @@ def get_student_year_report(student_id, academic_year):
         "class_rank": class_rank, "class_total": class_total,
         "remarks": remarks
                                  }
+    # ============================================================
+# PHASE 12: STAFF MANAGEMENT
+# ============================================================
+def create_staff(data):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO staff
+        (name, role, phone, email, qualification,
+         subjects, classes, salary, join_date, address, status)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        RETURNING id;
+    """, (
+        data["name"], data.get("role") or "teacher",
+        data.get("phone") or None, data.get("email") or None,
+        data.get("qualification") or None,
+        data.get("subjects") or [], data.get("classes") or [],
+        float(data["salary"]) if data.get("salary") else None,
+        data.get("join_date") or None,
+        data.get("address") or None,
+        data.get("status") or "active"
+    ))
+    sid = cur.fetchone()[0]
+    conn.commit()
+    cur.close()
+    conn.close()
+    return sid
+
+def get_staff_list(search=None, role=None):
+    conn = get_conn()
+    cur = conn.cursor()
+    q = """
+        SELECT id, name, role, phone, email, subjects, classes, status, join_date, salary
+        FROM staff WHERE 1=1
+    """
+    params = []
+    if search:
+        q += " AND (name ILIKE %s OR phone ILIKE %s OR email ILIKE %s)"
+        like = f"%{search}%"
+        params += [like, like, like]
+    if role:
+        q += " AND role=%s"
+        params.append(role)
+    q += " ORDER BY role, name;"
+    cur.execute(q, tuple(params))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [{"id": r[0], "name": r[1], "role": r[2], "phone": r[3],
+             "email": r[4], "subjects": r[5] or [], "classes": r[6] or [],
+             "status": r[7], "join_date": r[8], "salary": float(r[9]) if r[9] else 0} for r in rows]
+
+def get_staff(staff_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, name, role, phone, email, qualification,
+               subjects, classes, salary, join_date, address, status, created_at
+        FROM staff WHERE id=%s;
+    """, (staff_id,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not row:
+        return None
+    keys = ["id","name","role","phone","email","qualification",
+            "subjects","classes","salary","join_date","address",
+            "status","created_at"]
+    d = dict(zip(keys, row))
+    d["salary"] = float(d["salary"] or 0)
+    return d
+
+def update_staff(staff_id, data):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE staff SET
+            name=%s, role=%s, phone=%s, email=%s, qualification=%s,
+            subjects=%s, classes=%s, salary=%s, join_date=%s,
+            address=%s, status=%s
+        WHERE id=%s RETURNING id;
+    """, (
+        data["name"], data.get("role") or "teacher",
+        data.get("phone") or None, data.get("email") or None,
+        data.get("qualification") or None,
+        data.get("subjects") or [], data.get("classes") or [],
+        float(data["salary"]) if data.get("salary") else None,
+        data.get("join_date") or None,
+        data.get("address") or None,
+        data.get("status") or "active",
+        staff_id
+    ))
+    res = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
+    return res[0] if res else None
+
+def delete_staff(staff_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM staff WHERE id=%s;", (staff_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def count_active_staff():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM staff WHERE status='active';")
+    n = cur.fetchone()[0]
+    cur.close()
+    conn.close()
+    return n
