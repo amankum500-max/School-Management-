@@ -3422,3 +3422,38 @@ def get_online_payment_by_order(order_id):
     finally:
         cur.close()
         conn.close()
+def mark_online_payment_success(payment_id, razorpay_payment_id=None):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            UPDATE online_payments 
+            SET status='paid', razorpay_payment_id=%s, paid_at=NOW() 
+            WHERE id=%s;
+        """, (razorpay_payment_id, payment_id))
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
+
+def mark_online_payment_failed(payment_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            UPDATE online_payments 
+            SET status='failed' 
+            WHERE id=%s;
+        """, (payment_id,))
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
