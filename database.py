@@ -3294,3 +3294,33 @@ def delete_enquiry(enquiry_id):
     finally:
         cur.close()
         conn.close()
+def create_testimonial(name, role, message, rating):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO testimonials (name, role, message, rating, is_active)
+            VALUES (%s, %s, %s, %s, TRUE) RETURNING id;
+        """, (name, role, message, rating))
+        tid = cur.fetchone()[0]
+        conn.commit()
+        return tid
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
+
+def delete_testimonial(testimonial_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM testimonials WHERE id=%s;", (testimonial_id,))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
