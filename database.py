@@ -4615,3 +4615,45 @@ def get_staff_attendance_for_salary(staff_id, month):
         "unpaid_leave": s["leave"],
         "total_deduction_days": s["absent"] + (s["half_day"] * 0.5) + s["leave"]
     }
+    # ============================================================
+# PHASE 21: TRANSPORT — MISSING FUNCTIONS
+# ============================================================
+def get_all_routes_with_stops():
+    """Saare active bus routes fetch karta hai, har route ke saath uske stops bhi."""
+    conn = get_conn()
+    cur = conn.cursor()
+    
+    # Saare active routes fetch karo
+    cur.execute("""
+        SELECT id, name, driver_name, driver_phone, vehicle_no,
+               capacity, fee_per_month, status
+        FROM bus_routes
+        WHERE status='active'
+        ORDER BY name;
+    """)
+    routes_raw = cur.fetchall()
+    
+    routes = []
+    for r in routes_raw:
+        route_id = r[0]
+        # Har route ke stops fetch karo
+        cur.execute("""
+            SELECT id, route_id, name, pickup_time, drop_time, sequence
+            FROM bus_stops
+            WHERE route_id=%s
+            ORDER BY sequence, name;
+        """, (route_id,))
+        stops = [{"id": s[0], "route_id": s[1], "name": s[2],
+                  "pickup_time": s[3], "drop_time": s[4], "sequence": s[5]}
+                 for s in cur.fetchall()]
+        
+        routes.append({
+            "id": r[0], "name": r[1], "driver_name": r[2],
+            "driver_phone": r[3], "vehicle_no": r[4],
+            "capacity": r[5], "fee_per_month": float(r[6] or 0),
+            "status": r[7], "stops": stops
+        })
+    
+    cur.close()
+    conn.close()
+    return routes
