@@ -4236,3 +4236,218 @@ def get_attempt_answers(attempt_id):
              "a": r[5], "b": r[6], "c": r[7], "d": r[8],
              "correct": r[9], "marks": r[10] or 1}
             for r in rows]
+# ============================================================
+# PHASE 50: YEAR-END REPORT CARD
+# ============================================================
+def _academic_year_range(year_label):
+    """'2024-25' -> (date, date)"""
+    parts = year_label.split("-")
+    start_year = int(parts[0])
+    return date(start_year, 4, 1), date(start_year + 1, 3, 31)
+
+def get_current_academic_year():
+    today = date.today()
+    if today.month >= 4:
+        return f"{today.year}-{str(today.year + 1)[-2:]}"
+    return f"{today.year - 1}-{str(today.year)[-2:]}"
+
+def get_academic_year_options():
+    today = date.today()
+    current_start = today.year if today.month >= 4 else today.year - 1
+    return [f"{y}-{str(y + 1)[-2:]}" for y in range(current_start, current_start - 5, -1)]
+
+def get_student_year_report(student_id, academic_year):
+    try:
+        start, end = _academic_year_range(academic_year)
+    except Exception:
+        return None
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    # Student info
+    cur.execute("""
+        SELECT id, name, roll_no, class_name, section, gender, dob,
+               parent_name, parent_phone, address, admission_date, photo_url
+        FROM students WHERE id=%s;
+    """, (student_id,))
+    srow = cur.fetchone()
+    if not srow:
+        cur.close()
+        conn.close()
+        return None
+
+    student = {
+        "id": srow[0], "name": srow[1], "roll": srow[2],
+        "class_name": srow[3], "section": srow[4],
+        "gender": srow[5], "dob": srow[6],
+        "parent_name": srow[7], "parent_phone": srow[8],
+        "address": srow[9], "admission_date": srow[10],
+        "photo_url": srow[11]
+    }
+
+    class_name = student["class_name"]
+
+    # Exams
+    cur.execute("""
+        SELECT id, name, exam_date, subjects, max_marks
+        FROM exams
+        WHERE class_name=%s AND exam_date BETWEEN %s AND %s
+        ORDER BY exam_date, id;
+    """, (class_name, start, end))
+    exams = [{"id": r[0], "name": r[1], "exam_date": r[2],
+              "subjects": r[3] or [], "max_marks": r[4] or 100}
+             for r in cur.fetchall()]
+
+    # Marks
+    exam_results = []
+    all_subjects_set = set()
+    total_obtained_all = 0
+    total_max_all = 0
+
+    for e in exams:
+        cur.execute("""
+            SELECT subject, obtained FROM marks
+            WHERE exam_id=%s AND student_id=%s;
+        """, (e["id"], student_id))
+        marks = {r[0]: r[1] for r in cur.fetchall()}
+        if not marks:
+            continue
+
+        obtained_total = sum(v for v in marks.values() if v is not None)
+        max_total = e["max_marks"] * len(e["subjects"])
+        pct = round((obtained_total / max_total * 100), 1) if max_total > 0 else 0
+
+        if pct >= 90: grade = "A+"
+        elif pct >= 80: grade = "A"
+        elif pct >= 70: grade = "B"
+        elif pct >= 60: grade = "C"
+        elif pct >= 33: grade = "D"
+        else: grade = "F"
+
+        exam_results.append({
+            "name": e["name"],
+            "date": e["exam_date"],
+            "marks": marks,
+            "obtained": obtained_total,
+            "max": max_total,
+            "percent": pct,
+            "grade": grade
+        })
+
+        total_obtained_all += obtained_total
+        total_max_all += max_total
+        for subj in e["subjects"]:
+            all_subjects_set.add(subj)
+
+    all_subjects = sorted(all_subjects_set)
+
+    # Subject averages
+    subject_averages = {}
+    for subj in all_subjects:
+        scores = []
+        for er in exam_results:
+            if subj in er["marks"] and er["marks"][subj] is not None:
+                exam_max = next((e["max_marks"] for e in exams if e["name"] == er["name"]), 100)
+                scores.append(er["marks"][subj] / exam_max * 100)
+        if scores:
+            subject_averages[subj] = round(sum(scores) / len(scores), 1)
+        else:
+            subject_averages[subj] = None
+
+    overall_pct = round((total_obtained_all / total_max_all * 100), 1) if total_max_all > 0 else 0
+
+    if overall_pct >= 90: overall_grade = "A+"
+    elif overall_pct >= 80: overall_grade = "A"
+    elif overall_pct >= 70: overall_grade = "B"
+    elif overall_pct >= 60: overall_grade = "C"
+    elif overall_pct >= 33: overall_grade = "D"
+    else: overall_grade = "F"
+
+    # Attendance
+    cur.execute("""
+        SELECT
+            COUNT(*) FILTER (WHERE status='present') AS present,
+            COUNT(*) FILTER (WHERE status='absent') AS absent,
+            COUNT(*) FILTER (WHERE status='late') AS late,
+            COUNT(*) FILTER (WHERE status='leave') AS leave_c,
+            COUNT(*) AS total
+        FROM attendance
+        WHERE student_id=%s AND date BETWEEN %s AND %s;
+    """, (student_id, start, end))
+    ar = cur.fetchone()
+    att_total = ar[4] or 0
+    att_present = ar[0] or 0
+    att_pct = round((att_present / att_total * 100), 1) if att_total > 0 else 0
+    attendance = {
+        "present": att_present, "absent": ar[1] or 0,
+        "late": ar[2] or 0, "leave": ar[3] or 0,
+        "total": att_total, "percent": att_pct
+    }
+
+    # Fee
+    start_month = start.strftime("%Y-%m")
+    end_month = end.strftime("%Y-%m")
+    cur.execute("""
+        SELECT COALESCE(SUM(total_amount), 0)
+        FROM bills WHERE student_id=%s AND month BETWEEN %s AND %s;
+    """, (student_id, start_month, end_month))
+    fee_billed = float(cur.fetchone()[0] or 0)
+
+    cur.execute("""
+        SELECT COALESCE(SUM(amount), 0)
+        FROM fee_payments WHERE student_id=%s AND month BETWEEN %s AND %s;
+    """, (student_id, start_month, end_month))
+    fee_paid = float(cur.fetchone()[0] or 0)
+
+    fee_cleared = (fee_paid >= fee_billed and fee_billed > 0) or fee_billed == 0
+    fee_status = {
+        "billed": fee_billed, "paid": fee_paid,
+        "pending": max(fee_billed - fee_paid, 0),
+        "cleared": fee_cleared
+    }
+
+    # Rank
+    cur.execute("""
+        SELECT s.id, COALESCE(SUM(m.obtained), 0) AS total
+        FROM students s
+        JOIN marks m ON m.student_id = s.id
+        JOIN exams e ON e.id = m.exam_id
+        WHERE s.status='active' AND s.class_name=%s
+          AND e.exam_date BETWEEN %s AND %s
+        GROUP BY s.id ORDER BY total DESC;
+    """, (class_name, start, end))
+    ranks = cur.fetchall()
+    class_rank = None
+    class_total = len(ranks)
+    for i, r in enumerate(ranks):
+        if r[0] == student_id:
+            class_rank = i + 1
+            break
+
+    # Remarks
+    cur.execute("""
+        SELECT teacher_remark, principal_remark, conduct
+        FROM report_card_remarks
+        WHERE student_id=%s AND academic_year=%s;
+    """, (student_id, academic_year))
+    rr = cur.fetchone()
+    remarks = {
+        "teacher_remark": rr[0] if rr else "",
+        "principal_remark": rr[1] if rr else "",
+        "conduct": rr[2] if rr else "Good"
+    }
+
+    cur.close()
+    conn.close()
+
+    return {
+        "student": student, "academic_year": academic_year,
+        "exams": exam_results, "all_subjects": all_subjects,
+        "subject_averages": subject_averages,
+        "total_obtained": total_obtained_all, "total_max": total_max_all,
+        "overall_percent": overall_pct, "overall_grade": overall_grade,
+        "attendance": attendance, "fee_status": fee_status,
+        "class_rank": class_rank, "class_total": class_total,
+        "remarks": remarks
+                                 }
