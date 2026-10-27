@@ -5026,9 +5026,9 @@ def get_student_year_report(student_id, academic_year):
         "class_rank": class_rank, "class_total": class_total,
         "remarks": remarks
     }
-    def get_student_hostel(student_id):
-        conn = get_conn(); cur = conn.cursor()
-        cur.execute("""
+def get_student_hostel(student_id):
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("""
         SELECT a.id, a.room_id, a.check_in, a.status, 
                r.room_no, r.floor, r.room_type, r.monthly_fee, 
                h.id AS hostel_id, h.name AS hostel_name, h.warden_name, h.warden_phone
