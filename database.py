@@ -5026,3 +5026,34 @@ def get_student_year_report(student_id, academic_year):
         "class_rank": class_rank, "class_total": class_total,
         "remarks": remarks
     }
+    def get_student_hostel(student_id):
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("""
+        SELECT a.id, a.room_id, a.check_in, a.status, 
+               r.room_no, r.floor, r.room_type, r.monthly_fee, 
+               h.id AS hostel_id, h.name AS hostel_name, h.warden_name, h.warden_phone
+        FROM hostel_allocations a
+        LEFT JOIN hostel_rooms r ON r.id = a.room_id
+        LEFT JOIN hostels h ON h.id = r.hostel_id
+        WHERE a.student_id=%s AND a.status='active';
+    """, (student_id,))
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    if not row: return None
+    return {
+        "id": row[0], "room_id": row[1], "check_in": row[2], 
+        "room_no": row[4], "floor": row[5], "room_type": row[6], 
+        "monthly_fee": float(row[7] or 0), "hostel_id": row[8], 
+        "hostel_name": row[9], "warden_name": row[10], "warden_phone": row[11]
+    }
+
+def get_student_discounts(student_id, active_only=True):
+    conn = get_conn(); cur = conn.cursor()
+    q = "SELECT sd.id, sd.student_id, sd.discount_type_id, sd.custom_value, sd.from_date, sd.to_date, sd.reason, sd.is_active, sd.created_at, dt.name, dt.category, dt.discount_type AS dtype, dt.value AS master_value FROM student_discounts sd JOIN discount_types dt ON dt.id = sd.discount_type_id WHERE sd.student_id=%s"
+    if active_only: 
+        q += " AND sd.is_active=TRUE AND (sd.to_date IS NULL OR sd.to_date >= CURRENT_DATE)"
+    q += " ORDER BY sd.created_at DESC;"
+    cur.execute(q, (student_id,))
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return [{"id": r[0], "student_id": r[1], "discount_type_id": r[2], "custom_value": float(r[3]) if r[3] else None, "from_date": r[4], "to_date": r[5], "reason": r[6], "is_active": r[7], "created_at": r[8], "name": r[9], "category": r[10], "dtype": r[11], "master_value": float(r[12] or 0), "effective_value": float(r[3]) if r[3] else float(r[12] or 0)} for r in rows]
