@@ -2505,3 +2505,20 @@ def delete_hostel(hostel_id):
     finally:
         cur.close()
         conn.close()
+def create_hostel_room(hostel_id, room_no, floor, room_type, monthly_fee, capacity):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO hostel_rooms (hostel_id, room_no, floor, room_type, monthly_fee, capacity, occupied)
+            VALUES (%s, %s, %s, %s, %s, %s, 0) RETURNING id;
+        """, (hostel_id, room_no, floor, room_type, monthly_fee, capacity))
+        rid = cur.fetchone()[0]
+        conn.commit()
+        return rid
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
