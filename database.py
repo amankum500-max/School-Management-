@@ -2493,3 +2493,15 @@ def update_hostel(hostel_id, name, warden_name, warden_phone, capacity):
     finally:
         cur.close()
         conn.close()
+def delete_hostel(hostel_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM hostels WHERE id=%s;", (hostel_id,))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
