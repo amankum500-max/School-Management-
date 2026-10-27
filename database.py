@@ -4565,3 +4565,53 @@ def count_active_staff():
     cur.close()
     conn.close()
     return n
+# ============================================================
+# PHASE 39: STAFF ATTENDANCE FOR SALARY
+# ============================================================
+def get_staff_attendance_summary(staff_id, month):
+    """Ek staff ka monthly attendance summary"""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT
+            COUNT(*) FILTER (WHERE status='present') AS present,
+            COUNT(*) FILTER (WHERE status='absent') AS absent,
+            COUNT(*) FILTER (WHERE status='half_day') AS half_day,
+            COUNT(*) FILTER (WHERE status='leave') AS leave_c,
+            COUNT(*) FILTER (WHERE status='holiday') AS holiday,
+            COUNT(*) AS total
+        FROM staff_attendance
+        WHERE staff_id=%s AND TO_CHAR(date, 'YYYY-MM')=%s;
+    """, (staff_id, month))
+    r = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    present = r[0] or 0
+    absent = r[1] or 0
+    half = r[2] or 0
+    leave_c = r[3] or 0
+    total_working = present + absent + half + leave_c
+    
+    if total_working > 0:
+        pct = round(((present + half * 0.5) / total_working) * 100, 1)
+    else:
+        pct = 0
+
+    return {
+        "present": present, "absent": absent, "half_day": half,
+        "leave": leave_c, "holiday": r[4] or 0,
+        "total_marked": r[5] or 0,
+        "working_days": total_working,
+        "percent": pct
+    }
+
+def get_staff_attendance_for_salary(staff_id, month):
+    """Salary deduction calculation — absent days + half days"""
+    s = get_staff_attendance_summary(staff_id, month)
+    return {
+        "absent_days": s["absent"],
+        "half_days": s["half_day"],
+        "unpaid_leave": s["leave"],
+        "total_deduction_days": s["absent"] + (s["half_day"] * 0.5) + s["leave"]
+    }
