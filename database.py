@@ -3569,3 +3569,36 @@ def delete_staff_attendance(staff_id, date_str):
     finally:
         cur.close()
         conn.close()
+def get_staff_attendance_month_matrix(month):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Saare active staff ki list nikaalo
+        cur.execute("SELECT id, name, role FROM staff WHERE status='active' ORDER BY role, name;")
+        staff_list = [{"id": r[0], "name": r[1], "role": r[2]} for r in cur.fetchall()]
+        
+        # Us mahine ki saari attendance nikaalo
+        cur.execute("""
+            SELECT staff_id, TO_CHAR(date, 'YYYY-MM-DD'), status
+            FROM staff_attendance
+            WHERE TO_CHAR(date, 'YYYY-MM') = %s;
+        """, (month,))
+        
+        attendance_data = {}
+        for r in cur.fetchall():
+            staff_id = r[0]
+            date_str = r[1]
+            status = r[2]
+            if staff_id not in attendance_data:
+                attendance_data[staff_id] = {}
+            attendance_data[staff_id][date_str] = status
+            
+        return {
+            "staff_list": staff_list,
+            "attendance_data": attendance_data
+        }
+    except Exception:
+        return {"staff_list": [], "attendance_data": {}}
+    finally:
+        cur.close()
+        conn.close()
