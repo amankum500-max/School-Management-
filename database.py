@@ -3823,3 +3823,34 @@ def create_leave_application(staff_id, leave_type, start_date, end_date, reason)
     finally:
         cur.close()
         conn.close()
+def get_leave_applications(staff_id=None, status=None):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        q = """
+            SELECT l.id, l.staff_id, s.name, l.leave_type, l.start_date, l.end_date, l.reason, l.status, l.created_at
+            FROM staff_leaves l
+            JOIN staff s ON s.id = l.staff_id
+            WHERE 1=1
+        """
+        params = []
+        if staff_id:
+            q += " AND l.staff_id=%s"
+            params.append(staff_id)
+        if status:
+            q += " AND l.status=%s"
+            params.append(status)
+        q += " ORDER BY l.created_at DESC;"
+        
+        cur.execute(q, tuple(params))
+        rows = cur.fetchall()
+        return [{
+            "id": r[0], "staff_id": r[1], "name": r[2], "leave_type": r[3],
+            "start_date": r[4], "end_date": r[5], "reason": r[6],
+            "status": r[7], "created_at": r[8]
+        } for r in rows]
+    except Exception:
+        return []
+    finally:
+        cur.close()
+        conn.close()
