@@ -8,7 +8,8 @@ from database import (
     get_fee_structures, create_fee_structure, delete_fee_structure,
     create_fee_payment, get_payment, get_payments, delete_payment,
     total_collected, get_defaulters, pending_amount_for_student,
-    get_student, get_students, get_classes_list
+    get_student, get_students, get_classes_list,
+    get_receipts_for_bulk_print  # ✅ FIX 1: Missing function import add kiya
 )
 
 fees_bp = Blueprint("fees", __name__, url_prefix="/fees")
@@ -79,7 +80,7 @@ def collect():
                 int(data["student_id"]), data["fee_type"],
                 float(data["amount"]), data["month"],
                 data.get("mode") or "cash", data.get("note") or "",
-                session["admin_id"]
+                session.get("admin_id") # ✅ FIX 2: session KeyError fix kiya
             )
             flash(f"Payment recorded — Receipt {res['receipt_no']}", "success")
             return redirect(url_for("fees.receipt", payment_id=res["id"]))
@@ -114,28 +115,36 @@ def receipt(payment_id):
 def defaulters():
     month = request.args.get("month") or datetime.now().strftime("%Y-%m")
     rows = get_defaulters(month)
+    
+    # ✅ FIX 3: None values se TypeError aane se bachaya
+    processed_rows = [
+        {"id": r[0], "name": r[1], "roll": r[2], "class_name": r[3],
+         "section": r[4], "phone": r[5],
+         "due": r[6] or 0, "paid": r[7] or 0, 
+         "pending": (r[6] or 0) - (r[7] or 0)}
+        for r in rows
+    ]
+    
     return render_template(
         "fees/defaulters.html",
         month=month,
-        rows=[
-            {"id": r[0], "name": r[1], "roll": r[2], "class_name": r[3],
-             "section": r[4], "phone": r[5],
-             "due": r[6], "paid": r[7], "pending": r[6]-r[7]}
-            for r in rows
-        ],
-        total_pending=sum(r[6]-r[7] for r in rows)
+        rows=processed_rows,
+        total_pending=sum(item["pending"] for item in processed_rows)
     )
+
 @fees_bp.route("/bulk-receipts")
 @login_required
 def bulk_receipts():
     month = request.args.get("month") or datetime.now().strftime("%Y-%m")
     class_name = request.args.get("class", "").strip()
     receipts = get_receipts_for_bulk_print(month, class_name or None)
-    from database import get_classes_list
+    
+    # ✅ FIX 4: Duplicate import hataya
     return render_template("fees/bulk_receipts.html",
                            receipts=receipts, month=month,
                            classes=get_classes_list(),
                            selected_class=class_name)
+
 # ---------- Delete payment ----------
 @fees_bp.route("/payment/<int:pid>/delete", methods=["POST"])
 @login_required
