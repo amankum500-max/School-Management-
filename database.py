@@ -3658,3 +3658,87 @@ def get_leave_types():
     finally:
         cur.close()
         conn.close()
+        # ============================================================
+# LEAVE MANAGEMENT (For leave.py)
+# ============================================================
+def get_leave_types():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, name, max_days_per_year, is_paid FROM leave_types ORDER BY name;")
+        rows = cur.fetchall()
+        return [{"id": r[0], "name": r[1], "max_days": r[2], "is_paid": r[3]} for r in rows]
+    except Exception:
+        return [
+            {"id": 1, "name": "Casual Leave", "max_days": 12, "is_paid": True},
+            {"id": 2, "name": "Sick Leave", "max_days": 10, "is_paid": True}
+        ]
+    finally:
+        cur.close()
+        conn.close()
+
+def apply_leave(staff_id, leave_type, start_date, end_date, reason):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO staff_leaves (staff_id, leave_type, start_date, end_date, reason, status)
+            VALUES (%s,%s,%s,%s,%s,'pending') RETURNING id;
+        """, (staff_id, leave_type, start_date, end_date, reason))
+        lid = cur.fetchone()[0]
+        conn.commit()
+        return lid
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
+
+def get_leaves(staff_id=None, status=None):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        q = "SELECT l.id, l.staff_id, s.name, l.leave_type, l.start_date, l.end_date, l.reason, l.status FROM staff_leaves l JOIN staff s ON s.id=l.staff_id WHERE 1=1"
+        params = []
+        if staff_id:
+            q += " AND l.staff_id=%s"
+            params.append(staff_id)
+        if status:
+            q += " AND l.status=%s"
+            params.append(status)
+        q += " ORDER BY l.created_at DESC;"
+        cur.execute(q, tuple(params))
+        rows = cur.fetchall()
+        return [{"id": r[0], "staff_id": r[1], "name": r[2], "leave_type": r[3], "start_date": r[4], "end_date": r[5], "reason": r[6], "status": r[7]} for r in rows]
+    finally:
+        cur.close()
+        conn.close()
+
+def update_leave_status(leave_id, status):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE staff_leaves SET status=%s WHERE id=%s;", (status, leave_id))
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
+
+def delete_leave(leave_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM staff_leaves WHERE id=%s;", (leave_id,))
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
