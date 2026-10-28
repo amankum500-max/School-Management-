@@ -3270,3 +3270,38 @@ def get_system_stats():
         return {"total_students": 0, "total_staff": 0, "status": "Error"}
     finally:
         cur.close(); conn.close()
+        # ============================================================
+# DISCOUNTS MODULE (MISSING FUNCTIONS)
+# ============================================================
+def delete_discount_type(discount_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM discounts WHERE id=%s;", (discount_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"Error deleting discount: {e}")
+        return False
+    finally:
+        cur.close(); conn.close()
+
+def create_discount_type(name, category, amount, is_percentage=False):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO discounts (name, category, amount, is_percentage) VALUES (%s, %s, %s, %s) RETURNING id;", (name, category, amount, is_percentage))
+        did = cur.fetchone()[0]
+        conn.commit()
+        return did
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def get_discount_types():
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, name, category, amount, is_percentage FROM discounts ORDER BY id DESC;")
+        return cur.fetchall()
+    finally:
+        cur.close(); conn.close()
