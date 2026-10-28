@@ -3270,7 +3270,7 @@ def get_system_stats():
         return {"total_students": 0, "total_staff": 0, "status": "Error"}
     finally:
         cur.close(); conn.close()
-        # ============================================================
+# ============================================================
 # DISCOUNTS MODULE (MISSING FUNCTIONS)
 # ============================================================
 def delete_discount_type(discount_id):
