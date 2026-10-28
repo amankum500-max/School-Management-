@@ -3806,3 +3806,20 @@ def count_working_days(start_date, end_date):
             days += 1
         current += timedelta(days=1)
     return days
+def create_leave_application(staff_id, leave_type, start_date, end_date, reason):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO staff_leaves (staff_id, leave_type, start_date, end_date, reason, status)
+            VALUES (%s, %s, %s, %s, %s, 'pending') RETURNING id;
+        """, (staff_id, leave_type, start_date, end_date, reason))
+        lid = cur.fetchone()[0]
+        conn.commit()
+        return lid
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
