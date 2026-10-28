@@ -3788,3 +3788,21 @@ def get_or_init_leave_balance(staff_id, year=None):
     finally:
         cur.close()
         conn.close()
+def count_working_days(start_date, end_date):
+    from datetime import datetime, timedelta
+    if isinstance(start_date, str):
+        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+    if isinstance(end_date, str):
+        end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+    
+    if start_date > end_date:
+        return 0
+        
+    days = 0
+    current = start_date
+    while current <= end_date:
+        # weekday() mein 6 matlab Sunday hota hai
+        if current.weekday() != 6: 
+            days += 1
+        current += timedelta(days=1)
+    return days
