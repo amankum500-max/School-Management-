@@ -1,7 +1,7 @@
 """
 School Management System — Complete Database Layer
 ====================================================
-All phases combined into single database.py
+All modules combined into single database.py
 """
 
 import os
@@ -127,6 +127,9 @@ def get_admin(admin_id):
     if not row: return None
     return {"id": row[0], "username": row[1], "full_name": row[2], "role": row[3], "is_active": row[4], "created_at": row[5]}
 
+def get_admin_by_id(admin_id):
+    return get_admin(admin_id)
+
 def update_admin_profile(admin_id, full_name, username):
     conn = get_conn(); cur = conn.cursor()
     try:
@@ -161,6 +164,98 @@ def log_audit(admin_id, username, action, method=None, path=None, details=None):
         conn.commit(); cur.close(); conn.close()
     except Exception:
         pass
+
+def get_audit_logs(limit=100):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, admin_id, admin_username, action, method, path, details, created_at FROM audit_logs ORDER BY created_at DESC LIMIT %s;", (limit,))
+        rows = cur.fetchall()
+        return [{"id": r[0], "admin_id": r[1], "admin_username": r[2], "action": r[3], "method": r[4], "path": r[5], "details": r[6], "created_at": r[7]} for r in rows]
+    finally:
+        cur.close(); conn.close()
+
+# Admin Management module extra functions
+def create_admin_user(username, password, full_name, role="admin"):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO admins (username, password_hash, full_name, role, is_active) VALUES (%s, %s, %s, %s, TRUE) RETURNING id;", (username, generate_password_hash(password), full_name, role))
+        uid = cur.fetchone()[0]; conn.commit(); return uid
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def update_admin_user(admin_id, username, full_name, role):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE admins SET username=%s, full_name=%s, role=%s WHERE id=%s RETURNING id;", (username, full_name, role, admin_id))
+        res = cur.fetchone(); conn.commit()
+        return res[0] if res else None
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def delete_admin_user(admin_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM admins WHERE id=%s;", (admin_id,))
+        conn.commit()
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def reset_admin_password(admin_id, new_password):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE admins SET password_hash=%s WHERE id=%s RETURNING id;", (generate_password_hash(new_password), admin_id))
+        res = cur.fetchone(); conn.commit()
+        return res[0] if res else None
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def toggle_admin_status(admin_id, is_active):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE admins SET is_active=%s WHERE id=%s;", (_to_bool(is_active), admin_id))
+        conn.commit()
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+# Password Reset Functions
+def create_password_reset_token(admin_id, token):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO password_resets (admin_id, token, expires_at) VALUES (%s, %s, NOW() + INTERVAL '1 hour') RETURNING id;", (admin_id, token))
+        rid = cur.fetchone()[0]; conn.commit(); return rid
+    except Exception:
+        conn.rollback(); raise
+    finally: cur.close(); conn.close()
+
+def verify_reset_token(token):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT admin_id FROM password_resets WHERE token=%s AND expires_at > NOW() AND used=FALSE LIMIT 1;", (token,))
+        row = cur.fetchone()
+        return row[0] if row else None
+    finally: cur.close(); conn.close()
+
+def update_password_by_token(token, new_password):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        admin_id = verify_reset_token(token)
+        if not admin_id: return False
+        cur.execute("UPDATE admins SET password_hash=%s WHERE id=%s;", (generate_password_hash(new_password), admin_id))
+        cur.execute("UPDATE password_resets SET used=TRUE WHERE token=%s;", (token,))
+        conn.commit(); return True
+    except Exception:
+        conn.rollback(); return False
+    finally: cur.close(); conn.close()
 
 # ============================================================
 # PHASE 2 — STUDENTS
@@ -1042,7 +1137,7 @@ def check_bills_exist(month, class_name=None):
     return n
 
 # ============================================================
-# PHASE 18, 19, 20, 21, 22 — TIMETABLE, SALARY, HOMEWORK, TRANSPORT, EXPENSES
+# PHASE 18, 19, 20 — TIMETABLE, SALARY, HOMEWORK
 # ============================================================
 def get_timetable_grid(class_name, section=''):
     conn = get_conn(); cur = conn.cursor()
@@ -1207,6 +1302,9 @@ def count_homework_this_week():
     cur.close(); conn.close()
     return n
 
+# ============================================================
+# PHASE 21, 22 — TRANSPORT & EXPENSES
+# ============================================================
 def create_bus_route(data):
     conn = get_conn(); cur = conn.cursor()
     cur.execute("INSERT INTO bus_routes (name, driver_name, driver_phone, vehicle_no, capacity, fee_per_month, status) VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id;", (data["name"], data.get("driver_name") or None, data.get("driver_phone") or None, data.get("vehicle_no") or None, int(data.get("capacity") or 40), float(data.get("fee_per_month") or 0), data.get("status") or "active"))
@@ -1884,14 +1982,11 @@ def get_students_with_allergies():
 # PHASE 29 — ALERTS & NOTIFICATIONS
 # ============================================================
 def create_custom_alert(data, admin_id):
-    if not data or not data.get("title"):
-        raise ValueError("Alert title is required")
+    if not data or not data.get("title"): raise ValueError("Alert title is required")
     conn = get_conn(); cur = conn.cursor()
     try:
         cur.execute("INSERT INTO custom_alerts (title, message, alert_type, target, is_active, expires_at, created_by) VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id;", (data["title"].strip(), (data.get("message") or "").strip() or None, data.get("alert_type") or "info", data.get("target") or "admin", _to_bool(data.get("is_active"), default=True), data.get("expires_at") or None, admin_id))
-        aid = cur.fetchone()[0]
-        conn.commit()
-        return aid
+        aid = cur.fetchone()[0]; conn.commit(); return aid
     finally:
         cur.close(); conn.close()
 
@@ -2202,7 +2297,7 @@ def get_student_year_report(student_id, academic_year):
     return {"student": student, "academic_year": academic_year, "exams": exam_results, "all_subjects": all_subjects, "subject_averages": subject_averages, "total_obtained": total_obtained_all, "total_max": total_max_all, "overall_percent": overall_pct, "overall_grade": overall_grade, "attendance": attendance, "fee_status": fee_status, "class_rank": class_rank, "class_total": class_total, "remarks": remarks}
 
 # ============================================================
-# EXTRA MODULES: HOSTEL, LEAVE, DISCOUNTS, VISITORS, PAYMENTS
+# EXTRA MODULES: HOSTEL, DISCOUNTS, VISITORS, PAYMENTS, PUBLIC, AUTOMATION
 # ============================================================
 def get_student_hostel(student_id):
     conn = get_conn(); cur = conn.cursor()
@@ -2236,12 +2331,42 @@ def get_hostels():
     cur.close(); conn.close()
     return [{"id": r[0], "name": r[1], "warden_name": r[2], "warden_phone": r[3], "capacity": r[4]} for r in rows]
 
+def get_hostel(hostel_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, name, warden_name, warden_phone, capacity FROM hostels WHERE id=%s;", (hostel_id,))
+        row = cur.fetchone()
+        return {"id": row[0], "name": row[1], "warden_name": row[2], "warden_phone": row[3], "capacity": row[4]} if row else None
+    finally:
+        cur.close(); conn.close()
+
 def create_hostel(name, warden_name, warden_phone, capacity):
     conn = get_conn(); cur = conn.cursor()
     cur.execute("INSERT INTO hostels (name, warden_name, warden_phone, capacity) VALUES (%s,%s,%s,%s) RETURNING id;", (name, warden_name, warden_phone, capacity))
     hid = cur.fetchone()[0]
     conn.commit(); cur.close(); conn.close()
     return hid
+
+def update_hostel(hostel_id, name, warden_name, warden_phone, capacity):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE hostels SET name=%s, warden_name=%s, warden_phone=%s, capacity=%s WHERE id=%s RETURNING id;", (name, warden_name, warden_phone, capacity, hostel_id))
+        res = cur.fetchone(); conn.commit()
+        return res[0] if res else None
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def delete_hostel(hostel_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM hostels WHERE id=%s;", (hostel_id,))
+        conn.commit()
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
 
 def get_hostel_rooms(hostel_id=None):
     conn = get_conn(); cur = conn.cursor()
@@ -2254,7 +2379,37 @@ def get_hostel_rooms(hostel_id=None):
     cur.close(); conn.close()
     return [{"id": r[0], "hostel_id": r[1], "room_no": r[2], "floor": r[3], "room_type": r[4], "monthly_fee": float(r[5] or 0), "capacity": r[6], "occupied": r[7]} for r in rows]
 
-def allocate_hostel(student_id, room_id):
+def create_hostel_room(hostel_id, room_no, floor, room_type, monthly_fee, capacity):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO hostel_rooms (hostel_id, room_no, floor, room_type, monthly_fee, capacity, occupied) VALUES (%s, %s, %s, %s, %s, %s, 0) RETURNING id;", (hostel_id, room_no, floor, room_type, monthly_fee, capacity))
+        rid = cur.fetchone()[0]; conn.commit(); return rid
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def get_hostel_room(room_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, hostel_id, room_no, floor, room_type, monthly_fee, capacity, occupied FROM hostel_rooms WHERE id=%s;", (room_id,))
+        row = cur.fetchone()
+        if not row: return None
+        return {"id": row[0], "hostel_id": row[1], "room_no": row[2], "floor": row[3], "room_type": row[4], "monthly_fee": float(row[5] or 0), "capacity": row[6], "occupied": row[7]}
+    finally:
+        cur.close(); conn.close()
+
+def delete_hostel_room(room_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM hostel_rooms WHERE id=%s;", (room_id,))
+        conn.commit()
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def allocate_room(student_id, room_id):
     conn = get_conn(); cur = conn.cursor()
     try:
         cur.execute("INSERT INTO hostel_allocations (student_id, room_id, status) VALUES (%s,%s,'active');", (student_id, room_id))
@@ -2264,7 +2419,10 @@ def allocate_hostel(student_id, room_id):
         conn.rollback(); return False
     finally: cur.close(); conn.close()
 
-def vacate_hostel(student_id):
+def allocate_hostel(student_id, room_id):
+    return allocate_room(student_id, room_id)
+
+def vacate_room(student_id):
     conn = get_conn(); cur = conn.cursor()
     try:
         cur.execute("SELECT room_id FROM hostel_allocations WHERE student_id=%s AND status='active';", (student_id,))
@@ -2278,29 +2436,40 @@ def vacate_hostel(student_id):
         conn.rollback(); return False
     finally: cur.close(); conn.close()
 
-def apply_leave(staff_id, leave_type, start_date, end_date, reason):
-    conn = get_conn(); cur = conn.cursor()
-    cur.execute("INSERT INTO staff_leaves (staff_id, leave_type, start_date, end_date, reason, status) VALUES (%s,%s,%s,%s,%s,'pending') RETURNING id;", (staff_id, leave_type, start_date, end_date, reason))
-    lid = cur.fetchone()[0]
-    conn.commit(); cur.close(); conn.close()
-    return lid
+def vacate_hostel(student_id):
+    return vacate_room(student_id)
 
-def get_leaves(staff_id=None, status=None):
-    conn = get_conn(); cur = conn.cursor()
-    q = "SELECT l.id, l.staff_id, s.name, l.leave_type, l.start_date, l.end_date, l.reason, l.status FROM staff_leaves l JOIN staff s ON s.id=l.staff_id WHERE 1=1"
-    params = []
-    if staff_id: q += " AND l.staff_id=%s"; params.append(staff_id)
-    if status: q += " AND l.status=%s"; params.append(status)
-    q += " ORDER BY l.created_at DESC;"
-    cur.execute(q, tuple(params))
-    rows = cur.fetchall()
-    cur.close(); conn.close()
-    return [{"id": r[0], "staff_id": r[1], "name": r[2], "leave_type": r[3], "start_date": r[4], "end_date": r[5], "reason": r[6], "status": r[7]} for r in rows]
+def checkout_student(student_id):
+    return vacate_room(student_id)
 
-def update_leave_status(leave_id, status):
+def get_room_inmates(room_id):
     conn = get_conn(); cur = conn.cursor()
-    cur.execute("UPDATE staff_leaves SET status=%s WHERE id=%s;", (status, leave_id))
-    conn.commit(); cur.close(); conn.close()
+    try:
+        cur.execute("SELECT s.id, s.name, s.roll_no, s.class_name, s.section, s.parent_phone, a.check_in FROM hostel_allocations a JOIN students s ON s.id = a.student_id WHERE a.room_id=%s AND a.status='active' ORDER BY s.name;", (room_id,))
+        rows = cur.fetchall()
+        return [{"id": r[0], "name": r[1], "roll_no": r[2], "class_name": r[3], "section": r[4], "parent_phone": r[5], "check_in": r[6]} for r in rows]
+    finally:
+        cur.close(); conn.close()
+
+def get_hostel_inmates(hostel_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT s.id, s.name, s.roll_no, s.class_name, s.section, s.parent_phone, r.room_no FROM hostel_allocations a JOIN students s ON s.id = a.student_id JOIN hostel_rooms r ON r.id = a.room_id WHERE r.hostel_id = %s AND a.status='active' ORDER BY r.room_no, s.name;", (hostel_id,))
+        rows = cur.fetchall()
+        return [{"id": r[0], "name": r[1], "roll_no": r[2], "class_name": r[3], "section": r[4], "parent_phone": r[5], "room_no": r[6]} for r in rows]
+    finally:
+        cur.close(); conn.close()
+
+def get_hostel_stats():
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT COUNT(*) FROM hostels;"); total_hostels = cur.fetchone()[0] or 0
+        cur.execute("SELECT COUNT(*), COALESCE(SUM(capacity), 0), COALESCE(SUM(occupied), 0) FROM hostel_rooms;")
+        row = cur.fetchone(); total_rooms = row[0] or 0; total_capacity = row[1] or 0; total_occupied = row[2] or 0
+        cur.execute("SELECT COUNT(*) FROM hostel_allocations WHERE status='active';"); total_students = cur.fetchone()[0] or 0
+        return {"total_hostels": total_hostels, "total_rooms": total_rooms, "total_capacity": total_capacity, "total_occupied": total_occupied, "available_beds": total_capacity - total_occupied, "total_students": total_students}
+    finally:
+        cur.close(); conn.close()
 
 def get_discount_types():
     conn = get_conn(); cur = conn.cursor()
@@ -2347,1323 +2516,463 @@ def checkout_visitor(visitor_id):
     conn = get_conn(); cur = conn.cursor()
     cur.execute("UPDATE visitors SET check_out=NOW(), status='out' WHERE id=%s;", (visitor_id,))
     conn.commit(); cur.close(); conn.close()
-    # ============================================================
-# ADMIN USERS MANAGEMENT (Clean & Fixed)
+
+def create_online_payment(student_id, amount, month=None, purpose=None, razorpay_order_id=None):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO online_payments (student_id, amount, month, purpose, razorpay_order_id, status) VALUES (%s, %s, %s, %s, %s, 'pending') RETURNING id;", (student_id, amount, month, purpose, razorpay_order_id))
+        pid = cur.fetchone()[0]; conn.commit(); return pid
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def update_online_payment_status(payment_id, status, razorpay_payment_id=None):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        if status == 'paid': cur.execute("UPDATE online_payments SET status=%s, razorpay_payment_id=%s, paid_at=NOW() WHERE id=%s;", (status, razorpay_payment_id, payment_id))
+        else: cur.execute("UPDATE online_payments SET status=%s WHERE id=%s;", (status, payment_id))
+        conn.commit(); return True
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def get_online_payment_by_order(order_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, student_id, amount, month, purpose, razorpay_order_id, razorpay_payment_id, status, created_at, paid_at FROM online_payments WHERE razorpay_order_id=%s LIMIT 1;", (order_id,))
+        row = cur.fetchone()
+        if not row: return None
+        return {"id": row[0], "student_id": row[1], "amount": float(row[2] or 0), "month": row[3], "purpose": row[4], "order_id": row[5], "payment_id": row[6], "status": row[7], "created_at": row[8], "paid_at": row[9]}
+    finally:
+        cur.close(); conn.close()
+
+def mark_online_payment_success(payment_id, razorpay_payment_id=None):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE online_payments SET status='paid', razorpay_payment_id=%s, paid_at=NOW() WHERE id=%s;", (razorpay_payment_id, payment_id))
+        conn.commit(); return True
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def mark_online_payment_failed(payment_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE online_payments SET status='failed' WHERE id=%s;", (payment_id,))
+        conn.commit(); return True
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def get_online_payments_summary():
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT COUNT(*) FILTER (WHERE status='paid') AS paid_count, COALESCE(SUM(amount) FILTER (WHERE status='paid'), 0) AS total_paid, COUNT(*) FILTER (WHERE status='pending') AS pending_count, COALESCE(SUM(amount) FILTER (WHERE status='pending'), 0) AS total_pending, COUNT(*) AS total_transactions FROM online_payments;")
+        row = cur.fetchone()
+        return {"paid_count": row[0] or 0, "total_paid": float(row[1] or 0), "pending_count": row[2] or 0, "total_pending": float(row[3] or 0), "total_transactions": row[4] or 0}
+    except Exception:
+        return {"paid_count": 0, "total_paid": 0.0, "pending_count": 0, "total_pending": 0.0, "total_transactions": 0}
+    finally:
+        cur.close(); conn.close()
+
 # ============================================================
-def get_admin_by_id(admin_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT id, username, full_name, role, is_active, created_at
-        FROM admins WHERE id=%s;
-    """, (admin_id,))
-    row = cur.fetchone()
-    cur.close()
-    conn.close()
-    if not row:
-        return None
-    return {"id": row[0], "username": row[1], "full_name": row[2],
-            "role": row[3], "is_active": row[4], "created_at": row[5]}
-
-def create_admin_user(username, password, full_name, role="admin"):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            INSERT INTO admins (username, password_hash, full_name, role, is_active)
-            VALUES (%s, %s, %s, %s, TRUE) RETURNING id;
-        """, (username, generate_password_hash(password), full_name, role))
-        uid = cur.fetchone()[0]
-        conn.commit()
-        return uid
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-
-def update_admin_user(admin_id, username, full_name, role):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            UPDATE admins 
-            SET username=%s, full_name=%s, role=%s 
-            WHERE id=%s RETURNING id;
-        """, (username, full_name, role, admin_id))
-        res = cur.fetchone()
-        conn.commit()
-        return res[0] if res else None
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-
-def delete_admin_user(admin_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("DELETE FROM admins WHERE id=%s;", (admin_id,))
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-
-def reset_admin_password(admin_id, new_password):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        pwd_hash = generate_password_hash(new_password)
-        cur.execute("""
-            UPDATE admins SET password_hash=%s 
-            WHERE id=%s RETURNING id;
-        """, (pwd_hash, admin_id))
-        res = cur.fetchone()
-        conn.commit()
-        return res[0] if res else None
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-
-def toggle_admin_status(admin_id, is_active):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("UPDATE admins SET is_active=%s WHERE id=%s;", (_to_bool(is_active), admin_id))
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-def get_audit_logs(limit=100):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            SELECT id, admin_id, admin_username, action, method, path, details, created_at
-            FROM audit_logs
-            ORDER BY created_at DESC
-            LIMIT %s;
-        """, (limit,))
-        rows = cur.fetchall()
-        return [{
-            "id": r[0], "admin_id": r[1], "admin_username": r[2], 
-            "action": r[3], "method": r[4], "path": r[5], 
-            "details": r[6], "created_at": r[7]
-        } for r in rows]
-    finally:
-        cur.close()
-        conn.close()
-def get_hostel(hostel_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("SELECT id, name, warden_name, warden_phone, capacity FROM hostels WHERE id=%s;", (hostel_id,))
-        row = cur.fetchone()
-        return {"id": row[0], "name": row[1], "warden_name": row[2], "warden_phone": row[3], "capacity": row[4]} if row else None
-    finally:
-        cur.close()
-        conn.close()
-def update_hostel(hostel_id, name, warden_name, warden_phone, capacity):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            UPDATE hostels SET 
-                name=%s, warden_name=%s, warden_phone=%s, capacity=%s 
-            WHERE id=%s RETURNING id;
-        """, (name, warden_name, warden_phone, capacity, hostel_id))
-        res = cur.fetchone()
-        conn.commit()
-        return res[0] if res else None
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-def delete_hostel(hostel_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("DELETE FROM hostels WHERE id=%s;", (hostel_id,))
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-def create_hostel_room(hostel_id, room_no, floor, room_type, monthly_fee, capacity):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            INSERT INTO hostel_rooms (hostel_id, room_no, floor, room_type, monthly_fee, capacity, occupied)
-            VALUES (%s, %s, %s, %s, %s, %s, 0) RETURNING id;
-        """, (hostel_id, room_no, floor, room_type, monthly_fee, capacity))
-        rid = cur.fetchone()[0]
-        conn.commit()
-        return rid
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-def get_hostel_room(room_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            SELECT id, hostel_id, room_no, floor, room_type, monthly_fee, capacity, occupied
-            FROM hostel_rooms WHERE id=%s;
-        """, (room_id,))
-        row = cur.fetchone()
-        if not row:
-            return None
-        return {
-            "id": row[0], "hostel_id": row[1], "room_no": row[2], 
-            "floor": row[3], "room_type": row[4], "monthly_fee": float(row[5] or 0), 
-            "capacity": row[6], "occupied": row[7]
-        }
-    finally:
-        cur.close()
-        conn.close()
-def delete_hostel_room(room_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("DELETE FROM hostel_rooms WHERE id=%s;", (room_id,))
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-def allocate_room(student_id, room_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("INSERT INTO hostel_allocations (student_id, room_id, status) VALUES (%s,%s,'active');", (student_id, room_id))
-        cur.execute("UPDATE hostel_rooms SET occupied = occupied + 1 WHERE id=%s;", (room_id,))
-        conn.commit()
-        return True
-    except Exception:
-        conn.rollback()
-        return False
-    finally:
-        cur.close()
-        conn.close()
-
-def vacate_room(student_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("SELECT room_id FROM hostel_allocations WHERE student_id=%s AND status='active';", (student_id,))
-        row = cur.fetchone()
-        if row:
-            cur.execute("UPDATE hostel_allocations SET status='vacated' WHERE student_id=%s AND status='active';", (student_id,))
-            cur.execute("UPDATE hostel_rooms SET occupied = GREATEST(occupied - 1, 0) WHERE id=%s;", (row[0],))
-            conn.commit()
-        return True
-    except Exception:
-        conn.rollback()
-        return False
-    finally:
-        cur.close()
-        conn.close()
-def checkout_student(student_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("SELECT room_id FROM hostel_allocations WHERE student_id=%s AND status='active';", (student_id,))
-        row = cur.fetchone()
-        if row:
-            room_id = row[0]
-            cur.execute("UPDATE hostel_allocations SET status='vacated' WHERE student_id=%s AND status='active';", (student_id,))
-            cur.execute("UPDATE hostel_rooms SET occupied = GREATEST(occupied - 1, 0) WHERE id=%s;", (room_id,))
-            conn.commit()
-            return True
-        return False
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-def get_room_inmates(room_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            SELECT s.id, s.name, s.roll_no, s.class_name, s.section, s.parent_phone, a.check_in
-            FROM hostel_allocations a
-            JOIN students s ON s.id = a.student_id
-            WHERE a.room_id=%s AND a.status='active'
-            ORDER BY s.name;
-        """, (room_id,))
-        rows = cur.fetchall()
-        return [{
-            "id": r[0], "name": r[1], "roll_no": r[2],
-            "class_name": r[3], "section": r[4],
-            "parent_phone": r[5], "check_in": r[6]
-        } for r in rows]
-    finally:
-        cur.close()
-        conn.close()
-def get_hostel_inmates(hostel_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            SELECT s.id, s.name, s.roll_no, s.class_name, s.section, s.parent_phone, r.room_no
-            FROM hostel_allocations a
-            JOIN students s ON s.id = a.student_id
-            JOIN hostel_rooms r ON r.id = a.room_id
-            WHERE r.hostel_id = %s AND a.status='active'
-            ORDER BY r.room_no, s.name;
-        """, (hostel_id,))
-        rows = cur.fetchall()
-        return [{
-            "id": r[0], "name": r[1], "roll_no": r[2],
-            "class_name": r[3], "section": r[4],
-            "parent_phone": r[5], "room_no": r[6]
-        } for r in rows]
-    finally:
-        cur.close()
-        conn.close()
-def get_hostel_stats():
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        # Hostels count
-        cur.execute("SELECT COUNT(*) FROM hostels;")
-        total_hostels = cur.fetchone()[0] or 0
-        
-        # Rooms count and capacity
-        cur.execute("SELECT COUNT(*), COALESCE(SUM(capacity), 0), COALESCE(SUM(occupied), 0) FROM hostel_rooms;")
-        row = cur.fetchone()
-        total_rooms = row[0] or 0
-        total_capacity = row[1] or 0
-        total_occupied = row[2] or 0
-        
-        # Active students in hostel
-        cur.execute("SELECT COUNT(*) FROM hostel_allocations WHERE status='active';")
-        total_students = cur.fetchone()[0] or 0
-        
-        return {
-            "total_hostels": total_hostels,
-            "total_rooms": total_rooms,
-            "total_capacity": total_capacity,
-            "total_occupied": total_occupied,
-            "available_beds": total_capacity - total_occupied,
-            "total_students": total_students
-        }
-    finally:
-        cur.close()
-        conn.close()
-def get_student_by_qr_data(qr_data):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        qr_data = str(qr_data).strip()
-        # QR code mein ya toh Student ID hoti hai ya Roll Number
-        cur.execute("""
-            SELECT id, name, roll_no, class_name, section, parent_phone
-            FROM students
-            WHERE (id::text = %s OR roll_no = %s) AND status='active'
-            LIMIT 1;
-        """, (qr_data, qr_data))
-        row = cur.fetchone()
-        if not row:
-            return None
-        return {
-            "id": row[0], "name": row[1], "roll_no": row[2],
-            "class_name": row[3], "section": row[4], "parent_phone": row[5]
-        }
-    finally:
-        cur.close()
-        conn.close()
-def get_today_attendance_status(student_id, date_str=None):
-    if not date_str:
-        date_str = date.today().isoformat()
-    
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            SELECT status FROM attendance 
-            WHERE student_id=%s AND date=%s 
-            LIMIT 1;
-        """, (student_id, date_str))
-        row = cur.fetchone()
-        return row[0] if row else None
-    finally:
-        cur.close()
-        conn.close()
-def get_class_students_for_qr(class_name, section=None):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        q = "SELECT id, name, roll_no, class_name, section FROM students WHERE status='active' AND class_name=%s"
-        params = [class_name]
-        
-        if section:
-            q += " AND section=%s"
-            params.append(section)
-            
-        q += " ORDER BY section, roll_no, name;"
-        cur.execute(q, tuple(params))
-        rows = cur.fetchall()
-        
-        return [{
-            "id": r[0], "name": r[1], "roll_no": r[2], 
-            "class_name": r[3], "section": r[4]
-        } for r in rows]
-    finally:
-        cur.close()
-        conn.close()
-def get_todays_attendance_summary(date_str=None):
-    if not date_str:
-        date_str = date.today().isoformat()
-
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            SELECT
-                COUNT(*) FILTER (WHERE status='present') AS present,
-                COUNT(*) FILTER (WHERE status='absent') AS absent,
-                COUNT(*) FILTER (WHERE status='late') AS late,
-                COUNT(*) FILTER (WHERE status='leave') AS leave_c,
-                COUNT(*) AS total
-            FROM attendance
-            WHERE date=%s;
-        """, (date_str,))
-        row = cur.fetchone()
-
-        if not row:
-            return {"present": 0, "absent": 0, "late": 0, "leave": 0, "total": 0}
-
-        return {
-            "present": row[0] or 0,
-            "absent": row[1] or 0,
-            "late": row[2] or 0,
-            "leave": row[3] or 0,
-            "total": row[4] or 0
-        }
-    finally:
-        cur.close()
-        conn.close()
-        # ============================================================
-# AUTOMATION & ANNUAL REPORTS (Missing Functions)
+# PUBLIC CONTENT & ADMISSIONS
 # ============================================================
-def get_automation_jobs():
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            SELECT id, job_name, job_type, target, message, schedule_time, status, last_run 
-            FROM automation_jobs 
-            ORDER BY created_at DESC;
-        """)
-        rows = cur.fetchall()
-        return [{
-            "id": r[0], "job_name": r[1], "job_type": r[2], "target": r[3],
-            "message": r[4], "schedule_time": r[5], "status": r[6], "last_run": r[7]
-        } for r in rows]
-    except Exception:
-        return [] # Table na ho toh empty list return kare
-    finally:
-        cur.close()
-        conn.close()
-
-def add_automation_job(job_name, job_type, target, message, schedule_time):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            INSERT INTO automation_jobs (job_name, job_type, target, message, schedule_time, status)
-            VALUES (%s, %s, %s, %s, %s, 'active') RETURNING id;
-        """, (job_name, job_type, target, message, schedule_time))
-        jid = cur.fetchone()[0]
-        conn.commit()
-        return jid
-    except Exception as e:
-        conn.rollback()
-        raise e
-    finally:
-        cur.close()
-        conn.close()
-
-def delete_automation_job(job_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("DELETE FROM automation_jobs WHERE id=%s;", (job_id,))
-        conn.commit()
-        return True
-    except Exception:
-        conn.rollback()
-        return False
-    finally:
-        cur.close()
-        conn.close()
-
-def toggle_automation_job(job_id, status):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("UPDATE automation_jobs SET status=%s WHERE id=%s;", (status, job_id))
-        conn.commit()
-        return True
-    except Exception:
-        conn.rollback()
-        return False
-    finally:
-        cur.close()
-        conn.close()
-
-def get_annual_report_data(year):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        # Total Students
-        cur.execute("SELECT COUNT(*) FROM students WHERE status='active';")
-        total_students = cur.fetchone()[0] or 0
-        
-        # Total Fees Collected
-        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM fee_payments WHERE month LIKE %s;", (f"{year}%",))
-        total_fees = float(cur.fetchone()[0] or 0)
-        
-        # Total Salaries Paid
-        cur.execute("SELECT COALESCE(SUM(net_amount), 0) FROM salary_records WHERE status='paid' AND month LIKE %s;", (f"{year}%",))
-        total_salaries = float(cur.fetchone()[0] or 0)
-
-        # Total Expenses
-        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE TO_CHAR(expense_date, 'YYYY') = %s;", (str(year),))
-        total_expenses = float(cur.fetchone()[0] or 0)
-
-        return {
-            "total_students": total_students,
-            "total_fees": total_fees,
-            "total_salaries": total_salaries,
-            "total_expenses": total_expenses,
-            "net_profit": total_fees - (total_salaries + total_expenses)
-        }
-    except Exception:
-        return {"total_students": 0, "total_fees": 0, "total_salaries": 0, "total_expenses": 0, "net_profit": 0}
-    finally:
-        cur.close()
-        conn.close()
-def get_annual_financial_summary(year):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        year_str = str(year)
-        
-        # Fees collected in the year
-        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM fee_payments WHERE month LIKE %s;", (f"{year_str}-%",))
-        fees_collected = float(cur.fetchone()[0] or 0)
-        
-        # Salaries paid in the year
-        cur.execute("SELECT COALESCE(SUM(net_amount), 0) FROM salary_records WHERE status='paid' AND month LIKE %s;", (f"{year_str}-%",))
-        salaries_paid = float(cur.fetchone()[0] or 0)
-        
-        # Expenses in the year (expense_date is a date column)
-        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE TO_CHAR(expense_date, 'YYYY') = %s;", (year_str,))
-        expenses_total = float(cur.fetchone()[0] or 0)
-        
-        total_outflow = salaries_paid + expenses_total
-        net_profit = fees_collected - total_outflow
-        
-        return {
-            "year": year,
-            "fees_collected": fees_collected,
-            "salaries_paid": salaries_paid,
-            "expenses_total": expenses_total,
-            "total_outflow": total_outflow,
-            "net_profit": net_profit,
-            "profit": net_profit >= 0
-        }
-    finally:
-        cur.close()
-        conn.close()
-def get_annual_student_summary(year):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        year_str = str(year)
-        
-        # Total active students currently
-        cur.execute("SELECT COUNT(*) FROM students WHERE status='active';")
-        total_active = cur.fetchone()[0] or 0
-        
-        # New admissions in the given year
-        cur.execute("SELECT COUNT(*) FROM students WHERE TO_CHAR(admission_date, 'YYYY') = %s;", (year_str,))
-        new_admissions = cur.fetchone()[0] or 0
-        
-        # Gender breakdown (optional but good for reports)
-        cur.execute("SELECT gender, COUNT(*) FROM students WHERE status='active' GROUP BY gender;")
-        gender_counts = {row[0] or 'Unknown': row[1] for row in cur.fetchall()}
-
-        return {
-            "year": year,
-            "total_active_students": total_active,
-            "new_admissions": new_admissions,
-            "gender_distribution": gender_counts
-        }
-    finally:
-        cur.close()
-        conn.close()
-def get_annual_academic_summary(year):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        year_str = str(year)
-
-        # 1. Total Exams in the year
-        cur.execute("SELECT COUNT(*) FROM exams WHERE TO_CHAR(exam_date, 'YYYY') = %s;", (year_str,))
-        total_exams = cur.fetchone()[0] or 0
-
-        # 2. Overall Attendance Percentage for the year
-        cur.execute("""
-            SELECT
-                COUNT(*) FILTER (WHERE status='present') AS present,
-                COUNT(*) FILTER (WHERE status IN ('present','absent','late','leave')) AS total
-            FROM attendance
-            WHERE TO_CHAR(date, 'YYYY') = %s;
-        """, (year_str,))
-        row = cur.fetchone()
-        present = row[0] or 0
-        total_att = row[1] or 0
-        att_percent = round((present / total_att * 100), 1) if total_att > 0 else 0
-
-        # 3. Total Marks Recorded (Academic activity)
-        cur.execute("""
-            SELECT COUNT(*)
-            FROM marks m
-            JOIN exams e ON e.id = m.exam_id
-            WHERE TO_CHAR(e.exam_date, 'YYYY') = %s;
-        """, (year_str,))
-        total_marks_entries = cur.fetchone()[0] or 0
-
-        return {
-            "year": year,
-            "total_exams": total_exams,
-            "overall_attendance_percent": att_percent,
-            "total_marks_entries": total_marks_entries
-        }
-    finally:
-        cur.close()
-        conn.close()
-def get_annual_attendance_summary(year):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        year_str = str(year)
-        
-        cur.execute("""
-            SELECT
-                COUNT(*) FILTER (WHERE status='present') AS present,
-                COUNT(*) FILTER (WHERE status='absent') AS absent,
-                COUNT(*) FILTER (WHERE status='late') AS late,
-                COUNT(*) FILTER (WHERE status='leave') AS leave_c,
-                COUNT(*) AS total
-            FROM attendance
-            WHERE TO_CHAR(date, 'YYYY') = %s;
-        """, (year_str,))
-        row = cur.fetchone()
-
-        if not row or row[4] == 0:
-            return {
-                "year": year, "present": 0, "absent": 0,
-                "late": 0, "leave": 0, "total": 0, "percent": 0
-            }
-
-        present = row[0] or 0
-        late = row[2] or 0
-        total = row[4] or 0
-        percent = round(((present + late * 0.5) / total) * 100, 1) if total > 0 else 0
-
-        return {
-            "year": year,
-            "present": present,
-            "absent": row[1] or 0,
-            "late": late,
-            "leave": row[3] or 0,
-            "total": total,
-            "percent": percent
-        }
-    finally:
-        cur.close()
-        conn.close()
-def get_annual_fee_defaulters_summary(year):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        year_str = str(year)
-        cur.execute("""
-            SELECT COUNT(*), COALESCE(SUM(pending), 0) FROM (
-                SELECT b.student_id, MAX(b.total_amount) - COALESCE((SELECT SUM(amount) FROM fee_payments WHERE student_id=b.student_id AND month LIKE %s), 0) AS pending
-                FROM bills b
-                WHERE b.month LIKE %s
-                GROUP BY b.student_id
-            ) t WHERE pending > 0;
-        """, (f"{year_str}-%", f"{year_str}-%"))
-        row = cur.fetchone()
-        return {
-            "year": year,
-            "total_defaulters": row[0] or 0,
-            "total_pending_amount": float(row[1] or 0)
-        }
-    finally:
-        cur.close()
-        conn.close()
-
-def get_annual_fee_collection_summary(year):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        year_str = str(year)
-        cur.execute("""
-            SELECT COALESCE(SUM(amount), 0), COUNT(*) FROM fee_payments WHERE month LIKE %s;
-        """, (f"{year_str}-%",))
-        row = cur.fetchone()
-        return {
-            "year": year,
-            "total_collected": float(row[0] or 0),
-            "total_transactions": row[1] or 0
-        }
-    finally:
-        cur.close()
-        conn.close()
-
-def get_annual_expense_summary(year):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        year_str = str(year)
-        cur.execute("""
-            SELECT category, SUM(amount) FROM expenses WHERE TO_CHAR(expense_date, 'YYYY') = %s GROUP BY category ORDER BY 2 DESC;
-        """, (year_str,))
-        rows = cur.fetchall()
-        cats = [{"category": r[0], "amount": float(r[1] or 0)} for r in rows]
-        return {
-            "year": year,
-            "total_expense": sum(c["amount"] for c in cats),
-            "categories": cats
-        }
-    finally:
-        cur.close()
-        conn.close()
 def create_enquiry(data):
-    conn = get_conn()
-    cur = conn.cursor()
+    conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("""
-            INSERT INTO enquiries (student_name, parent_name, phone, email, class_interested, message, status)
-            VALUES (%s, %s, %s, %s, %s, %s, 'new') RETURNING id;
-        """, (
-            data.get("student_name"), 
-            data.get("parent_name"), 
-            data.get("phone"), 
-            data.get("email"), 
-            data.get("class_interested"), 
-            data.get("message")
-        ))
-        eid = cur.fetchone()[0]
-        conn.commit()
-        return eid
+        cur.execute("INSERT INTO enquiries (student_name, parent_name, phone, email, class_interested, message, status) VALUES (%s, %s, %s, %s, %s, %s, 'new') RETURNING id;", (data.get("student_name"), data.get("parent_name"), data.get("phone"), data.get("email"), data.get("class_interested"), data.get("message")))
+        eid = cur.fetchone()[0]; conn.commit(); return eid
     except Exception:
-        conn.rollback()
-        raise
+        conn.rollback(); raise
     finally:
-        cur.close()
-        conn.close()
+        cur.close(); conn.close()
 
 def get_enquiries(status=None):
-    conn = get_conn()
-    cur = conn.cursor()
+    conn = get_conn(); cur = conn.cursor()
     try:
         q = "SELECT id, student_name, parent_name, phone, email, class_interested, message, status, created_at FROM enquiries"
         params = []
-        if status:
-            q += " WHERE status=%s"
-            params.append(status)
+        if status: q += " WHERE status=%s"; params.append(status)
         q += " ORDER BY created_at DESC;"
-        
         cur.execute(q, tuple(params))
         rows = cur.fetchall()
-        return [{
-            "id": r[0], "student_name": r[1], "parent_name": r[2], 
-            "phone": r[3], "email": r[4], "class_interested": r[5], 
-            "message": r[6], "status": r[7], "created_at": r[8]
-        } for r in rows]
+        return [{"id": r[0], "student_name": r[1], "parent_name": r[2], "phone": r[3], "email": r[4], "class_interested": r[5], "message": r[6], "status": r[7], "created_at": r[8]} for r in rows]
     finally:
-        cur.close()
-        conn.close()
-def get_testimonials(limit=10):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            SELECT id, name, role, message, rating, is_active, created_at
-            FROM testimonials
-            WHERE is_active = TRUE
-            ORDER BY created_at DESC
-            LIMIT %s;
-        """, (limit,))
-        rows = cur.fetchall()
-        return [{
-            "id": r[0], "name": r[1], "role": r[2], "message": r[3],
-            "rating": r[4], "is_active": r[5], "created_at": r[6]
-        } for r in rows]
-    except Exception:
-        # Agar database mein table nahi hai toh app crash na ho, khali list return kare
-        return []
-    finally:
-        cur.close()
-        conn.close()
-def get_gallery(limit=200):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            SELECT id, title, image_url, description, created_at
-            FROM gallery
-            ORDER BY created_at DESC
-            LIMIT %s;
-        """, (limit,))
-        rows = cur.fetchall()
-        return [{
-            "id": r[0], "title": r[1], "image_url": r[2], 
-            "description": r[3], "created_at": r[4]
-        } for r in rows]
-    except Exception:
-        # Agar table na ho toh app crash na ho
-        return []
-    finally:
-        cur.close()
-        conn.close()
+        cur.close(); conn.close()
 
-def add_gallery_item(title, image_url, description=""):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            INSERT INTO gallery (title, image_url, description)
-            VALUES (%s, %s, %s) RETURNING id;
-        """, (title, image_url, description))
-        gid = cur.fetchone()[0]
-        conn.commit()
-        return gid
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-def create_gallery_item(title, image_url, description="", category="General"):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            INSERT INTO gallery (title, image_url, description, category)
-            VALUES (%s, %s, %s, %s) RETURNING id;
-        """, (title, image_url, description, category))
-        gid = cur.fetchone()[0]
-        conn.commit()
-        return gid
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-
-def delete_gallery_item(item_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("DELETE FROM gallery WHERE id=%s;", (item_id,))
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-def get_gallery_categories():
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        # Agar gallery table mein category column hai
-        cur.execute("SELECT DISTINCT category FROM gallery WHERE category IS NOT NULL AND category != '';")
-        rows = cur.fetchall()
-        return [r[0] for r in rows]
-    except Exception:
-        # Agar column nahi hai toh default categories return kare
-        return ["Events", "Sports", "Academics", "Campus", "Other"]
-    finally:
-        cur.close()
-        conn.close()
-
-def get_public_notices(limit=5):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            SELECT id, title, content, created_at
-            FROM notices
-            WHERE is_public = TRUE AND published = TRUE
-            ORDER BY created_at DESC
-            LIMIT %s;
-        """, (limit,))
-        rows = cur.fetchall()
-        return [{
-            "id": r[0], "title": r[1], "content": r[2], "created_at": r[3]
-        } for r in rows]
-    except Exception:
-        return []
-    finally:
-        cur.close()
-        conn.close()
-
-def get_public_events(limit=5):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            SELECT id, title, description, event_date, venue
-            FROM events
-            WHERE is_public = TRUE AND event_date >= CURRENT_DATE
-            ORDER BY event_date ASC
-            LIMIT %s;
-        """, (limit,))
-        rows = cur.fetchall()
-        return [{
-            "id": r[0], "title": r[1], "description": r[2], 
-            "event_date": r[3], "venue": r[4]
-        } for r in rows]
-    except Exception:
-        return []
-    finally:
-        cur.close()
-        conn.close()
 def get_enquiry(enquiry_id):
-    conn = get_conn()
-    cur = conn.cursor()
+    conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("""
-            SELECT id, student_name, parent_name, phone, email, class_interested, message, status, created_at
-            FROM enquiries WHERE id=%s;
-        """, (enquiry_id,))
+        cur.execute("SELECT id, student_name, parent_name, phone, email, class_interested, message, status, created_at FROM enquiries WHERE id=%s;", (enquiry_id,))
         row = cur.fetchone()
-        if not row:
-            return None
-        return {
-            "id": row[0], "student_name": row[1], "parent_name": row[2], 
-            "phone": row[3], "email": row[4], "class_interested": row[5], 
-            "message": row[6], "status": row[7], "created_at": row[8]
-        }
+        if not row: return None
+        return {"id": row[0], "student_name": row[1], "parent_name": row[2], "phone": row[3], "email": row[4], "class_interested": row[5], "message": row[6], "status": row[7], "created_at": row[8]}
     finally:
-        cur.close()
-        conn.close()
+        cur.close(); conn.close()
 
 def update_enquiry_status(enquiry_id, status):
-    conn = get_conn()
-    cur = conn.cursor()
+    conn = get_conn(); cur = conn.cursor()
     try:
         cur.execute("UPDATE enquiries SET status=%s WHERE id=%s;", (status, enquiry_id))
-        conn.commit()
-        return True
+        conn.commit(); return True
     except Exception:
-        conn.rollback()
-        raise
+        conn.rollback(); raise
     finally:
-        cur.close()
-        conn.close()
+        cur.close(); conn.close()
 
 def delete_enquiry(enquiry_id):
-    conn = get_conn()
-    cur = conn.cursor()
+    conn = get_conn(); cur = conn.cursor()
     try:
         cur.execute("DELETE FROM enquiries WHERE id=%s;", (enquiry_id,))
-        conn.commit()
-        return True
+        conn.commit(); return True
     except Exception:
-        conn.rollback()
-        raise
+        conn.rollback(); raise
     finally:
-        cur.close()
-        conn.close()
-def create_testimonial(name, role, message, rating):
-    conn = get_conn()
-    cur = conn.cursor()
+        cur.close(); conn.close()
+
+def get_testimonials(limit=10):
+    conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("""
-            INSERT INTO testimonials (name, role, message, rating, is_active)
-            VALUES (%s, %s, %s, %s, TRUE) RETURNING id;
-        """, (name, role, message, rating))
-        tid = cur.fetchone()[0]
-        conn.commit()
-        return tid
+        cur.execute("SELECT id, name, role, message, rating, is_active, created_at FROM testimonials WHERE is_active = TRUE ORDER BY created_at DESC LIMIT %s;", (limit,))
+        rows = cur.fetchall()
+        return [{"id": r[0], "name": r[1], "role": r[2], "message": r[3], "rating": r[4], "is_active": r[5], "created_at": r[6]} for r in rows]
     except Exception:
-        conn.rollback()
-        raise
+        return []
     finally:
-        cur.close()
-        conn.close()
+        cur.close(); conn.close()
+
+def create_testimonial(name, role, message, rating):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO testimonials (name, role, message, rating, is_active) VALUES (%s, %s, %s, %s, TRUE) RETURNING id;", (name, role, message, rating))
+        tid = cur.fetchone()[0]; conn.commit(); return tid
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
 
 def delete_testimonial(testimonial_id):
-    conn = get_conn()
-    cur = conn.cursor()
+    conn = get_conn(); cur = conn.cursor()
     try:
         cur.execute("DELETE FROM testimonials WHERE id=%s;", (testimonial_id,))
         conn.commit()
     except Exception:
-        conn.rollback()
-        raise
+        conn.rollback(); raise
     finally:
-        cur.close()
-        conn.close()
+        cur.close(); conn.close()
+
 def toggle_testimonial_public(testimonial_id, is_active):
-    conn = get_conn()
-    cur = conn.cursor()
+    conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("""
-            UPDATE testimonials 
-            SET is_active=%s 
-            WHERE id=%s;
-        """, (is_active, testimonial_id))
-        conn.commit()
-        return True
+        cur.execute("UPDATE testimonials SET is_active=%s WHERE id=%s;", (is_active, testimonial_id))
+        conn.commit(); return True
     except Exception:
-        conn.rollback()
-        raise
+        conn.rollback(); raise
     finally:
-        cur.close()
-        conn.close()
+        cur.close(); conn.close()
 
-        conn.close()
-def create_online_payment(student_id, amount, month=None, purpose=None, razorpay_order_id=None):
-    conn = get_conn()
-    cur = conn.cursor()
+def get_gallery(limit=200):
+    conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("""
-            INSERT INTO online_payments (student_id, amount, month, purpose, razorpay_order_id, status)
-            VALUES (%s, %s, %s, %s, %s, 'pending') RETURNING id;
-        """, (student_id, amount, month, purpose, razorpay_order_id))
-        pid = cur.fetchone()[0]
-        conn.commit()
-        return pid
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-
-def update_online_payment_status(payment_id, status, razorpay_payment_id=None):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        if status == 'paid':
-            cur.execute("""
-                UPDATE online_payments 
-                SET status=%s, razorpay_payment_id=%s, paid_at=NOW() 
-                WHERE id=%s;
-            """, (status, razorpay_payment_id, payment_id))
-        else:
-            cur.execute("""
-                UPDATE online_payments 
-                SET status=%s 
-                WHERE id=%s;
-            """, (status, payment_id))
-        conn.commit()
-        return True
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-def get_online_payment_by_order(order_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            SELECT id, student_id, amount, month, purpose, razorpay_order_id, razorpay_payment_id, status, created_at, paid_at
-            FROM online_payments 
-            WHERE razorpay_order_id=%s LIMIT 1;
-        """, (order_id,))
-        row = cur.fetchone()
-        if not row:
-            return None
-        return {
-            "id": row[0], "student_id": row[1], "amount": float(row[2] or 0),
-            "month": row[3], "purpose": row[4], "order_id": row[5],
-            "payment_id": row[6], "status": row[7], "created_at": row[8],
-            "paid_at": row[9]
-        }
-    finally:
-        cur.close()
-        conn.close()
-def mark_online_payment_success(payment_id, razorpay_payment_id=None):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            UPDATE online_payments 
-            SET status='paid', razorpay_payment_id=%s, paid_at=NOW() 
-            WHERE id=%s;
-        """, (razorpay_payment_id, payment_id))
-        conn.commit()
-        return True
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-
-def mark_online_payment_failed(payment_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            UPDATE online_payments 
-            SET status='failed' 
-            WHERE id=%s;
-        """, (payment_id,))
-        conn.commit()
-        return True
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-def get_online_payments_summary():
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            SELECT 
-                COUNT(*) FILTER (WHERE status='paid') AS paid_count,
-                COALESCE(SUM(amount) FILTER (WHERE status='paid'), 0) AS total_paid,
-                COUNT(*) FILTER (WHERE status='pending') AS pending_count,
-                COALESCE(SUM(amount) FILTER (WHERE status='pending'), 0) AS total_pending,
-                COUNT(*) AS total_transactions
-            FROM online_payments;
-        """)
-        row = cur.fetchone()
-        return {
-            "paid_count": row[0] or 0,
-            "total_paid": float(row[1] or 0),
-            "pending_count": row[2] or 0,
-            "total_pending": float(row[3] or 0),
-            "total_transactions": row[4] or 0
-        }
-    except Exception:
-        # Agar table na ho toh default values return kare
-        return {"paid_count": 0, "total_paid": 0.0, "pending_count": 0, "total_pending": 0.0, "total_transactions": 0}
-    finally:
-        cur.close()
-        conn.close()
-def get_staff_attendance_for_date(date_str):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            SELECT s.id, s.name, s.role, sa.status, sa.check_in, sa.check_out
-            FROM staff s
-            LEFT JOIN staff_attendance sa ON sa.staff_id = s.id AND sa.date = %s
-            WHERE s.status = 'active'
-            ORDER BY s.role, s.name;
-        """, (date_str,))
+        cur.execute("SELECT id, title, image_url, description, created_at FROM gallery ORDER BY created_at DESC LIMIT %s;", (limit,))
         rows = cur.fetchall()
-        return [{
-            "staff_id": r[0],
-            "name": r[1],
-            "role": r[2],
-            "status": r[3] or "unmarked",
-            "check_in": r[4],
-            "check_out": r[5]
-        } for r in rows]
+        return [{"id": r[0], "title": r[1], "image_url": r[2], "description": r[3], "created_at": r[4]} for r in rows]
+    except Exception:
+        return []
     finally:
-        cur.close()
-        conn.close()
+        cur.close(); conn.close()
 
-def mark_staff_attendance(staff_id, date_str, status, check_in=None, check_out=None):
-    conn = get_conn()
-    cur = conn.cursor()
+def add_gallery_item(title, image_url, description=""):
+    conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("""
-            INSERT INTO staff_attendance (staff_id, date, status, check_in, check_out)
-            VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (staff_id, date) DO UPDATE SET
-                status=EXCLUDED.status,
-                check_in=EXCLUDED.check_in,
-                check_out=EXCLUDED.check_out;
-        """, (staff_id, date_str, status, check_in, check_out))
+        cur.execute("INSERT INTO gallery (title, image_url, description) VALUES (%s, %s, %s) RETURNING id;", (title, image_url, description))
+        gid = cur.fetchone()[0]; conn.commit(); return gid
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def create_gallery_item(title, image_url, description="", category="General"):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO gallery (title, image_url, description, category) VALUES (%s, %s, %s, %s) RETURNING id;", (title, image_url, description, category))
+        gid = cur.fetchone()[0]; conn.commit(); return gid
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def delete_gallery_item(item_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM gallery WHERE id=%s;", (item_id,))
         conn.commit()
-        return True
     except Exception:
-        conn.rollback()
-        raise
+        conn.rollback(); raise
     finally:
-        cur.close()
-        conn.close()
-def bulk_mark_staff_attendance(date_str, status, staff_ids=None):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        if staff_ids:
-            # Agar specific staff ki list aayi hai
-            for sid in staff_ids:
-                cur.execute("""
-                    INSERT INTO staff_attendance (staff_id, date, status)
-                    VALUES (%s, %s, %s)
-                    ON CONFLICT (staff_id, date) DO UPDATE SET status=EXCLUDED.status;
-                """, (sid, date_str, status))
-        else:
-            # Agar sabhi active staff ki attendance lagani hai
-            cur.execute("""
-                INSERT INTO staff_attendance (staff_id, date, status)
-                SELECT id, %s, %s FROM staff WHERE status='active'
-                ON CONFLICT (staff_id, date) DO UPDATE SET status=EXCLUDED.status;
-            """, (date_str, status))
-            
-        conn.commit()
-        return True
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-def delete_staff_attendance(staff_id, date_str):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("DELETE FROM staff_attendance WHERE staff_id=%s AND date=%s;", (staff_id, date_str))
-        conn.commit()
-        return True
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-def get_staff_attendance_month_matrix(month):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        # Saare active staff ki list nikaalo
-        cur.execute("SELECT id, name, role FROM staff WHERE status='active' ORDER BY role, name;")
-        staff_list = [{"id": r[0], "name": r[1], "role": r[2]} for r in cur.fetchall()]
-        
-        # Us mahine ki saari attendance nikaalo
-        cur.execute("""
-            SELECT staff_id, TO_CHAR(date, 'YYYY-MM-DD'), status
-            FROM staff_attendance
-            WHERE TO_CHAR(date, 'YYYY-MM') = %s;
-        """, (month,))
-        
-        attendance_data = {}
-        for r in cur.fetchall():
-            staff_id = r[0]
-            date_str = r[1]
-            status = r[2]
-            if staff_id not in attendance_data:
-                attendance_data[staff_id] = {}
-            attendance_data[staff_id][date_str] = status
-            
-        return {
-            "staff_list": staff_list,
-            "attendance_data": attendance_data
-        }
-    except Exception:
-        return {"staff_list": [], "attendance_data": {}}
-    finally:
-        cur.close()
-        conn.close()
-def get_staff_attendance_today_summary(date_str=None):
-    if not date_str:
-        date_str = date.today().isoformat()
+        cur.close(); conn.close()
 
-    conn = get_conn()
-    cur = conn.cursor()
+def get_gallery_categories():
+    conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("""
-            SELECT
-                COUNT(*) FILTER (WHERE status='present') AS present,
-                COUNT(*) FILTER (WHERE status='absent') AS absent,
-                COUNT(*) FILTER (WHERE status='half_day') AS half_day,
-                COUNT(*) FILTER (WHERE status='leave') AS leave_c,
-                COUNT(*) FILTER (WHERE status='holiday') AS holiday,
-                COUNT(*) AS total
-            FROM staff_attendance
-            WHERE date=%s;
-        """, (date_str,))
-        row = cur.fetchone()
-
-        if not row:
-            return {"present": 0, "absent": 0, "half_day": 0, "leave": 0, "holiday": 0, "total": 0}
-
-        return {
-            "present": row[0] or 0,
-            "absent": row[1] or 0,
-            "half_day": row[2] or 0,
-            "leave": row[3] or 0,
-            "holiday": row[4] or 0,
-            "total": row[5] or 0
-        }
-    finally:
-        cur.close()
-        conn.close()
-def get_leave_types():
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("SELECT id, name, max_days_per_year, is_paid FROM leave_types ORDER BY name;")
+        cur.execute("SELECT DISTINCT category FROM gallery WHERE category IS NOT NULL AND category != '';")
         rows = cur.fetchall()
-        return [{
-            "id": r[0], 
-            "name": r[1], 
-            "max_days": r[2], 
-            "is_paid": r[3]
-        } for r in rows]
+        return [r[0] for r in rows]
     except Exception:
-        # Agar database mein table nahi hai toh app crash na ho, default types return kare
-        return [
-            {"id": 1, "name": "Casual Leave", "max_days": 12, "is_paid": True},
-            {"id": 2, "name": "Sick Leave", "max_days": 10, "is_paid": True},
-            {"id": 3, "name": "Unpaid Leave", "max_days": 0, "is_paid": False}
-        ]
+        return ["Events", "Sports", "Academics", "Campus", "Other"]
     finally:
-        cur.close()
-        conn.close()
-        # ============================================================
-# LEAVE MANAGEMENT (For leave.py)
+        cur.close(); conn.close()
+
+def get_public_notices(limit=5):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, title, content, created_at FROM notices WHERE is_public = TRUE AND published = TRUE ORDER BY created_at DESC LIMIT %s;", (limit,))
+        rows = cur.fetchall()
+        return [{"id": r[0], "title": r[1], "content": r[2], "created_at": r[3]} for r in rows]
+    except Exception:
+        return []
+    finally:
+        cur.close(); conn.close()
+
+def get_public_events(limit=5):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, title, description, event_date, venue FROM events WHERE is_public = TRUE AND event_date >= CURRENT_DATE ORDER BY event_date ASC LIMIT %s;", (limit,))
+        rows = cur.fetchall()
+        return [{"id": r[0], "title": r[1], "description": r[2], "event_date": r[3], "venue": r[4]} for r in rows]
+    except Exception:
+        return []
+    finally:
+        cur.close(); conn.close()
+
+def create_contact_message(data):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO contact_messages (name, email, phone, subject, message, status) VALUES (%s, %s, %s, %s, %s, 'new') RETURNING id;", (data.get("name"), data.get("email"), data.get("phone"), data.get("subject"), data.get("message")))
+        mid = cur.fetchone()[0]; conn.commit(); return mid
+    except Exception:
+        conn.rollback(); return True
+    finally:
+        cur.close(); conn.close()
+
+def get_contact_messages(limit=50):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, name, email, phone, subject, message, status, created_at FROM contact_messages ORDER BY created_at DESC LIMIT %s;", (limit,))
+        rows = cur.fetchall()
+        return [{"id": r[0], "name": r[1], "email": r[2], "phone": r[3], "subject": r[4], "message": r[5], "status": r[6], "created_at": r[7]} for r in rows]
+    except Exception:
+        return []
+    finally:
+        cur.close(); conn.close()
+
+def get_public_stats():
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT COUNT(*) FROM students WHERE status='active';"); total_students = cur.fetchone()[0] or 0
+        cur.execute("SELECT COUNT(*) FROM staff WHERE status='active';"); total_staff = cur.fetchone()[0] or 0
+        return {"total_students": total_students, "total_staff": total_staff}
+    except Exception:
+        return {"total_students": 0, "total_staff": 0}
+    finally:
+        cur.close(); conn.close()
+
+# ============================================================
+# QR ATTENDANCE
+# ============================================================
+def get_student_by_qr_data(qr_data):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        qr_data = str(qr_data).strip()
+        cur.execute("SELECT id, name, roll_no, class_name, section, parent_phone FROM students WHERE (id::text = %s OR roll_no = %s) AND status='active' LIMIT 1;", (qr_data, qr_data))
+        row = cur.fetchone()
+        if not row: return None
+        return {"id": row[0], "name": row[1], "roll_no": row[2], "class_name": row[3], "section": row[4], "parent_phone": row[5]}
+    finally:
+        cur.close(); conn.close()
+
+def get_today_attendance_status(student_id, date_str=None):
+    if not date_str: date_str = date.today().isoformat()
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT status FROM attendance WHERE student_id=%s AND date=%s LIMIT 1;", (student_id, date_str))
+        row = cur.fetchone()
+        return row[0] if row else None
+    finally:
+        cur.close(); conn.close()
+
+def get_class_students_for_qr(class_name, section=None):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        q = "SELECT id, name, roll_no, class_name, section FROM students WHERE status='active' AND class_name=%s"
+        params = [class_name]
+        if section: q += " AND section=%s"; params.append(section)
+        q += " ORDER BY section, roll_no, name;"
+        cur.execute(q, tuple(params))
+        rows = cur.fetchall()
+        return [{"id": r[0], "name": r[1], "roll_no": r[2], "class_name": r[3], "section": r[4]} for r in rows]
+    finally:
+        cur.close(); conn.close()
+
+def get_todays_attendance_summary(date_str=None):
+    if not date_str: date_str = date.today().isoformat()
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT COUNT(*) FILTER (WHERE status='present') AS present, COUNT(*) FILTER (WHERE status='absent') AS absent, COUNT(*) FILTER (WHERE status='late') AS late, COUNT(*) FILTER (WHERE status='leave') AS leave_c, COUNT(*) AS total FROM attendance WHERE date=%s;", (date_str,))
+        row = cur.fetchone()
+        if not row: return {"present": 0, "absent": 0, "late": 0, "leave": 0, "total": 0}
+        return {"present": row[0] or 0, "absent": row[1] or 0, "late": row[2] or 0, "leave": row[3] or 0, "total": row[4] or 0}
+    finally:
+        cur.close(); conn.close()
+
+# ============================================================
+# AUTOMATION & ANNUAL REPORTS
+# ============================================================
+def get_automation_jobs():
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, job_name, job_type, target, message, schedule_time, status, last_run FROM automation_jobs ORDER BY created_at DESC;")
+        rows = cur.fetchall()
+        return [{"id": r[0], "job_name": r[1], "job_type": r[2], "target": r[3], "message": r[4], "schedule_time": r[5], "status": r[6], "last_run": r[7]} for r in rows]
+    except Exception:
+        return []
+    finally:
+        cur.close(); conn.close()
+
+def add_automation_job(job_name, job_type, target, message, schedule_time):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO automation_jobs (job_name, job_type, target, message, schedule_time, status) VALUES (%s, %s, %s, %s, %s, 'active') RETURNING id;", (job_name, job_type, target, message, schedule_time))
+        jid = cur.fetchone()[0]; conn.commit(); return jid
+    except Exception as e:
+        conn.rollback(); raise e
+    finally:
+        cur.close(); conn.close()
+
+def delete_automation_job(job_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM automation_jobs WHERE id=%s;", (job_id,))
+        conn.commit(); return True
+    except Exception:
+        conn.rollback(); return False
+    finally:
+        cur.close(); conn.close()
+
+def toggle_automation_job(job_id, status):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE automation_jobs SET status=%s WHERE id=%s;", (status, job_id))
+        conn.commit(); return True
+    except Exception:
+        conn.rollback(); return False
+    finally:
+        cur.close(); conn.close()
+
+def get_annual_report_data(year):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT COUNT(*) FROM students WHERE status='active';"); total_students = cur.fetchone()[0] or 0
+        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM fee_payments WHERE month LIKE %s;", (f"{year}%",)); total_fees = float(cur.fetchone()[0] or 0)
+        cur.execute("SELECT COALESCE(SUM(net_amount), 0) FROM salary_records WHERE status='paid' AND month LIKE %s;", (f"{year}%",)); total_salaries = float(cur.fetchone()[0] or 0)
+        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE TO_CHAR(expense_date, 'YYYY') = %s;", (str(year),)); total_expenses = float(cur.fetchone()[0] or 0)
+        return {"total_students": total_students, "total_fees": total_fees, "total_salaries": total_salaries, "total_expenses": total_expenses, "net_profit": total_fees - (total_salaries + total_expenses)}
+    except Exception:
+        return {"total_students": 0, "total_fees": 0, "total_salaries": 0, "total_expenses": 0, "net_profit": 0}
+    finally:
+        cur.close(); conn.close()
+
+def get_annual_financial_summary(year):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        year_str = str(year)
+        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM fee_payments WHERE month LIKE %s;", (f"{year_str}-%",)); fees_collected = float(cur.fetchone()[0] or 0)
+        cur.execute("SELECT COALESCE(SUM(net_amount), 0) FROM salary_records WHERE status='paid' AND month LIKE %s;", (f"{year_str}-%",)); salaries_paid = float(cur.fetchone()[0] or 0)
+        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE TO_CHAR(expense_date, 'YYYY') = %s;", (year_str,)); expenses_total = float(cur.fetchone()[0] or 0)
+        total_outflow = salaries_paid + expenses_total
+        net_profit = fees_collected - total_outflow
+        return {"year": year, "fees_collected": fees_collected, "salaries_paid": salaries_paid, "expenses_total": expenses_total, "total_outflow": total_outflow, "net_profit": net_profit, "profit": net_profit >= 0}
+    finally:
+        cur.close(); conn.close()
+
+def get_annual_student_summary(year):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        year_str = str(year)
+        cur.execute("SELECT COUNT(*) FROM students WHERE status='active';"); total_active = cur.fetchone()[0] or 0
+        cur.execute("SELECT COUNT(*) FROM students WHERE TO_CHAR(admission_date, 'YYYY') = %s;", (year_str,)); new_admissions = cur.fetchone()[0] or 0
+        cur.execute("SELECT gender, COUNT(*) FROM students WHERE status='active' GROUP BY gender;"); gender_counts = {row[0] or 'Unknown': row[1] for row in cur.fetchall()}
+        return {"year": year, "total_active_students": total_active, "new_admissions": new_admissions, "gender_distribution": gender_counts}
+    finally:
+        cur.close(); conn.close()
+
+def get_annual_academic_summary(year):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        year_str = str(year)
+        cur.execute("SELECT COUNT(*) FROM exams WHERE TO_CHAR(exam_date, 'YYYY') = %s;", (year_str,)); total_exams = cur.fetchone()[0] or 0
+        cur.execute("SELECT COUNT(*) FILTER (WHERE status='present') AS present, COUNT(*) FILTER (WHERE status IN ('present','absent','late','leave')) AS total FROM attendance WHERE TO_CHAR(date, 'YYYY') = %s;", (year_str,))
+        row = cur.fetchone(); present = row[0] or 0; total_att = row[1] or 0
+        att_percent = round((present / total_att * 100), 1) if total_att > 0 else 0
+        cur.execute("SELECT COUNT(*) FROM marks m JOIN exams e ON e.id = m.exam_id WHERE TO_CHAR(e.exam_date, 'YYYY') = %s;", (year_str,)); total_marks_entries = cur.fetchone()[0] or 0
+        return {"year": year, "total_exams": total_exams, "overall_attendance_percent": att_percent, "total_marks_entries": total_marks_entries}
+    finally:
+        cur.close(); conn.close()
+
+def get_annual_attendance_summary(year):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        year_str = str(year)
+        cur.execute("SELECT COUNT(*) FILTER (WHERE status='present') AS present, COUNT(*) FILTER (WHERE status='absent') AS absent, COUNT(*) FILTER (WHERE status='late') AS late, COUNT(*) FILTER (WHERE status='leave') AS leave_c, COUNT(*) AS total FROM attendance WHERE TO_CHAR(date, 'YYYY') = %s;", (year_str,))
+        row = cur.fetchone()
+        if not row or row[4] == 0: return {"year": year, "present": 0, "absent": 0, "late": 0, "leave": 0, "total": 0, "percent": 0}
+        present = row[0] or 0; late = row[2] or 0; total = row[4] or 0
+        percent = round(((present + late * 0.5) / total) * 100, 1) if total > 0 else 0
+        return {"year": year, "present": present, "absent": row[1] or 0, "late": late, "leave": row[3] or 0, "total": total, "percent": percent}
+    finally:
+        cur.close(); conn.close()
+
+def get_annual_fee_defaulters_summary(year):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        year_str = str(year)
+        cur.execute("SELECT COUNT(*), COALESCE(SUM(pending), 0) FROM (SELECT b.student_id, MAX(b.total_amount) - COALESCE((SELECT SUM(amount) FROM fee_payments WHERE student_id=b.student_id AND month LIKE %s), 0) AS pending FROM bills b WHERE b.month LIKE %s GROUP BY b.student_id) t WHERE pending > 0;", (f"{year_str}-%", f"{year_str}-%"))
+        row = cur.fetchone()
+        return {"year": year, "total_defaulters": row[0] or 0, "total_pending_amount": float(row[1] or 0)}
+    finally:
+        cur.close(); conn.close()
+
+def get_annual_fee_collection_summary(year):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        year_str = str(year)
+        cur.execute("SELECT COALESCE(SUM(amount), 0), COUNT(*) FROM fee_payments WHERE month LIKE %s;", (f"{year_str}-%",))
+        row = cur.fetchone()
+        return {"year": year, "total_collected": float(row[0] or 0), "total_transactions": row[1] or 0}
+    finally:
+        cur.close(); conn.close()
+
+def get_annual_expense_summary(year):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        year_str = str(year)
+        cur.execute("SELECT category, SUM(amount) FROM expenses WHERE TO_CHAR(expense_date, 'YYYY') = %s GROUP BY category ORDER BY 2 DESC;", (year_str,))
+        rows = cur.fetchall()
+        cats = [{"category": r[0], "amount": float(r[1] or 0)} for r in rows]
+        return {"year": year, "total_expense": sum(c["amount"] for c in cats), "categories": cats}
+    finally:
+        cur.close(); conn.close()
+
+# ============================================================
+# LEAVE MANAGEMENT (Perfectly synced with leave.py)
 # ============================================================
 def get_leave_types():
-    conn = get_conn()
-    cur = conn.cursor()
+    conn = get_conn(); cur = conn.cursor()
     try:
         cur.execute("SELECT id, name, max_days_per_year, is_paid FROM leave_types ORDER BY name;")
         rows = cur.fetchall()
@@ -3674,375 +2983,290 @@ def get_leave_types():
             {"id": 2, "name": "Sick Leave", "max_days": 10, "is_paid": True}
         ]
     finally:
-        cur.close()
-        conn.close()
+        cur.close(); conn.close()
 
-def apply_leave(staff_id, leave_type, start_date, end_date, reason):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            INSERT INTO staff_leaves (staff_id, leave_type, start_date, end_date, reason, status)
-            VALUES (%s,%s,%s,%s,%s,'pending') RETURNING id;
-        """, (staff_id, leave_type, start_date, end_date, reason))
-        lid = cur.fetchone()[0]
-        conn.commit()
-        return lid
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-
-def get_leaves(staff_id=None, status=None):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        q = "SELECT l.id, l.staff_id, s.name, l.leave_type, l.start_date, l.end_date, l.reason, l.status FROM staff_leaves l JOIN staff s ON s.id=l.staff_id WHERE 1=1"
-        params = []
-        if staff_id:
-            q += " AND l.staff_id=%s"
-            params.append(staff_id)
-        if status:
-            q += " AND l.status=%s"
-            params.append(status)
-        q += " ORDER BY l.created_at DESC;"
-        cur.execute(q, tuple(params))
-        rows = cur.fetchall()
-        return [{"id": r[0], "staff_id": r[1], "name": r[2], "leave_type": r[3], "start_date": r[4], "end_date": r[5], "reason": r[6], "status": r[7]} for r in rows]
-    finally:
-        cur.close()
-        conn.close()
-
-def update_leave_status(leave_id, status):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("UPDATE staff_leaves SET status=%s WHERE id=%s;", (status, leave_id))
-        conn.commit()
-        return True
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-
-def delete_leave(leave_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("DELETE FROM staff_leaves WHERE id=%s;", (leave_id,))
-        conn.commit()
-        return True
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
-def get_or_init_leave_balance(staff_id, year=None):
-    import datetime
-    if not year:
-        year = datetime.date.today().year
-
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        # Check agar pehle se record hai
-        cur.execute("""
-            SELECT id, total_leaves, used_leaves 
-            FROM leave_balances 
-            WHERE staff_id=%s AND year=%s;
-        """, (staff_id, year))
-        row = cur.fetchone()
-        
-        if row:
-            total = row[1]
-            used = row[2]
-            return {
-                "id": row[0], "staff_id": staff_id, "year": year, 
-                "total": total, "used": used, "remaining": total - used
-            }
-            
-        # Agar record nahi hai, toh naya initialize karo (Default: 12 leaves)
-        cur.execute("""
-            INSERT INTO leave_balances (staff_id, year, total_leaves, used_leaves)
-            VALUES (%s, %s, 12, 0) RETURNING id;
-        """, (staff_id, year))
-        new_id = cur.fetchone()[0]
-        conn.commit()
-        
-        return {
-            "id": new_id, "staff_id": staff_id, "year": year, 
-            "total": 12, "used": 0, "remaining": 12
-        }
-    except Exception:
-        conn.rollback()
-        # Agar database mein table hi nahi hai toh crash na ho, default return kare
-        return {
-            "staff_id": staff_id, "year": year, 
-            "total": 12, "used": 0, "remaining": 12
-        }
-    finally:
-        cur.close()
-        conn.close()
 def count_working_days(start_date, end_date):
     from datetime import datetime, timedelta
-    if isinstance(start_date, str):
-        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-    if isinstance(end_date, str):
-        end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
-    
-    if start_date > end_date:
-        return 0
-        
+    if isinstance(start_date, str): start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+    if isinstance(end_date, str): end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+    if start_date > end_date: return 0
     days = 0
     current = start_date
     while current <= end_date:
-        # weekday() mein 6 matlab Sunday hota hai
-        if current.weekday() != 6: 
-            days += 1
+        if current.weekday() != 6: days += 1
         current += timedelta(days=1)
     return days
-def create_leave_application(staff_id, leave_type, start_date, end_date, reason):
-    conn = get_conn()
-    cur = conn.cursor()
+
+def create_leave_application(staff_id, leave_type_id, start_date, end_date, reason):
+    conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("""
-            INSERT INTO staff_leaves (staff_id, leave_type, start_date, end_date, reason, status)
-            VALUES (%s, %s, %s, %s, %s, 'pending') RETURNING id;
-        """, (staff_id, leave_type, start_date, end_date, reason))
+        cur.execute("SELECT name FROM leave_types WHERE id=%s;", (leave_type_id,))
+        lt_row = cur.fetchone()
+        leave_type_name = lt_row[0] if lt_row else str(leave_type_id)
+        days = count_working_days(start_date, end_date)
+        cur.execute("INSERT INTO staff_leaves (staff_id, leave_type, start_date, end_date, reason, status) VALUES (%s, %s, %s, %s, %s, 'pending') RETURNING id;", (staff_id, leave_type_name, start_date, end_date, reason))
         lid = cur.fetchone()[0]
         conn.commit()
-        return lid
+        return {"id": lid, "days": days}
     except Exception:
-        conn.rollback()
-        raise
+        conn.rollback(); raise
     finally:
-        cur.close()
-        conn.close()
-def get_leave_applications(staff_id=None, status=None):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        q = """
-            SELECT l.id, l.staff_id, s.name, l.leave_type, l.start_date, l.end_date, l.reason, l.status, l.created_at
-            FROM staff_leaves l
-            JOIN staff s ON s.id = l.staff_id
-            WHERE 1=1
-        """
-        params = []
-        if staff_id:
-            q += " AND l.staff_id=%s"
-            params.append(staff_id)
-        if status:
-            q += " AND l.status=%s"
-            params.append(status)
-        q += " ORDER BY l.created_at DESC;"
-        
-        cur.execute(q, tuple(params))
-        rows = cur.fetchall()
-        return [{
-            "id": r[0], "staff_id": r[1], "name": r[2], "leave_type": r[3],
-            "start_date": r[4], "end_date": r[5], "reason": r[6],
-            "status": r[7], "created_at": r[8]
-        } for r in rows]
-    except Exception:
-        return []
-    finally:
-        cur.close()
-        conn.close()
-
-# ============================================================
-# LEAVE MANAGEMENT (Cleaned & Fixed)
-# ============================================================
-def get_leave_types():
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("SELECT id, name, max_days_per_year, is_paid FROM leave_types ORDER BY name;")
-        rows = cur.fetchall()
-        return [{"id": r[0], "name": r[1], "max_days": r[2], "is_paid": r[3]} for r in rows]
-    except Exception:
-        return [
-            {"id": 1, "name": "Casual Leave", "max_days": 12, "is_paid": True},
-            {"id": 2, "name": "Sick Leave", "max_days": 10, "is_paid": True}
-        ]
-    finally:
-        cur.close()
-        conn.close()
-
-def create_leave_application(staff_id, leave_type, start_date, end_date, reason):
-    conn = get_conn()
-    cur = conn.cursor()
-    try:
-        cur.execute("""
-            INSERT INTO staff_leaves (staff_id, leave_type, start_date, end_date, reason, status)
-            VALUES (%s, %s, %s, %s, %s, 'pending') RETURNING id;
-        """, (staff_id, leave_type, start_date, end_date, reason))
-        lid = cur.fetchone()[0]
-        conn.commit()
-        return lid
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        cur.close()
-        conn.close()
+        cur.close(); conn.close()
 
 def apply_leave(staff_id, leave_type, start_date, end_date, reason):
-    # Dono functions same kaam karte hain, isliye ek dusre ko call kar rahe hain
     return create_leave_application(staff_id, leave_type, start_date, end_date, reason)
 
-def get_leave_applications(staff_id=None, status=None):
-    conn = get_conn()
-    cur = conn.cursor()
+def get_leave_applications(staff_id=None, status=None, limit=100):
+    conn = get_conn(); cur = conn.cursor()
     try:
-        q = """
-            SELECT l.id, l.staff_id, s.name, l.leave_type, l.start_date, l.end_date, l.reason, l.status, l.created_at
-            FROM staff_leaves l
-            JOIN staff s ON s.id = l.staff_id
-            WHERE 1=1
-        """
+        q = "SELECT l.id, l.staff_id, s.name, l.leave_type, l.start_date, l.end_date, l.reason, l.status, l.created_at FROM staff_leaves l JOIN staff s ON s.id = l.staff_id WHERE 1=1"
         params = []
-        if staff_id:
-            q += " AND l.staff_id=%s"
-            params.append(staff_id)
-        if status:
-            q += " AND l.status=%s"
-            params.append(status)
-        q += " ORDER BY l.created_at DESC;"
-        
+        if staff_id: q += " AND l.staff_id=%s"; params.append(staff_id)
+        if status: q += " AND l.status=%s"; params.append(status)
+        q += " ORDER BY l.created_at DESC LIMIT %s;"
+        params.append(limit)
         cur.execute(q, tuple(params))
         rows = cur.fetchall()
-        return [{
-            "id": r[0], "staff_id": r[1], "name": r[2], "leave_type": r[3],
-            "start_date": r[4], "end_date": r[5], "reason": r[6],
-            "status": r[7], "created_at": r[8]
-        } for r in rows]
+        return [{"id": r[0], "staff_id": r[1], "name": r[2], "leave_type": r[3], "start_date": r[4], "end_date": r[5], "reason": r[6], "status": r[7], "created_at": r[8]} for r in rows]
     except Exception:
         return []
     finally:
-        cur.close()
-        conn.close()
+        cur.close(); conn.close()
 
 def get_leaves(staff_id=None, status=None):
-    # Alias for get_leave_applications
     return get_leave_applications(staff_id, status)
 
 def get_leave_application(leave_id):
-    # Ye function missing tha, isko add kar diya
-    conn = get_conn()
-    cur = conn.cursor()
+    conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("""
-            SELECT l.id, l.staff_id, s.name, l.leave_type, l.start_date, l.end_date, l.reason, l.status, l.created_at
-            FROM staff_leaves l
-            JOIN staff s ON s.id = l.staff_id
-            WHERE l.id = %s;
-        """, (leave_id,))
+        cur.execute("SELECT l.id, l.staff_id, s.name, l.leave_type, l.start_date, l.end_date, l.reason, l.status, l.created_at FROM staff_leaves l JOIN staff s ON s.id = l.staff_id WHERE l.id = %s;", (leave_id,))
         row = cur.fetchone()
-        if not row:
-            return None
-        return {
-            "id": row[0], "staff_id": row[1], "name": row[2], "leave_type": row[3],
-            "start_date": row[4], "end_date": row[5], "reason": row[6],
-            "status": row[7], "created_at": row[8]
-        }
+        if not row: return None
+        return {"id": row[0], "staff_id": row[1], "name": row[2], "leave_type": row[3], "start_date": row[4], "end_date": row[5], "reason": row[6], "status": row[7], "created_at": row[8]}
     except Exception:
         return None
     finally:
-        cur.close()
-        conn.close()
+        cur.close(); conn.close()
+
+def approve_leave(leave_id, admin_id, note=""):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE staff_leaves SET status='approved', admin_note=%s WHERE id=%s AND status='pending' RETURNING staff_id, start_date, end_date;", (note, leave_id))
+        row = cur.fetchone()
+        if not row: return {"ok": False, "error": "already reviewed"}
+        staff_id, start_date, end_date = row
+        cur.execute("INSERT INTO staff_attendance (staff_id, date, status) SELECT %s, date_val, 'leave' FROM generate_series(%s::date, %s::date, interval '1 day') AS date_val WHERE EXTRACT(DOW FROM date_val) != 0 ON CONFLICT (staff_id, date) DO UPDATE SET status='leave';", (staff_id, start_date, end_date))
+        conn.commit()
+        return {"ok": True}
+    except Exception as e:
+        conn.rollback(); return {"ok": False, "error": str(e)}
+    finally:
+        cur.close(); conn.close()
+
+def reject_leave(leave_id, admin_id, note=""):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE staff_leaves SET status='rejected', admin_note=%s WHERE id=%s AND status='pending';", (note, leave_id))
+        conn.commit(); return cur.rowcount > 0
+    except Exception:
+        conn.rollback(); return False
+    finally:
+        cur.close(); conn.close()
+
+def cancel_leave(leave_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE staff_leaves SET status='cancelled' WHERE id=%s AND status='pending';", (leave_id,))
+        conn.commit(); return cur.rowcount > 0
+    except Exception:
+        conn.rollback(); return False
+    finally:
+        cur.close(); conn.close()
 
 def update_leave_status(leave_id, status):
-    conn = get_conn()
-    cur = conn.cursor()
+    conn = get_conn(); cur = conn.cursor()
     try:
         cur.execute("UPDATE staff_leaves SET status=%s WHERE id=%s;", (status, leave_id))
-        conn.commit()
-        return True
+        conn.commit(); return True
     except Exception:
-        conn.rollback()
-        raise
+        conn.rollback(); raise
     finally:
-        cur.close()
-        conn.close()
+        cur.close(); conn.close()
 
 def delete_leave(leave_id):
-    conn = get_conn()
-    cur = conn.cursor()
+    conn = get_conn(); cur = conn.cursor()
     try:
         cur.execute("DELETE FROM staff_leaves WHERE id=%s;", (leave_id,))
-        conn.commit()
-        return True
+        conn.commit(); return True
     except Exception:
-        conn.rollback()
-        raise
+        conn.rollback(); raise
     finally:
-        cur.close()
-        conn.close()
+        cur.close(); conn.close()
+
+def get_pending_leave_count():
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT COUNT(*) FROM staff_leaves WHERE status='pending';")
+        return cur.fetchone()[0] or 0
+    except Exception:
+        return 0
+    finally:
+        cur.close(); conn.close()
+
+def get_staff_leave_summary(staff_id, year):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        balance = get_or_init_leave_balance(staff_id, year)
+        cur.execute("SELECT COUNT(*) FROM staff_leaves WHERE staff_id=%s AND status='approved' AND EXTRACT(YEAR FROM start_date) = %s;", (staff_id, year))
+        approved_count = cur.fetchone()[0] or 0
+        return {"total_allowed": balance.get("total", 12), "used": balance.get("used", 0) + approved_count, "remaining": balance.get("remaining", 12) - approved_count}
+    except Exception:
+        return {"total_allowed": 12, "used": 0, "remaining": 12}
+    finally:
+        cur.close(); conn.close()
+
+def get_leave_applications_for_staff(staff_id, limit=30):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, leave_type, start_date, end_date, reason, status, created_at FROM staff_leaves WHERE staff_id=%s ORDER BY created_at DESC LIMIT %s;", (staff_id, limit))
+        rows = cur.fetchall()
+        return [{"id": r[0], "leave_type": r[1], "start_date": r[2], "end_date": r[3], "reason": r[4], "status": r[5], "created_at": r[6]} for r in rows]
+    except Exception:
+        return []
+    finally:
+        cur.close(); conn.close()
 
 def get_or_init_leave_balance(staff_id, year=None):
     import datetime
-    if not year:
-        year = datetime.date.today().year
-
-    conn = get_conn()
-    cur = conn.cursor()
+    if not year: year = datetime.date.today().year
+    conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("""
-            SELECT id, total_leaves, used_leaves 
-            FROM leave_balances 
-            WHERE staff_id=%s AND year=%s;
-        """, (staff_id, year))
+        cur.execute("SELECT id, total_leaves, used_leaves FROM leave_balances WHERE staff_id=%s AND year=%s;", (staff_id, year))
         row = cur.fetchone()
-        
-        if row:
-            total = row[1]
-            used = row[2]
-            return {
-                "id": row[0], "staff_id": staff_id, "year": year, 
-                "total": total, "used": used, "remaining": total - used
-            }
-            
-        cur.execute("""
-            INSERT INTO leave_balances (staff_id, year, total_leaves, used_leaves)
-            VALUES (%s, %s, 12, 0) RETURNING id;
-        """, (staff_id, year))
+        if row: return {"id": row[0], "staff_id": staff_id, "year": year, "total": row[1], "used": row[2], "remaining": row[1] - row[2]}
+        cur.execute("INSERT INTO leave_balances (staff_id, year, total_leaves, used_leaves) VALUES (%s, %s, 12, 0) RETURNING id;", (staff_id, year))
         new_id = cur.fetchone()[0]
         conn.commit()
-        
-        return {
-            "id": new_id, "staff_id": staff_id, "year": year, 
-            "total": 12, "used": 0, "remaining": 12
-        }
+        return {"id": new_id, "staff_id": staff_id, "year": year, "total": 12, "used": 0, "remaining": 12}
     except Exception:
         conn.rollback()
-        return {
-            "staff_id": staff_id, "year": year, 
-            "total": 12, "used": 0, "remaining": 12
-        }
+        return {"staff_id": staff_id, "year": year, "total": 12, "used": 0, "remaining": 12}
     finally:
-        cur.close()
-        conn.close()
+        cur.close(); conn.close()
 
-def count_working_days(start_date, end_date):
-    from datetime import datetime, timedelta
-    if isinstance(start_date, str):
-        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-    if isinstance(end_date, str):
-        end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
-    
-    if start_date > end_date:
-        return 0
-        
-    days = 0
-    current = start_date
-    while current <= end_date:
-        if current.weekday() != 6: 
-            days += 1
-        current += timedelta(days=1)
-    return daysis pure code ko is photo me jo jo file sab ka database.py file ka code complete kar ke do koi chutna nahi chahiye 
+# ============================================================
+# STAFF ATTENDANCE (Full Module)
+# ============================================================
+def get_staff_attendance_for_date(date_str):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT s.id, s.name, s.role, sa.status, sa.check_in, sa.check_out FROM staff s LEFT JOIN staff_attendance sa ON sa.staff_id = s.id AND sa.date = %s WHERE s.status = 'active' ORDER BY s.role, s.name;", (date_str,))
+        rows = cur.fetchall()
+        return [{"staff_id": r[0], "name": r[1], "role": r[2], "status": r[3] or "unmarked", "check_in": r[4], "check_out": r[5]} for r in rows]
+    finally:
+        cur.close(); conn.close()
+
+def mark_staff_attendance(staff_id, date_str, status, check_in=None, check_out=None):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO staff_attendance (staff_id, date, status, check_in, check_out) VALUES (%s, %s, %s, %s, %s) ON CONFLICT (staff_id, date) DO UPDATE SET status=EXCLUDED.status, check_in=EXCLUDED.check_in, check_out=EXCLUDED.check_out;", (staff_id, date_str, status, check_in, check_out))
+        conn.commit(); return True
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def bulk_mark_staff_attendance(date_str, status, staff_ids=None):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        if staff_ids:
+            for sid in staff_ids:
+                cur.execute("INSERT INTO staff_attendance (staff_id, date, status) VALUES (%s, %s, %s) ON CONFLICT (staff_id, date) DO UPDATE SET status=EXCLUDED.status;", (sid, date_str, status))
+        else:
+            cur.execute("INSERT INTO staff_attendance (staff_id, date, status) SELECT id, %s, %s FROM staff WHERE status='active' ON CONFLICT (staff_id, date) DO UPDATE SET status=EXCLUDED.status;", (date_str, status))
+        conn.commit(); return True
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def delete_staff_attendance(staff_id, date_str):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM staff_attendance WHERE staff_id=%s AND date=%s;", (staff_id, date_str))
+        conn.commit(); return True
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def get_staff_attendance_month_matrix(month):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, name, role FROM staff WHERE status='active' ORDER BY role, name;")
+        staff_list = [{"id": r[0], "name": r[1], "role": r[2]} for r in cur.fetchall()]
+        cur.execute("SELECT staff_id, TO_CHAR(date, 'YYYY-MM-DD'), status FROM staff_attendance WHERE TO_CHAR(date, 'YYYY-MM') = %s;", (month,))
+        attendance_data = {}
+        for r in cur.fetchall(): attendance_data.setdefault(r[0], {})[r[1]] = r[2]
+        return {"staff_list": staff_list, "attendance_data": attendance_data}
+    except Exception:
+        return {"staff_list": [], "attendance_data": {}}
+    finally:
+        cur.close(); conn.close()
+
+def get_staff_attendance_today_summary(date_str=None):
+    if not date_str: date_str = date.today().isoformat()
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT COUNT(*) FILTER (WHERE status='present') AS present, COUNT(*) FILTER (WHERE status='absent') AS absent, COUNT(*) FILTER (WHERE status='half_day') AS half_day, COUNT(*) FILTER (WHERE status='leave') AS leave_c, COUNT(*) FILTER (WHERE status='holiday') AS holiday, COUNT(*) AS total FROM staff_attendance WHERE date=%s;", (date_str,))
+        row = cur.fetchone()
+        if not row: return {"present": 0, "absent": 0, "half_day": 0, "leave": 0, "holiday": 0, "total": 0}
+        return {"present": row[0] or 0, "absent": row[1] or 0, "half_day": row[2] or 0, "leave": row[3] or 0, "holiday": row[4] or 0, "total": row[5] or 0}
+    finally:
+        cur.close(); conn.close()
+
+# ============================================================
+# SYSTEM & SMS FUNCTIONS (Extra safety for missing modules)
+# ============================================================
+def get_sms_templates():
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, name, body FROM sms_templates ORDER BY name;")
+        rows = cur.fetchall()
+        return [{"id": r[0], "name": r[1], "body": r[2]} for r in rows]
+    except Exception:
+        return []
+    finally:
+        cur.close(); conn.close()
+
+def log_sms(student_id, phone, message, admin_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO sms_logs (student_id, phone, message, sent_by) VALUES (%s, %s, %s, %s) RETURNING id;", (student_id, phone, message, admin_id))
+        lid = cur.fetchone()[0]; conn.commit(); return lid
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def get_recent_sms_logs(limit=50):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT l.id, l.sent_at, l.phone, s.name, s.class_name FROM sms_logs l LEFT JOIN students s ON s.id=l.student_id ORDER BY l.sent_at DESC LIMIT %s;", (limit,))
+        rows = cur.fetchall()
+        return [{"id": r[0], "sent_at": r[1], "phone": r[2], "student_name": r[3], "class_name": r[4]} for r in rows]
+    except Exception:
+        return []
+    finally:
+        cur.close(); conn.close()
+
+def get_system_stats():
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT COUNT(*) FROM students;"); st = cur.fetchone()[0] or 0
+        cur.execute("SELECT COUNT(*) FROM staff;"); sf = cur.fetchone()[0] or 0
+        return {"total_students": st, "total_staff": sf, "status": "Online"}
+    except Exception:
+        return {"total_students": 0, "total_staff": 0, "status": "Error"}
+    finally:
+        cur.close(); conn.close()
