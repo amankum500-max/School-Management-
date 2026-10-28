@@ -3742,3 +3742,49 @@ def delete_leave(leave_id):
     finally:
         cur.close()
         conn.close()
+def get_or_init_leave_balance(staff_id, year=None):
+    import datetime
+    if not year:
+        year = datetime.date.today().year
+
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Check agar pehle se record hai
+        cur.execute("""
+            SELECT id, total_leaves, used_leaves 
+            FROM leave_balances 
+            WHERE staff_id=%s AND year=%s;
+        """, (staff_id, year))
+        row = cur.fetchone()
+        
+        if row:
+            total = row[1]
+            used = row[2]
+            return {
+                "id": row[0], "staff_id": staff_id, "year": year, 
+                "total": total, "used": used, "remaining": total - used
+            }
+            
+        # Agar record nahi hai, toh naya initialize karo (Default: 12 leaves)
+        cur.execute("""
+            INSERT INTO leave_balances (staff_id, year, total_leaves, used_leaves)
+            VALUES (%s, %s, 12, 0) RETURNING id;
+        """, (staff_id, year))
+        new_id = cur.fetchone()[0]
+        conn.commit()
+        
+        return {
+            "id": new_id, "staff_id": staff_id, "year": year, 
+            "total": 12, "used": 0, "remaining": 12
+        }
+    except Exception:
+        conn.rollback()
+        # Agar database mein table hi nahi hai toh crash na ho, default return kare
+        return {
+            "staff_id": staff_id, "year": year, 
+            "total": 12, "used": 0, "remaining": 12
+        }
+    finally:
+        cur.close()
+        conn.close()
