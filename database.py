@@ -1843,3 +1843,14 @@ def get_teacher_by_username(username):
     cur.execute("SELECT t.id, t.staff_id, t.username, t.password_hash, s.name, s.role, s.phone, s.email FROM teachers t JOIN staff s ON s.id = t.staff_id WHERE t.username=%s;", (username,))
     row = cur.fetchone()
     cur.close();
+    # ============================================================
+# FIX FOR MEDICAL RECORD (Add this at the very bottom of database.py)
+# ============================================================
+def get_medical_record(student_id):
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("SELECT id, student_id, blood_group, allergies, chronic_conditions, medications, emergency_contact_name, emergency_contact_phone, doctor_name, doctor_phone, insurance_info, notes, last_updated FROM medical_records WHERE student_id=%s;", (student_id,))
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    if not row: return None
+    keys = ["id","student_id","blood_group","allergies","chronic_conditions","medications","emergency_contact_name","emergency_contact_phone","doctor_name","doctor_phone","insurance_info","notes","last_updated"]
+    return dict(zip(keys, row))
