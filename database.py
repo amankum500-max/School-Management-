@@ -4067,7 +4067,7 @@ def mark_chat_messages_read(thread_id, reader_type):
     finally:
         cur.close()
         conn.close()
-        def get_admin_threads():
+def get_admin_threads():
     conn = get_conn()
     cur = conn.cursor()
     try:
