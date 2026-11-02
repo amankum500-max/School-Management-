@@ -2001,3 +2001,63 @@ def count_unread_threads_for_parent(parent_id):
         return n
     finally:
         cur.close(); conn.close()
+        # ============================================================
+# FIX FOR PARENT.PY IMPORTS (Online Exam Attempts)
+# (Isko database.py ke sabse niche paste karein)
+# ============================================================
+
+def get_student_attempts(student_id, class_name=None):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        q = "SELECT e.id, e.title, e.subject, e.duration_minutes, e.total_marks, e.start_date, e.end_date, (SELECT id FROM online_exam_attempts a WHERE a.exam_id=e.id AND a.student_id=%s) AS attempt_id, (SELECT status FROM online_exam_attempts a WHERE a.exam_id=e.id AND a.student_id=%s) AS attempt_status, (SELECT score FROM online_exam_attempts a WHERE a.exam_id=e.id AND a.student_id=%s) AS score, (SELECT COUNT(*) FROM online_exam_questions WHERE exam_id=e.id) AS q_count FROM online_exams e WHERE e.is_published=TRUE AND e.class_name=%s ORDER BY e.start_date DESC NULLS LAST, e.created_at DESC;"
+        cur.execute(q, (student_id, student_id, student_id, class_name))
+        rows = cur.fetchall()
+        return [{"exam_id": r[0], "title": r[1], "subject": r[2], "duration": r[3], "total_marks": r[4], "start_date": r[5], "end_date": r[6], "attempt_id": r[7], "attempt_status": r[8], "score": r[9], "q_count": r[10] or 0} for r in rows]
+    finally:
+        cur.close(); conn.close()
+
+def get_or_create_attempt(exam_id, student_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, started_at, submitted_at, score, total_marks, status FROM online_exam_attempts WHERE exam_id=%s AND student_id=%s;", (exam_id, student_id))
+        row = cur.fetchone()
+        if row:
+            return {"id": row[0], "started_at": row[1], "submitted_at": row[2], "score": row[3] or 0, "total_marks": row[4] or 0, "status": row[5], "created_new": False}
+        cur.execute("INSERT INTO online_exam_attempts (exam_id, student_id) VALUES (%s, %s) RETURNING id, started_at;", (exam_id, student_id))
+        r = cur.fetchone()
+        conn.commit()
+        return {"id": r[0], "started_at": r[1], "submitted_at": None, "score": 0, "total_marks": 0, "status": "in_progress", "created_new": True}
+    finally:
+        cur.close(); conn.close()
+
+def get_attempt(attempt_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT a.id, a.exam_id, a.student_id, a.started_at, a.submitted_at, a.score, a.total_marks, a.status, e.title, e.duration_minutes, e.class_name, e.subject, s.name AS student_name, s.roll_no, s.class_name AS s_class, s.section FROM online_exam_attempts a JOIN online_exams e ON e.id = a.exam_id JOIN students s ON s.id = a.student_id WHERE a.id=%s;", (attempt_id,))
+        row = cur.fetchone()
+        if not row: return None
+        return {"id": row[0], "exam_id": row[1], "student_id": row[2], "started_at": row[3], "submitted_at": row[4], "score": row[5] or 0, "total_marks": row[6] or 0, "status": row[7], "exam_title": row[8], "duration": row[9], "exam_class": row[10], "subject": row[11], "student_name": row[12], "roll": row[13], "class_name": row[14], "section": row[15]}
+    finally:
+        cur.close(); conn.close()
+        
+def get_online_exam(eid):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, title, class_name, subject, duration_minutes, total_marks, instructions, start_date, end_date, is_published, shuffle_questions, created_at FROM online_exams WHERE id=%s;", (eid,))
+        row = cur.fetchone()
+        if not row: return None
+        keys = ["id","title","class_name","subject","duration","total_marks","instructions","start_date","end_date","is_published","shuffle_questions","created_at"]
+        return dict(zip(keys, row))
+    finally:
+        cur.close(); conn.close()
+
+def get_exam_questions(eid, shuffle=False):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, question_no, question_text, option_a, option_b, option_c, option_d, correct_option, marks FROM online_exam_questions WHERE exam_id=%s ORDER BY question_no;", (eid,))
+        rows = cur.fetchall()
+        qs = [{"id": r[0], "q_no": r[1], "text": r[2], "a": r[3], "b": r[4], "c": r[5], "d": r[6], "correct": r[7], "marks": r[8] or 1} for r in rows]
+        if shuffle: _random.shuffle(qs)
+        return qs
+    finally:
+        cur.close(); conn.close()
