@@ -4894,4 +4894,134 @@ def clear_exam_seating(exam_id):
     finally:
         cur.close()
         conn.close()
+# ============================================================
+# REPORT CARD FUNCTIONS
+# ============================================================
+
+def save_report_card_remarks(exam_id, student_id, remarks):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Upsert: Agar remarks hain toh update, nahi toh insert
+        cur.execute("""
+            INSERT INTO report_card_remarks (exam_id, student_id, remarks, updated_at) 
+            VALUES (%s, %s, %s, NOW()) 
+            ON CONFLICT (exam_id, student_id) DO UPDATE 
+            SET remarks = EXCLUDED.remarks, updated_at = NOW();
+        """, (exam_id, student_id, remarks))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"Error save_report_card_remarks: {e}")
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
+def get_student_year_report(student_id, academic_year):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Student ki details fetch karein
+        student = get_student(student_id)
+        if not student:
+            return None
+            
+        # Us saal ke saare exams aur marks fetch karein
+        cur.execute("""
+            SELECT e.id as exam_id, e.title as exam_title, e.exam_date,
+                   m.subject, m.marks_obtained, m.total_marks
+            FROM exams e
+            LEFT JOIN marks m ON e.id = m.exam_id AND m.student_id = %s
+            WHERE e.academic_year = %s
+            ORDER BY e.exam_date ASC;
+        """, (student_id, academic_year))
+        
+        rows = cur.fetchall()
+        keys = ["exam_id", "exam_title", "exam_date", "subject", "marks_obtained", "total_marks"]
+        exams_data = [dict(zip(keys, r)) for r in rows]
+        
+        return {
+            "student": student,
+            "academic_year": academic_year,
+            "exams": exams_data
+        }
+    except Exception as e:
+        print(f"Error get_student_year_report: {e}")
+        return None
+    finally:
+        cur.close()
+        conn.close()
+
+def get_class_report_card_summary(class_name, academic_year):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Class ke hisaab se aggregate data
+        cur.execute("""
+            SELECT s.id, s.name, s.roll_no, 
+                   COALESCE(SUM(m.marks_obtained), 0) as total_obtained,
+                   COALESCE(SUM(m.total_marks), 0) as total_max
+            FROM students s
+            LEFT JOIN marks m ON s.id = m.student_id
+            LEFT JOIN exams e ON m.exam_id = e.id AND e.academic_year = %s
+            WHERE s.class_name = %s AND s.status = 'active'
+            GROUP BY s.id, s.name, s.roll_no
+            ORDER BY s.roll_no ASC;
+        """, (academic_year, class_name))
+        
+        rows = cur.fetchall()
+        keys = ["id", "name", "roll_no", "total_obtained", "total_max"]
+        summary = []
+        
+        for r in rows:
+            data = dict(zip(keys, r))
+            # Percentage calculate karein
+            if data["total_max"] > 0:
+                data["percentage"] = round((data["total_obtained"] / data["total_max"]) * 100, 2)
+            else:
+                data["percentage"] = 0.0
+            summary.append(data)
+            
+        return summary
+    except Exception as e:
+        print(f"Error get_class_report_card_summary: {e}")
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+def get_children_for_parent(parent_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Maan lete hain students table mein parent_id column hai
+        cur.execute("""
+            SELECT id, name, roll_no, class_name, section, photo_url 
+            FROM students 
+            WHERE parent_id = %s AND status = 'active'
+            ORDER BY name;
+        """, (parent_id,))
+        rows = cur.fetchall()
+        keys = ["id", "name", "roll_no", "class_name", "section", "photo_url"]
+        return [dict(zip(keys, r)) for r in rows]
+    except Exception as e:
+        # Agar parent_id column nahi hai, toh parent_phone se match karein
+        try:
+            cur.execute("""
+                SELECT s.id, s.name, s.roll_no, s.class_name, s.section, s.photo_url 
+                FROM students s
+                JOIN parents p ON s.parent_phone = p.phone
+                WHERE p.id = %s AND s.status = 'active'
+                ORDER BY s.name;
+            """, (parent_id,))
+            rows = cur.fetchall()
+            keys = ["id", "name", "roll_no", "class_name", "section", "photo_url"]
+            return [dict(zip(keys, r)) for r in rows]
+        except Exception:
+            return []
+    finally:
+        cur.close()
+        conn.close()
         
