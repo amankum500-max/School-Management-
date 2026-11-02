@@ -2461,3 +2461,44 @@ def count_active_alerts():
     try: total += len(get_custom_alerts(active_only=True, limit=100))
     except Exception: pass
     return total
+    # ============================================================
+# FIX FOR ALERTS.PY IMPORTS (Computed Alerts)
+# (Isko database.py ke sabse niche paste karein)
+# ============================================================
+
+def get_computed_alerts():
+    from flask import url_for
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        month = date.today().strftime("%Y-%m")
+        alerts = []
+        def get_url(endpoint, **kwargs):
+            try: return url_for(endpoint, **kwargs)
+            except Exception: return "#"
+
+        cur.execute("SELECT COUNT(*) FROM (SELECT s.id FROM students s LEFT JOIN (SELECT class_name, SUM(amount) AS total FROM fee_structure GROUP BY class_name) fs ON fs.class_name = s.class_name LEFT JOIN (SELECT student_id, SUM(amount) AS paid FROM fee_payments WHERE month=%s GROUP BY student_id) fp ON fp.student_id = s.id WHERE s.status='active' AND COALESCE(fs.total,0) > COALESCE(fp.paid,0)) t;", (month,))
+        fd_count = cur.fetchone()[0] or 0
+        if fd_count > 0: alerts.append({"type": "danger", "icon": "💰", "title": f"{fd_count} students ki fees pending", "message": f"{month} ke liye fee defaulters hain", "link": get_url("reports.defaulters", month=month), "count": fd_count})
+
+        cur.execute("SELECT COUNT(*) FROM (SELECT student_id, ROUND((COUNT(*) FILTER (WHERE status='present') * 100.0 / NULLIF(COUNT(*),0))::numeric, 1) AS pct, COUNT(*) FROM attendance WHERE TO_CHAR(date, 'YYYY-MM')=%s GROUP BY student_id HAVING COUNT(*) >= 5 AND (COUNT(*) FILTER (WHERE status='present') * 100.0 / NULLIF(COUNT(*),0)) < 75) t;", (month,))
+        att_count = cur.fetchone()[0] or 0
+        if att_count > 0: alerts.append({"type": "warning", "icon": "📊", "title": f"{att_count} students ki attendance <75%", "message": f"{month} mein low attendance wale students", "link": get_url("reports.attendance", month=month), "count": att_count})
+
+        cur.execute("SELECT COUNT(*) FROM book_issues WHERE status='issued' AND due_date < CURRENT_DATE;")
+        lib_count = cur.fetchone()[0] or 0
+        if lib_count > 0: alerts.append({"type": "danger", "icon": "📚", "title": f"{lib_count} overdue library books", "message": "Books due date cross kar chuki hain", "link": get_url("library.active_issues", overdue="1"), "count": lib_count})
+
+        cur.execute("SELECT COUNT(*) FROM salary_records WHERE month=%s AND status='pending';", (month,))
+        sal_count = cur.fetchone()[0] or 0
+        if sal_count > 0: alerts.append({"type": "warning", "icon": "💵", "title": f"{sal_count} pending salaries", "message": f"{month} ke salary records pending hain", "link": get_url("salary.index", month=month), "count": sal_count})
+
+        cur.execute("SELECT COUNT(*) FROM events WHERE COALESCE(end_date, start_date) >= CURRENT_DATE AND start_date <= CURRENT_DATE + INTERVAL '7 days' AND is_public = TRUE;")
+        evt_count = cur.fetchone()[0] or 0
+        if evt_count > 0: alerts.append({"type": "info", "icon": "📅", "title": f"{evt_count} events in next 7 days", "message": "Upcoming school events", "link": get_url("events.index"), "count": evt_count})
+
+        cur.execute("SELECT COUNT(*) FROM homework WHERE created_at > NOW() - INTERVAL '3 days';")
+        hw_count = cur.fetchone()[0] or 0
+        if hw_count > 0: alerts.append({"type": "info", "icon": "📝", "title": f"{hw_count} homework assigned recently", "message": "Last 3 days ka homework", "link": get_url("homework.index"), "count": hw_count})
+        return alerts
+    finally:
+        cur.close(); conn.close()
