@@ -3706,4 +3706,22 @@ def get_staff_list():
     finally:
         cur.close()
         conn.close()
+        def create_advance(staff_id, amount, advance_date, reason, status="pending"):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO advances 
+            (staff_id, amount, advance_date, reason, status) 
+            VALUES (%s, %s, %s, %s, %s) RETURNING id;
+        """, (staff_id, amount, advance_date, reason, status))
+        advance_id = cur.fetchone()[0]
+        conn.commit()
+        return advance_id
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cur.close()
+        conn.close()
         
