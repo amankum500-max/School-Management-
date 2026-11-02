@@ -2060,4 +2060,42 @@ def get_exam_questions(eid, shuffle=False):
         if shuffle: _random.shuffle(qs)
         return qs
     finally:
+        cur.close(); conn.close()# ============================================================
+# FIX FOR PARENT.PY IMPORTS (Exam Submission)
+# (Isko database.py ke sabse niche paste karein)
+# ============================================================
+
+def submit_attempt(attempt_id, answers_dict):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT q.id, q.correct_option, q.marks FROM online_exam_questions q JOIN online_exam_attempts a ON a.exam_id = q.exam_id WHERE a.id=%s;", (attempt_id,))
+        questions = {r[0]: {"correct": r[1], "marks": r[2] or 1} for r in cur.fetchall()}
+        if not questions:
+            return None
+        total_score, total_marks = 0, 0
+        for qid, qinfo in questions.items():
+            selected = answers_dict.get(qid) or answers_dict.get(str(qid))
+            is_correct = (selected == qinfo["correct"])
+            if is_correct: total_score += qinfo["marks"]
+            total_marks += qinfo["marks"]
+            cur.execute("INSERT INTO online_exam_answers (attempt_id, question_id, selected_option, is_correct) VALUES (%s, %s, %s, %s) ON CONFLICT (attempt_id, question_id) DO UPDATE SET selected_option=EXCLUDED.selected_option, is_correct=EXCLUDED.is_correct;", (attempt_id, qid, selected, is_correct))
+        
+        cur.execute("UPDATE online_exam_attempts SET submitted_at=NOW(), score=%s, total_marks=%s, status='submitted' WHERE id=%s AND status='in_progress' RETURNING id;", (total_score, total_marks, attempt_id))
+        res = cur.fetchone()
+        conn.commit()
+        if not res: return None
+        return {"score": total_score, "total_marks": total_marks}
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cur.close(); conn.close()
+
+def get_attempt_answers(attempt_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT a.question_id, a.selected_option, a.is_correct, q.question_no, q.question_text, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option, q.marks FROM online_exam_answers a JOIN online_exam_questions q ON q.id = a.question_id WHERE a.attempt_id=%s ORDER BY q.question_no;", (attempt_id,))
+        rows = cur.fetchall()
+        return [{"qid": r[0], "selected": r[1], "is_correct": r[2], "q_no": r[3], "text": r[4], "a": r[5], "b": r[6], "c": r[7], "d": r[8], "correct": r[9], "marks": r[10] or 1} for r in rows]
+    finally:
         cur.close(); conn.close()
