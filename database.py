@@ -4086,7 +4086,7 @@ def get_admin_threads():
     finally:
         cur.close()
         conn.close()
-        def close_thread(thread_id):
+def close_thread(thread_id):
     conn = get_conn()
     cur = conn.cursor()
     try:
