@@ -134,7 +134,7 @@ def bulk():
                            classes=get_classes_list(),
                            selected_class=class_name)
     from database import (
-    ..., add_student_document, get_student_documents,
+    add_student_document, get_student_documents,
     delete_student_document, DOC_TYPES
 )
 
