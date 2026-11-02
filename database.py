@@ -4067,5 +4067,23 @@ def mark_chat_messages_read(thread_id, reader_type):
     finally:
         cur.close()
         conn.close()
-        
+        def get_admin_threads():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # chat_threads table se saare threads fetch karein
+        cur.execute("""
+            SELECT id, parent_id, subject, updated_at 
+            FROM chat_threads 
+            ORDER BY updated_at DESC;
+        """)
+        rows = cur.fetchall()
+        keys = ["id", "parent_id", "subject", "updated_at"]
+        return [dict(zip(keys, r)) for r in rows]
+    except Exception as e:
+        print(f"Error get_admin_threads: {e}")
+        return []
+    finally:
+        cur.close()
+        conn.close()
         
