@@ -2308,3 +2308,30 @@ def reset_teacher_password(teacher_id, new_password):
         return res[0] if res else None
     finally:
         cur.close(); conn.close()
+        # ============================================================
+# FIX FOR MEDICAL.PY IMPORTS
+# (Isko database.py ke sabse niche paste karein)
+# ============================================================
+
+def save_medical_record(student_id, data, admin_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO medical_records (student_id, blood_group, allergies, chronic_conditions, medications, emergency_contact_name, emergency_contact_phone, doctor_name, doctor_phone, insurance_info, notes, updated_by)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            ON CONFLICT (student_id) DO UPDATE SET
+                blood_group=EXCLUDED.blood_group, allergies=EXCLUDED.allergies, chronic_conditions=EXCLUDED.chronic_conditions,
+                medications=EXCLUDED.medications, emergency_contact_name=EXCLUDED.emergency_contact_name,
+                emergency_contact_phone=EXCLUDED.emergency_contact_phone, doctor_name=EXCLUDED.doctor_name,
+                doctor_phone=EXCLUDED.doctor_phone, insurance_info=EXCLUDED.insurance_info,
+                notes=EXCLUDED.notes, updated_by=EXCLUDED.updated_by, last_updated=NOW()
+            RETURNING id;
+        """, (student_id, data.get("blood_group") or None, data.get("allergies") or None, data.get("chronic_conditions") or None, data.get("medications") or None, data.get("emergency_contact_name") or None, data.get("emergency_contact_phone") or None, data.get("doctor_name") or None, data.get("doctor_phone") or None, data.get("insurance_info") or None, data.get("notes") or None, admin_id))
+        rid = cur.fetchone()[0]
+        conn.commit()
+        return rid
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cur.close(); conn.close()
