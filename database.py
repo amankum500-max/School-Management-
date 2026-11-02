@@ -4465,4 +4465,276 @@ def get_exam_results(exam_id):
     finally:
         cur.close()
         conn.close()
+# ============================================================
+# AUTOMATION & SMS FUNCTIONS
+# ============================================================
+
+def get_automation_settings():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT key, value FROM automation_settings;")
+        rows = cur.fetchall()
+        return {r[0]: r[1] for r in rows}
+    except Exception as e:
+        print(f"Error get_automation_settings: {e}")
+        return {}
+    finally:
+        cur.close()
+        conn.close()
+
+def update_automation_settings(key, value):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO automation_settings (key, value) 
+            VALUES (%s, %s) 
+            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+        """, (key, value))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"Error update_automation_settings: {e}")
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
+def get_sms_quota_remaining():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Maan lete hain settings table mein quota save hota hai
+        cur.execute("SELECT value FROM automation_settings WHERE key = 'sms_quota_remaining';")
+        row = cur.fetchone()
+        return int(row[0]) if row else 0
+    except Exception:
+        return 0
+    finally:
+        cur.close()
+        conn.close()
+
+def start_automation_run(job_name, job_type="auto"):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO automation_runs (job_name, job_type, status, started_at) 
+            VALUES (%s, %s, 'running', NOW()) RETURNING id;
+        """, (job_name, job_type))
+        run_id = cur.fetchone()[0]
+        conn.commit()
+        return run_id
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cur.close()
+        conn.close()
+
+def complete_automation_run(run_id, status, details=""):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            UPDATE automation_runs 
+            SET status = %s, details = %s, completed_at = NOW() 
+            WHERE id = %s;
+        """, (status, details, run_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
+def update_last_run(job_name):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO automation_settings (key, value) 
+            VALUES (%s, NOW()::text) 
+            ON CONFLICT (key) DO UPDATE SET value = NOW()::text;
+        """, (f"last_run_{job_name}",))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
+def get_automation_runs(limit=50):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, job_name, job_type, status, details, started_at, completed_at 
+            FROM automation_runs 
+            ORDER BY started_at DESC LIMIT %s;
+        """, (limit,))
+        rows = cur.fetchall()
+        keys = ["id", "job_name", "job_type", "status", "details", "started_at", "completed_at"]
+        return [dict(zip(keys, r)) for r in rows]
+    except Exception as e:
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+# ---------------- SMS SPECIFIC QUERIES ----------------
+
+def get_fee_defaulters_for_sms():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Example query: Jo students fees ke liye due hain
+        cur.execute("""
+            SELECT id, name, parent_phone 
+            FROM students 
+            WHERE status = 'active' AND id NOT IN (
+                SELECT student_id FROM fee_payments WHERE month = TO_CHAR(NOW(), 'YYYY-MM')
+            ) LIMIT 100;
+        """)
+        rows = cur.fetchall()
+        keys = ["id", "name", "phone"]
+        return [dict(zip(keys, r)) for r in rows if r[2]]
+    except Exception as e:
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+def get_absentees_today_for_sms():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT s.id, s.name, s.parent_phone 
+            FROM attendance a
+            JOIN students s ON a.student_id = s.id
+            WHERE a.date = CURRENT_DATE AND a.status = 'absent';
+        """)
+        rows = cur.fetchall()
+        keys = ["id", "name", "phone"]
+        return [dict(zip(keys, r)) for r in rows if r[2]]
+    except Exception as e:
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+def get_library_overdue_for_sms():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Assuming library_issues table exists
+        cur.execute("""
+            SELECT s.id, s.name, s.parent_phone, b.title
+            FROM library_issues li
+            JOIN students s ON li.student_id = s.id
+            JOIN library_books b ON li.book_id = b.id
+            WHERE li.return_date IS NULL AND li.due_date < CURRENT_DATE;
+        """)
+        rows = cur.fetchall()
+        keys = ["id", "name", "phone", "book_title"]
+        return [dict(zip(keys, r)) for r in rows if r[2]]
+    except Exception as e:
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+def get_upcoming_events_for_sms(days=1):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, title, event_date 
+            FROM events 
+            WHERE event_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '%s days';
+        """, (days,))
+        rows = cur.fetchall()
+        keys = ["id", "title", "event_date"]
+        return [dict(zip(keys, r)) for r in rows]
+    except Exception as e:
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+def get_students_with_low_attendance_for_sms(threshold=75):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT s.id, s.name, s.parent_phone, 
+                   (COUNT(CASE WHEN a.status = 'present' THEN 1 END) * 100.0 / COUNT(a.id)) as percentage
+            FROM students s
+            JOIN attendance a ON s.id = a.student_id
+            WHERE s.status = 'active'
+            GROUP BY s.id, s.name, s.parent_phone
+            HAVING (COUNT(CASE WHEN a.status = 'present' THEN 1 END) * 100.0 / COUNT(a.id)) < %s;
+        """, (threshold,))
+        rows = cur.fetchall()
+        keys = ["id", "name", "phone", "percentage"]
+        return [dict(zip(keys, r)) for r in rows if r[2]]
+    except Exception as e:
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+# ---------------- SMS LOGS & TEMPLATES ----------------
+
+def was_sms_sent_to_student_today(student_id, sms_type):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT 1 FROM sms_logs 
+            WHERE student_id = %s AND sms_type = %s AND DATE(sent_at) = CURRENT_DATE LIMIT 1;
+        """, (student_id, sms_type))
+        return cur.fetchone() is not None
+    except Exception:
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
+def log_sms(student_id, phone, message, sms_type, status="sent"):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO sms_logs (student_id, phone, message, sms_type, status, sent_at)
+            VALUES (%s, %s, %s, %s, %s, NOW());
+        """, (student_id, phone, message, sms_type, status))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
+def get_sms_template(template_name):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT message FROM sms_templates WHERE name = %s LIMIT 1;", (template_name,))
+        row = cur.fetchone()
+        return row[0] if row else ""
+    except Exception:
+        return ""
+    finally:
+        cur.close()
+        conn.close()
         
