@@ -2099,3 +2099,71 @@ def get_attempt_answers(attempt_id):
         return [{"qid": r[0], "selected": r[1], "is_correct": r[2], "q_no": r[3], "text": r[4], "a": r[5], "b": r[6], "c": r[7], "d": r[8], "correct": r[9], "marks": r[10] or 1} for r in rows]
     finally:
         cur.close(); conn.close()
+        # ============================================================
+# FIX FOR PARENT.PY IMPORTS (Yearly Report)
+# (Isko database.py ke sabse niche paste karein)
+# ============================================================
+
+def get_student_year_report(student_id, academic_year):
+    try: start, end = _academic_year_range(academic_year)
+    except Exception: return None
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, name, roll_no, class_name, section, gender, dob, parent_name, parent_phone, address, admission_date, photo_url FROM students WHERE id=%s;", (student_id,))
+        srow = cur.fetchone()
+        if not srow: return None
+        student = {"id": srow[0], "name": srow[1], "roll": srow[2], "class_name": srow[3], "section": srow[4], "gender": srow[5], "dob": srow[6], "parent_name": srow[7], "parent_phone": srow[8], "address": srow[9], "admission_date": srow[10], "photo_url": srow[11]}
+        class_name = student["class_name"]
+        cur.execute("SELECT id, name, exam_date, subjects, max_marks FROM exams WHERE class_name=%s AND exam_date BETWEEN %s AND %s ORDER BY exam_date, id;", (class_name, start, end))
+        exams = [{"id": r[0], "name": r[1], "exam_date": r[2], "subjects": r[3] or [], "max_marks": r[4] or 100} for r in cur.fetchall()]
+        
+        exam_results, all_subjects_set, total_obtained_all, total_max_all = [], set(), 0, 0
+        for e in exams:
+            cur.execute("SELECT subject, obtained FROM marks WHERE exam_id=%s AND student_id=%s;", (e["id"], student_id))
+            marks = {r[0]: r[1] for r in cur.fetchall()}
+            if not marks: continue
+            obtained_total = sum(v for v in marks.values() if v is not None)
+            max_total = e["max_marks"] * len(e["subjects"])
+            pct = round((obtained_total / max_total * 100), 1) if max_total > 0 else 0
+            grade = "A+" if pct >= 90 else "A" if pct >= 80 else "B" if pct >= 70 else "C" if pct >= 60 else "D" if pct >= 33 else "F"
+            exam_results.append({"name": e["name"], "date": e["exam_date"], "marks": marks, "obtained": obtained_total, "max": max_total, "percent": pct, "grade": grade})
+            total_obtained_all += obtained_total
+            total_max_all += max_total
+            for subj in e["subjects"]: all_subjects_set.add(subj)
+            
+        all_subjects = sorted(all_subjects_set)
+        subject_averages = {}
+        for subj in all_subjects:
+            scores = [er["marks"][subj] / next((e["max_marks"] for e in exams if e["name"] == er["name"]), 100) * 100 for er in exam_results if subj in er["marks"] and er["marks"][subj] is not None]
+            subject_averages[subj] = round(sum(scores) / len(scores), 1) if scores else None
+            
+        overall_pct = round((total_obtained_all / total_max_all * 100), 1) if total_max_all > 0 else 0
+        overall_grade = "A+" if overall_pct >= 90 else "A" if overall_pct >= 80 else "B" if overall_pct >= 70 else "C" if overall_pct >= 60 else "D" if overall_pct >= 33 else "F"
+        
+        cur.execute("SELECT COUNT(*) FILTER (WHERE status='present'), COUNT(*) FILTER (WHERE status='absent'), COUNT(*) FILTER (WHERE status='late'), COUNT(*) FILTER (WHERE status='leave'), COUNT(*) FROM attendance WHERE student_id=%s AND date BETWEEN %s AND %s;", (student_id, start, end))
+        ar = cur.fetchone()
+        att_total, att_present = ar[4] or 0, ar[0] or 0
+        att_pct = round((att_present / att_total * 100), 1) if att_total > 0 else 0
+        attendance = {"present": att_present, "absent": ar[1] or 0, "late": ar[2] or 0, "leave": ar[3] or 0, "total": att_total, "percent": att_pct}
+        
+        start_month, end_month = start.strftime("%Y-%m"), end.strftime("%Y-%m")
+        cur.execute("SELECT COALESCE(SUM(total_amount), 0) FROM bills WHERE student_id=%s AND month BETWEEN %s AND %s;", (student_id, start_month, end_month))
+        fee_billed = float(cur.fetchone()[0] or 0)
+        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM fee_payments WHERE student_id=%s AND month BETWEEN %s AND %s;", (student_id, start_month, end_month))
+        fee_paid = float(cur.fetchone()[0] or 0)
+        fee_cleared = (fee_paid >= fee_billed and fee_billed > 0) or fee_billed == 0
+        fee_status = {"billed": fee_billed, "paid": fee_paid, "pending": max(fee_billed - fee_paid, 0), "cleared": fee_cleared}
+        
+        cur.execute("SELECT s.id, COALESCE(SUM(m.obtained), 0) AS total FROM students s JOIN marks m ON m.student_id = s.id JOIN exams e ON e.id = m.exam_id WHERE s.status='active' AND s.class_name=%s AND e.exam_date BETWEEN %s AND %s GROUP BY s.id ORDER BY total DESC;", (class_name, start, end))
+        ranks = cur.fetchall()
+        class_rank, class_total = None, len(ranks)
+        for i, r in enumerate(ranks):
+            if r[0] == student_id: class_rank = i + 1; break
+            
+        cur.execute("SELECT teacher_remark, principal_remark, conduct FROM report_card_remarks WHERE student_id=%s AND academic_year=%s;", (student_id, academic_year))
+        rr = cur.fetchone()
+        remarks = {"teacher_remark": rr[0] if rr else "", "principal_remark": rr[1] if rr else "", "conduct": rr[2] if rr else "Good"}
+        
+        return {"student": student, "academic_year": academic_year, "exams": exam_results, "all_subjects": all_subjects, "subject_averages": subject_averages, "total_obtained": total_obtained_all, "total_max": total_max_all, "overall_percent": overall_pct, "overall_grade": overall_grade, "attendance": attendance, "fee_status": fee_status, "class_rank": class_rank, "class_total": class_total, "remarks": remarks}
+    finally:
+        cur.close(); conn.close()
