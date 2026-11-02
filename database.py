@@ -4737,4 +4737,161 @@ def get_sms_template(template_name):
     finally:
         cur.close()
         conn.close()
+# ============================================================
+# HALL TICKET & SEATING FUNCTIONS
+# ============================================================
+
+def get_exam(exam_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT * FROM exams WHERE id = %s;", (exam_id,))
+        row = cur.fetchone()
+        if row:
+            # Column names nikalne ke liye
+            colnames = [desc[0] for desc in cur.description]
+            return dict(zip(colnames, row))
+        return None
+    except Exception as e:
+        print(f"Error get_exam: {e}")
+        return None
+    finally:
+        cur.close()
+        conn.close()
+
+def get_exams(class_name=None):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        if class_name:
+            cur.execute("SELECT * FROM exams WHERE class_name = %s ORDER BY exam_date DESC;", (class_name,))
+        else:
+            cur.execute("SELECT * FROM exams ORDER BY exam_date DESC;")
+        rows = cur.fetchall()
+        colnames = [desc[0] for desc in cur.description]
+        return [dict(zip(colnames, r)) for r in rows]
+    except Exception as e:
+        print(f"Error get_exams: {e}")
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+def get_exam_students_for_tickets(exam_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Yahan hum exam_seating table se room aur seat bhi fetch kar rahe hain agar wo assign hui ho
+        cur.execute("""
+            SELECT s.id, s.name, s.roll_no, s.class_name, s.section, 
+                   e.title as exam_title, e.exam_date, e.start_time,
+                   es.room_no, es.seat_no
+            FROM students s
+            JOIN exam_students es ON s.id = es.student_id
+            JOIN exams e ON es.exam_id = e.id
+            LEFT JOIN exam_seating exs ON exs.exam_id = e.id AND exs.student_id = s.id
+            WHERE es.exam_id = %s AND s.status = 'active'
+            ORDER BY s.roll_no ASC;
+        """, (exam_id,))
+        rows = cur.fetchall()
+        keys = ["id", "name", "roll_no", "class_name", "section", "exam_title", "exam_date", "start_time", "room_no", "seat_no"]
+        return [dict(zip(keys, r)) for r in rows]
+    except Exception as e:
+        print(f"Error get_exam_students_for_tickets: {e}")
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+def set_exam_seating(exam_id, student_id, room_no, seat_no):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Agar pehle se seating hai toh update karega, warna naya insert karega
+        cur.execute("""
+            INSERT INTO exam_seating (exam_id, student_id, room_no, seat_no)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (exam_id, student_id) DO UPDATE 
+            SET room_no = EXCLUDED.room_no, seat_no = EXCLUDED.seat_no;
+        """, (exam_id, student_id, room_no, seat_no))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"Error set_exam_seating: {e}")
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
+def auto_assign_seating(exam_id, room_capacity=30):
+    # Pehle purani seating clear karein
+    clear_exam_seating(exam_id)
+    
+    students = get_exam_students_for_tickets(exam_id)
+    if not students:
+        return False
+
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        room_num = 1
+        seat_num = 1
+        
+        for s in students:
+            if seat_num > room_capacity:
+                room_num += 1
+                seat_num = 1
+
+            cur.execute("""
+                INSERT INTO exam_seating (exam_id, student_id, room_no, seat_no)
+                VALUES (%s, %s, %s, %s);
+            """, (exam_id, s['id'], str(room_num), str(seat_num)))
+            
+            seat_num += 1
+            
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"Error auto_assign_seating: {e}")
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
+def get_exam_seating_summary(exam_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT room_no, COUNT(student_id) as student_count
+            FROM exam_seating
+            WHERE exam_id = %s
+            GROUP BY room_no
+            ORDER BY room_no;
+        """, (exam_id,))
+        rows = cur.fetchall()
+        return [{"room_no": r[0], "student_count": r[1]} for r in rows]
+    except Exception as e:
+        print(f"Error get_exam_seating_summary: {e}")
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+def clear_exam_seating(exam_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM exam_seating WHERE exam_id = %s;", (exam_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"Error clear_exam_seating: {e}")
+        return False
+    finally:
+        cur.close()
+        conn.close()
         
