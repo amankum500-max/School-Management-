@@ -2218,3 +2218,93 @@ def record_advance_repayment(advance_id, month, amount, salary_record_id=None):
         conn.rollback(); raise
     finally:
         cur.close(); conn.close()
+        # ============================================================
+# FIX FOR TEACHER_PORTAL.PY IMPORTS
+# (Isko database.py ke sabse niche paste karein)
+# ============================================================
+
+def get_teacher_by_username(username):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT t.id, t.staff_id, t.username, t.password_hash, s.name, s.role, s.phone, s.email FROM teachers t JOIN staff s ON s.id = t.staff_id WHERE t.username=%s;", (username,))
+        row = cur.fetchone()
+        return row
+    finally:
+        cur.close(); conn.close()
+
+def verify_teacher(username, password):
+    row = get_teacher_by_username(username)
+    if not row or not check_password_hash(row[3], password): return None
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE teachers SET last_login=NOW() WHERE id=%s;", (row[0],))
+        conn.commit()
+        return {"id": row[0], "staff_id": row[1], "username": row[2], "name": row[4], "role": row[5]}
+    finally:
+        cur.close(); conn.close()
+
+def get_teacher_classes(staff_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT DISTINCT class_name, section FROM timetable WHERE staff_id=%s ORDER BY class_name, section;", (staff_id,))
+        rows = cur.fetchall()
+        return [{"class_name": r[0], "section": r[1] or ''} for r in rows]
+    finally:
+        cur.close(); conn.close()
+
+def get_teacher_today_schedule(staff_id):
+    weekday = date.today().isoweekday()
+    if weekday > 6: return []
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT period_no, class_name, section, subject FROM timetable WHERE staff_id=%s AND day_of_week=%s ORDER BY period_no;", (staff_id, weekday))
+        rows = cur.fetchall()
+        return [{"period_no": r[0], "class_name": r[1], "section": r[2] or '', "subject": r[3]} for r in rows]
+    finally:
+        cur.close(); conn.close()
+
+def get_teacher_homework(staff_id, limit=30):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT DISTINCT h.id, h.title, h.class_name, h.section, h.subject, h.due_date, h.created_at FROM homework h WHERE h.class_name IN (SELECT DISTINCT class_name FROM timetable WHERE staff_id=%s) ORDER BY h.created_at DESC LIMIT %s;", (staff_id, limit))
+        rows = cur.fetchall()
+        return [{"id": r[0], "title": r[1], "class_name": r[2], "section": r[3] or '', "subject": r[4], "due_date": r[5], "created_at": r[6]} for r in rows]
+    finally:
+        cur.close(); conn.close()
+
+def create_teacher(staff_id, username, password):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO teachers (staff_id, username, password_hash) VALUES (%s, %s, %s) RETURNING id;", (staff_id, username, generate_password_hash(password)))
+        tid = cur.fetchone()[0]; conn.commit(); return tid
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def get_all_teachers():
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT t.id, t.username, t.last_login, s.id AS staff_id, s.name, s.role, s.phone FROM teachers t JOIN staff s ON s.id = t.staff_id ORDER BY s.name;")
+        rows = cur.fetchall()
+        return [{"id": r[0], "username": r[1], "last_login": r[2], "staff_id": r[3], "name": r[4], "role": r[5], "phone": r[6]} for r in rows]
+    finally:
+        cur.close(); conn.close()
+
+def delete_teacher(teacher_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM teachers WHERE id=%s;", (teacher_id,))
+        conn.commit()
+    finally:
+        cur.close(); conn.close()
+
+def reset_teacher_password(teacher_id, new_password):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE teachers SET password_hash=%s WHERE id=%s RETURNING id;", (generate_password_hash(new_password), teacher_id))
+        res = cur.fetchone()
+        conn.commit()
+        return res[0] if res else None
+    finally:
+        cur.close(); conn.close()
