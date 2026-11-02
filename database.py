@@ -3323,3 +3323,20 @@ def get_system_stats():
         return {"total_students": 0, "total_staff": 0, "status": "Error"}
     finally:
         cur.close(); conn.close()
+        # ============================================================
+# FIX FOR DISCOUNTS.PY (Delete Discount Type)
+# (Isko database.py ke sabse niche paste karein)
+# ============================================================
+
+def delete_discount_type(discount_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM discount_types WHERE id=%s;", (discount_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"Error deleting discount type: {e}")
+        return False
+    finally:
+        cur.close(); conn.close()
