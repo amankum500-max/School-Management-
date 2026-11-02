@@ -2408,3 +2408,56 @@ def get_students_with_allergies():
         return [{"id": r[0], "name": r[1], "class_name": r[2], "section": r[3], "blood_group": r[4], "allergies": r[5]} for r in rows]
     finally:
         cur.close(); conn.close()
+        # ============================================================
+# FIX FOR ALERTS.PY IMPORTS
+# (Isko database.py ke sabse niche paste karein)
+# ============================================================
+
+def create_custom_alert(data, admin_id):
+    if not data or not data.get("title"): raise ValueError("Alert title is required")
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO custom_alerts (title, message, alert_type, target, is_active, expires_at, created_by) VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id;", (data["title"].strip(), (data.get("message") or "").strip() or None, data.get("alert_type") or "info", data.get("target") or "admin", _to_bool(data.get("is_active"), default=True), data.get("expires_at") or None, admin_id))
+        aid = cur.fetchone()[0]; conn.commit(); return aid
+    except Exception as e:
+        conn.rollback(); raise e
+    finally:
+        cur.close(); conn.close()
+
+def get_custom_alerts(active_only=True, limit=20):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        q = "SELECT id, title, message, alert_type, target, is_active, expires_at, created_at FROM custom_alerts"
+        if active_only: q += " WHERE is_active=TRUE AND (expires_at IS NULL OR expires_at >= CURRENT_DATE)"
+        q += " ORDER BY created_at DESC LIMIT %s;"
+        cur.execute(q, (limit,))
+        rows = cur.fetchall()
+        return [{"id": r[0], "title": r[1], "message": r[2], "alert_type": r[3], "target": r[4], "is_active": r[5], "expires_at": r[6], "created_at": r[7]} for r in rows]
+    finally:
+        cur.close(); conn.close()
+
+def toggle_custom_alert(aid, is_active):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE custom_alerts SET is_active=%s WHERE id=%s;", (_to_bool(is_active), aid))
+        conn.commit()
+    except Exception as e:
+        conn.rollback(); raise e
+    finally:
+        cur.close(); conn.close()
+
+def delete_custom_alert(aid):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM custom_alerts WHERE id=%s;", (aid,))
+        conn.commit()
+    finally:
+        cur.close(); conn.close()
+        
+def count_active_alerts():
+    total = 0
+    try: total += len(get_computed_alerts())
+    except Exception: pass
+    try: total += len(get_custom_alerts(active_only=True, limit=100))
+    except Exception: pass
+    return total
