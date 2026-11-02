@@ -4284,4 +4284,185 @@ def get_parent_threads(parent_id):
     finally:
         cur.close()
         conn.close()
+# ============================================================
+# ONLINE EXAM FUNCTIONS (Complete)
+# ============================================================
+
+def create_online_exam(title, class_name, subject, start_time, end_time, duration_minutes, total_marks, created_by):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO online_exams 
+            (title, class_name, subject, start_time, end_time, duration_minutes, total_marks, created_by, is_active) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, FALSE) RETURNING id;
+        """, (title, class_name, subject, start_time, end_time, duration_minutes, total_marks, created_by))
+        exam_id = cur.fetchone()[0]
+        conn.commit()
+        return exam_id
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cur.close()
+        conn.close()
+
+def get_online_exams(class_name=None, status=None):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        q = "SELECT id, title, class_name, subject, start_time, end_time, duration_minutes, total_marks, is_active FROM online_exams WHERE 1=1"
+        params = []
+        if class_name:
+            q += " AND class_name = %s"
+            params.append(class_name)
+        if status == 'active':
+            q += " AND is_active = TRUE"
+        q += " ORDER BY start_time DESC;"
+        
+        cur.execute(q, tuple(params))
+        rows = cur.fetchall()
+        keys = ["id", "title", "class_name", "subject", "start_time", "end_time", "duration_minutes", "total_marks", "is_active"]
+        return [dict(zip(keys, r)) for r in rows]
+    finally:
+        cur.close()
+        conn.close()
+
+def get_online_exam(exam_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, title, class_name, subject, start_time, end_time, duration_minutes, total_marks, is_active FROM online_exams WHERE id = %s;", (exam_id,))
+        row = cur.fetchone()
+        if row:
+            keys = ["id", "title", "class_name", "subject", "start_time", "end_time", "duration_minutes", "total_marks", "is_active"]
+            return dict(zip(keys, row))
+        return None
+    finally:
+        cur.close()
+        conn.close()
+
+def update_online_exam(exam_id, title, start_time, end_time, duration_minutes, total_marks):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            UPDATE online_exams 
+            SET title=%s, start_time=%s, end_time=%s, duration_minutes=%s, total_marks=%s 
+            WHERE id=%s;
+        """, (title, start_time, end_time, duration_minutes, total_marks, exam_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cur.close()
+        conn.close()
+
+def delete_online_exam(exam_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Pehle questions delete karein (foreign key constraint se bachne ke liye)
+        cur.execute("DELETE FROM exam_questions WHERE exam_id = %s;", (exam_id,))
+        cur.execute("DELETE FROM online_exams WHERE id = %s;", (exam_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cur.close()
+        conn.close()
+
+def toggle_exam_publish(exam_id, is_active):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE online_exams SET is_active = %s WHERE id = %s;", (is_active, exam_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
+# ---------------- EXAM QUESTIONS ----------------
+
+def get_exam_questions(exam_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, exam_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks 
+            FROM exam_questions 
+            WHERE exam_id = %s ORDER BY id ASC;
+        """, (exam_id,))
+        rows = cur.fetchall()
+        keys = ["id", "exam_id", "question_text", "option_a", "option_b", "option_c", "option_d", "correct_option", "marks"]
+        return [dict(zip(keys, r)) for r in rows]
+    except Exception as e:
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+def add_exam_question(exam_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks=1):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO exam_questions 
+            (exam_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id;
+        """, (exam_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks))
+        q_id = cur.fetchone()[0]
+        conn.commit()
+        return q_id
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cur.close()
+        conn.close()
+
+def delete_exam_question(question_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM exam_questions WHERE id = %s;", (question_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
+# ---------------- EXAM RESULTS ----------------
+
+def get_exam_results(exam_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT r.id, r.exam_id, r.student_id, s.name as student_name, s.roll_no, 
+                   r.marks_obtained, r.total_marks, r.status, r.submitted_at 
+            FROM exam_results r
+            JOIN students s ON r.student_id = s.id
+            WHERE r.exam_id = %s 
+            ORDER BY r.marks_obtained DESC;
+        """, (exam_id,))
+        rows = cur.fetchall()
+        keys = ["id", "exam_id", "student_id", "student_name", "roll_no", "marks_obtained", "total_marks", "status", "submitted_at"]
+        return [dict(zip(keys, r)) for r in rows]
+    except Exception as e:
+        return []
+    finally:
+        cur.close()
+        conn.close()
         
