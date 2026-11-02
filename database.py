@@ -13,6 +13,7 @@ from decimal import Decimal
 
 from werkzeug.security import generate_password_hash, check_password_hash
 from supabase_client import get_conn
+import psycopg2.extras
 
 # ============================================================
 # IMPORTS & CONSTANTS
@@ -3340,3 +3341,199 @@ def delete_discount_type(discount_id):
         return False
     finally:
         cur.close(); conn.close()
+        import psycopg2
+import psycopg2.extras
+from datetime import date
+
+# Apne hisaab se connection details dalein
+def get_conn():
+    return psycopg2.connect(
+        dbname="your_db_name",
+        user="your_db_user",
+        password="your_db_password",
+        host="your_db_host",
+        port="your_db_port"
+    )
+
+# Categories list
+DISCOUNT_CATEGORIES = ["academic", "sports", "sibling", "staff", "other"]
+
+# ---------------- DISCOUNT TYPES ----------------
+
+def get_discount_types(active_only=True):
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    try:
+        query = "SELECT * FROM discount_types"
+        if active_only:
+            query += " WHERE is_active = TRUE"
+        query += " ORDER BY name"
+        cur.execute(query)
+        return cur.fetchall()
+    finally:
+        cur.close()
+        conn.close()
+
+def create_discount_type(name, category, discount_type, value, description):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO discount_types (name, category, discount_type, value, description)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (name, category, discount_type, value, description))
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()
+
+def delete_discount_type(dtid):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM discount_types WHERE id = %s", (dtid,))
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()
+
+# ---------------- STUDENT DISCOUNTS ----------------
+
+def get_student_discounts(student_id, active_only=True):
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    try:
+        query = """
+            SELECT sd.*, dt.name as discount_name, dt.discount_type, dt.value as type_value
+            FROM student_discounts sd
+            JOIN discount_types dt ON sd.discount_type_id = dt.id
+            WHERE sd.student_id = %s
+        """
+        if active_only:
+            query += " AND (sd.to_date IS NULL OR sd.to_date >= CURRENT_DATE)"
+        cur.execute(query, (student_id,))
+        return cur.fetchall()
+    finally:
+        cur.close()
+        conn.close()
+
+def add_student_discount(student_id, discount_type_id, custom_value, from_date, to_date, reason, admin_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO student_discounts 
+            (student_id, discount_type_id, custom_value, from_date, to_date, reason, created_by)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (student_id, discount_type_id, custom_value, from_date, to_date, reason, admin_id))
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()
+
+def delete_student_discount(sd_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM student_discounts WHERE id = %s", (sd_id,))
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()
+
+# Ye function discounts.py mein use ho raha hai
+def compute_student_discount(base_fee, student_id):
+    applied_discounts = get_student_discounts(student_id, active_only=True)
+    total_discount_amount = 0
+    discount_items = []
+    
+    for d in applied_discounts:
+        # Agar custom value di hai toh wo use karo, warna default type value
+        val = d['custom_value'] if d['custom_value'] is not None else d['type_value']
+        
+        if d['discount_type'] == 'percent':
+            amt = (base_fee * float(val)) / 100
+        else: # flat
+            amt = float(val)
+            
+        total_discount_amount += amt
+        discount_items.append({
+            'name': d['discount_name'],
+            'amount': amt,
+            'type': d['discount_type'],
+            'value': val
+        })
+        
+    return total_discount_amount, discount_items
+
+# ---------------- SUMMARIES & REPORTS ----------------
+
+def get_all_discount_summary():
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    try:
+        cur.execute("""
+            SELECT dt.name, COUNT(sd.id) as total_applied, SUM(dt.value) as total_value
+            FROM discount_types dt
+            LEFT JOIN student_discounts sd ON dt.id = sd.discount_type_id
+            GROUP BY dt.id, dt.name
+        """)
+        return cur.fetchall()
+    finally:
+        cur.close()
+        conn.close()
+
+def get_discounts_summary_for_class(class_name):
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    try:
+        cur.execute("""
+            SELECT s.name as student_name, s.roll_no, dt.name as discount_name, 
+                   sd.custom_value, sd.from_date, sd.to_date
+            FROM student_discounts sd
+            JOIN students s ON sd.student_id = s.id
+            JOIN discount_types dt ON sd.discount_type_id = dt.id
+            WHERE s.class_name = %s
+        """, (class_name,))
+        return cur.fetchall()
+    finally:
+        cur.close()
+        conn.close()
+
+# ---------------- STUDENTS & CLASSES ----------------
+
+def get_student(student_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Assuming aapke paas students table hai jisme ye columns hain
+        cur.execute("""
+            SELECT id, name, roll_no, class_name, section, gender, dob, 
+                   parent_name, parent_phone, address, admission_date, status, created_at
+            FROM students WHERE id = %s
+        """, (student_id,))
+        return cur.fetchone()
+    finally:
+        cur.close()
+        conn.close()
+
+def get_students():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, name, roll_no, class_name FROM students ORDER BY name")
+        return cur.fetchall()
+    finally:
+        cur.close()
+        conn.close()
+
+def get_classes_list():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT DISTINCT class_name FROM students WHERE class_name IS NOT NULL ORDER BY class_name")
+        return [row[0] for row in cur.fetchall()]
+    finally:
+        cur.close()
+        conn.close()
+        
