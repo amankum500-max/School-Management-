@@ -2167,3 +2167,54 @@ def get_student_year_report(student_id, academic_year):
         return {"student": student, "academic_year": academic_year, "exams": exam_results, "all_subjects": all_subjects, "subject_averages": subject_averages, "total_obtained": total_obtained_all, "total_max": total_max_all, "overall_percent": overall_pct, "overall_grade": overall_grade, "attendance": attendance, "fee_status": fee_status, "class_rank": class_rank, "class_total": class_total, "remarks": remarks}
     finally:
         cur.close(); conn.close()
+        # ============================================================
+# FIX FOR SALARY.PY IMPORTS
+# (Isko database.py ke sabse niche paste karein)
+# ============================================================
+
+def get_staff_attendance_summary(staff_id, month):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT COUNT(*) FILTER (WHERE status='present'), COUNT(*) FILTER (WHERE status='absent'), COUNT(*) FILTER (WHERE status='half_day'), COUNT(*) FILTER (WHERE status='leave'), COUNT(*) FILTER (WHERE status='holiday'), COUNT(*) FROM staff_attendance WHERE staff_id=%s AND TO_CHAR(date, 'YYYY-MM')=%s;", (staff_id, month))
+        r = cur.fetchone()
+        if not r: return {"present": 0, "absent": 0, "half_day": 0, "leave": 0, "holiday": 0, "total_marked": 0, "working_days": 0, "percent": 0}
+        present = r[0] or 0; absent = r[1] or 0; half = r[2] or 0; leave_c = r[3] or 0
+        total_working = present + absent + half + leave_c
+        pct = round(((present + half * 0.5) / total_working) * 100, 1) if total_working > 0 else 0
+        return {"present": present, "absent": absent, "half_day": half, "leave": leave_c, "holiday": r[4] or 0, "total_marked": r[5] or 0, "working_days": total_working, "percent": pct}
+    finally:
+        cur.close(); conn.close()
+
+def get_staff_attendance_for_salary(staff_id, month):
+    s = get_staff_attendance_summary(staff_id, month)
+    return {"absent_days": s["absent"], "half_days": s["half_day"], "unpaid_leave": s["leave"], "total_deduction_days": s["absent"] + (s["half_day"] * 0.5) + s["leave"]}
+
+def get_total_advance_outstanding():
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT COALESCE(SUM(remaining_amount), 0), COUNT(*) FILTER (WHERE status='active') FROM staff_advances WHERE status='active';")
+        r = cur.fetchone()
+        return {"outstanding": float(r[0] or 0), "active_count": r[1] or 0}
+    finally:
+        cur.close(); conn.close()
+
+def get_active_advance(staff_id, month):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, amount, remaining_amount, monthly_deduction FROM staff_advances WHERE staff_id=%s AND status='active' ORDER BY created_at ASC LIMIT 1;", (staff_id,))
+        row = cur.fetchone()
+        if not row: return None
+        return {"id": row[0], "amount": float(row[1] or 0), "remaining": float(row[2] or 0), "monthly": float(row[3] or 0)}
+    finally:
+        cur.close(); conn.close()
+
+def record_advance_repayment(advance_id, month, amount, salary_record_id=None):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO advance_repayments (advance_id, month, amount, salary_record_id) VALUES (%s, %s, %s, %s);", (advance_id, month, amount, salary_record_id))
+        cur.execute("UPDATE staff_advances SET remaining_amount = remaining_amount - %s, status = CASE WHEN remaining_amount - %s <= 0 THEN 'completed' ELSE 'active' END WHERE id=%s;", (amount, amount, advance_id))
+        conn.commit()
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
