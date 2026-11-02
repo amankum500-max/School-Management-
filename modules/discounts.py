@@ -10,7 +10,7 @@ from modules.auth import login_required, role_required
 from database import (
     get_discount_types, create_discount_type, delete_discount_type,
     get_student_discounts, add_student_discount, delete_student_discount,
-    compute_student_discount, get_discounts_summary_for_class,
+    delete_student_discount, get_discounts_summary_for_class,
     get_all_discount_summary, get_student, get_students,
     DISCOUNT_CATEGORIES, get_conn, get_classes_list
 )
