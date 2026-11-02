@@ -2335,3 +2335,15 @@ def save_medical_record(student_id, data, admin_id):
         raise e
     finally:
         cur.close(); conn.close()
+        # ============================================================
+# FIX FOR MEDICAL.PY IMPORTS (Delete Record)
+# (Isko database.py ke sabse niche paste karein)
+# ============================================================
+
+def delete_medical_record(student_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM medical_records WHERE student_id=%s;", (student_id,))
+        conn.commit()
+    finally:
+        cur.close(); conn.close()
