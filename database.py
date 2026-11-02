@@ -2335,6 +2335,7 @@ def save_medical_record(student_id, data, admin_id):
         raise e
     finally:
         cur.close(); conn.close()
+        
         # ============================================================
 # FIX FOR MEDICAL.PY IMPORTS (Delete Record)
 # (Isko database.py ke sabse niche paste karein)
@@ -2345,5 +2346,65 @@ def delete_medical_record(student_id):
     try:
         cur.execute("DELETE FROM medical_records WHERE student_id=%s;", (student_id,))
         conn.commit()
+    finally:
+        cur.close(); conn.close()
+        # ============================================================
+# FIX FOR MEDICAL.PY IMPORTS (Vaccinations & Allergies)
+# (Isko database.py ke sabse niche paste karein)
+# ============================================================
+
+def get_vaccinations(student_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, vaccine_name, date_given, dose_no, notes, created_at FROM vaccinations WHERE student_id=%s ORDER BY date_given DESC;", (student_id,))
+        rows = cur.fetchall()
+        return [{"id": r[0], "vaccine_name": r[1], "date_given": r[2], "dose_no": r[3], "notes": r[4], "created_at": r[5]} for r in rows]
+    finally:
+        cur.close(); conn.close()
+
+def add_vaccination(student_id, vaccine_name, date_given, dose_no, notes):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO vaccinations (student_id, vaccine_name, date_given, dose_no, notes) VALUES (%s,%s,%s,%s,%s) RETURNING id;", (student_id, vaccine_name, date_given, dose_no or None, notes or None))
+        vid = cur.fetchone()[0]
+        conn.commit()
+        return vid
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def delete_vaccination(vid):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM vaccinations WHERE id=%s;", (vid,))
+        conn.commit()
+    finally:
+        cur.close(); conn.close()
+
+def count_students_with_medical():
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT COUNT(*) FROM medical_records;")
+        n = cur.fetchone()[0]
+        return n
+    finally:
+        cur.close(); conn.close()
+
+def get_students_missing_medical(limit=50):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT s.id, s.name, s.roll_no, s.class_name, s.section FROM students s LEFT JOIN medical_records m ON m.student_id = s.id WHERE s.status='active' AND m.id IS NULL ORDER BY s.class_name, s.section, s.roll_no LIMIT %s;", (limit,))
+        rows = cur.fetchall()
+        return [{"id": r[0], "name": r[1], "roll": r[2], "class_name": r[3], "section": r[4]} for r in rows]
+    finally:
+        cur.close(); conn.close()
+
+def get_students_with_allergies():
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT s.id, s.name, s.class_name, s.section, m.blood_group, m.allergies FROM medical_records m JOIN students s ON s.id = m.student_id WHERE s.status='active' AND m.allergies IS NOT NULL AND m.allergies != '' ORDER BY s.class_name, s.roll_no;")
+        rows = cur.fetchall()
+        return [{"id": r[0], "name": r[1], "class_name": r[2], "section": r[3], "blood_group": r[4], "allergies": r[5]} for r in rows]
     finally:
         cur.close(); conn.close()
