@@ -3536,4 +3536,174 @@ def get_classes_list():
     finally:
         cur.close()
         conn.close()
+        import random
+from datetime import datetime, date
+
+# ============================================================
+# VISITOR FUNCTIONS FOR SUPABASE (Raw SQL)
+# ============================================================
+
+def check_in_visitor(data, admin_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Badge number generate karna (jaise: VIS-20231102-1234)
+        badge_no = f"VIS-{datetime.now().strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
+        
+        cur.execute("""
+            INSERT INTO visitors 
+            (name, phone, purpose, student_id, staff_id, notes, badge_no, admin_id) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id;
+        """, (
+            data.get('name'), 
+            data.get('phone'), 
+            data.get('purpose'), 
+            data.get('student_id') or None, 
+            data.get('staff_id') or None, 
+            data.get('notes'), 
+            badge_no, 
+            admin_id
+        ))
+        vid = cur.fetchone()[0]
+        conn.commit()
+        return {"id": vid, "badge_no": badge_no}
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cur.close()
+        conn.close()
+
+def check_out_visitor(visitor_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE visitors SET check_out=NOW() WHERE id=%s AND check_out IS NULL RETURNING id;", (visitor_id,))
+        res = cur.fetchone()
+        conn.commit()
+        return bool(res)
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cur.close()
+        conn.close()
+
+def get_visitor(visitor_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT v.id, v.name, v.phone, v.purpose, v.check_in, v.check_out, v.badge_no, v.notes,
+                   s.name as student_name, s.class_name, st.name as staff_name 
+            FROM visitors v
+            LEFT JOIN students s ON v.student_id = s.id
+            LEFT JOIN staff st ON v.staff_id = st.id
+            WHERE v.id=%s;
+        """, (visitor_id,))
+        row = cur.fetchone()
+        if not row:
+            return None
+        
+        # Manually dictionary banate hain taaki template mein v.name easily chal sake
+        keys = ["id", "name", "phone", "purpose", "check_in", "check_out", "badge_no", "notes", "student_name", "class_name", "staff_name"]
+        return dict(zip(keys, row))
+    finally:
+        cur.close()
+        conn.close()
+
+def get_visitors(date_str=None, status=None, search=None):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        q = """
+            SELECT v.id, v.name, v.phone, v.purpose, v.check_in, v.check_out, v.badge_no,
+                   s.name as student_name, s.class_name, st.name as staff_name
+            FROM visitors v
+            LEFT JOIN students s ON v.student_id = s.id
+            LEFT JOIN staff st ON v.staff_id = st.id
+            WHERE 1=1
+        """
+        params = []
+        
+        if date_str:
+            q += " AND DATE(v.check_in) = %s"
+            params.append(date_str)
+            
+        if status == 'active':
+            q += " AND v.check_out IS NULL"
+        elif status == 'checked_out':
+            q += " AND v.check_out IS NOT NULL"
+            
+        if search:
+            q += " AND (v.name ILIKE %s OR v.phone ILIKE %s OR v.badge_no ILIKE %s)"
+            like_search = f"%{search}%"
+            params.extend([like_search, like_search, like_search])
+            
+        q += " ORDER BY v.check_in DESC;"
+        
+        cur.execute(q, tuple(params))
+        rows = cur.fetchall()
+        
+        # Convert to dictionary list
+        keys = ["id", "name", "phone", "purpose", "check_in", "check_out", "badge_no", "student_name", "class_name", "staff_name"]
+        return [dict(zip(keys, r)) for r in rows]
+    finally:
+        cur.close()
+        conn.close()
+
+def get_visitors_summary(date_str=None):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        q = "SELECT COUNT(*) FROM visitors WHERE 1=1"
+        params = []
+        
+        if date_str:
+            q += " AND DATE(check_in) = %s"
+            params.append(date_str)
+            
+        cur.execute(q, tuple(params))
+        total = cur.fetchone()[0]
+        
+        q_active = q + " AND check_out IS NULL"
+        cur.execute(q_active, tuple(params))
+        active = cur.fetchone()[0]
+        
+        return {"total": total, "active": active, "checked_out": total - active}
+    finally:
+        cur.close()
+        conn.close()
+
+def get_active_visitors():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT v.id, v.name, v.phone, v.purpose, v.check_in, v.badge_no, s.name as student_name
+            FROM visitors v
+            LEFT JOIN students s ON v.student_id = s.id
+            WHERE v.check_out IS NULL 
+            ORDER BY v.check_in DESC;
+        """)
+        rows = cur.fetchall()
+        keys = ["id", "name", "phone", "purpose", "check_in", "badge_no", "student_name"]
+        return [dict(zip(keys, r)) for r in rows]
+    finally:
+        cur.close()
+        conn.close()
+
+def get_staff_list():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, name FROM staff WHERE is_active=TRUE ORDER BY name;")
+        rows = cur.fetchall()
+        return [{"id": r[0], "name": r[1]} for r in rows]
+    except Exception:
+        # Agar staff table abhi nahi bani hai toh crash na ho
+        return []
+    finally:
+        cur.close()
+        conn.close()
         
