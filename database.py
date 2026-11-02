@@ -4086,4 +4086,24 @@ def get_admin_threads():
     finally:
         cur.close()
         conn.close()
+        def close_thread(thread_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Maan lete hain chat_threads table mein status column hai
+        # Agar column ka naam alag hai (jaise is_closed), toh query adjust kar lein
+        cur.execute("""
+            UPDATE chat_threads 
+            SET status = 'closed' 
+            WHERE id = %s;
+        """, (thread_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"Error close_thread: {e}")
+        return False
+    finally:
+        cur.close()
+        conn.close()
         
