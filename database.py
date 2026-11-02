@@ -5024,4 +5024,101 @@ def get_children_for_parent(parent_id):
     finally:
         cur.close()
         conn.close()
+# ============================================================
+# PASSWORD RESET FUNCTIONS
+# ============================================================
+
+def find_user_for_reset(identifier):
+    """Email, Username ya Phone se user ko dhundhne ke liye"""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Yahan hum maan rahe hain ki aapke paas admins table hai
+        cur.execute("""
+            SELECT id, username, email, phone, full_name 
+            FROM admins 
+            WHERE username = %s OR email = %s OR phone = %s LIMIT 1;
+        """, (identifier, identifier, identifier))
+        row = cur.fetchone()
+        if row:
+            keys = ["id", "username", "email", "phone", "full_name"]
+            return dict(zip(keys, row))
+        return None
+    except Exception as e:
+        print(f"Error find_user_for_reset: {e}")
+        return None
+    finally:
+        cur.close()
+        conn.close()
+
+def create_password_reset(admin_id, otp, expires_at):
+    """OTP ko database mein save karne ke liye"""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Purane reset requests ko invalid/used mark kar dein
+        cur.execute("UPDATE password_resets SET used = TRUE WHERE admin_id = %s AND used = FALSE;", (admin_id,))
+        
+        # Naya OTP insert karein
+        cur.execute("""
+            INSERT INTO password_resets (admin_id, otp, expires_at, used) 
+            VALUES (%s, %s, %s, FALSE) RETURNING id;
+        """, (admin_id, otp, expires_at))
+        reset_id = cur.fetchone()[0]
+        conn.commit()
+        return reset_id
+    except Exception as e:
+        conn.rollback()
+        print(f"Error create_password_reset: {e}")
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
+def verify_password_otp(identifier, otp):
+    """Check karne ke liye ki OTP sahi hai aur expire toh nahi hua"""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT pr.id, pr.admin_id 
+            FROM password_resets pr
+            JOIN admins a ON pr.admin_id = a.id
+            WHERE (a.username = %s OR a.email = %s OR a.phone = %s) 
+              AND pr.otp = %s 
+              AND pr.expires_at > NOW() 
+              AND pr.used = FALSE 
+            LIMIT 1;
+        """, (identifier, identifier, identifier, otp))
+        row = cur.fetchone()
+        if row:
+            return {"reset_id": row[0], "admin_id": row[1]}
+        return None
+    except Exception as e:
+        print(f"Error verify_password_otp: {e}")
+        return None
+    finally:
+        cur.close()
+        conn.close()
+
+def consume_password_reset(reset_id, admin_id, new_password_hash):
+    """Password update karne aur OTP ko used mark karne ke liye"""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # 1. Admin ka naya password set karein
+        cur.execute("UPDATE admins SET password_hash = %s WHERE id = %s;", (new_password_hash, admin_id))
+        
+        # 2. Reset token ko used mark karein taaki dobara use na ho sake
+        cur.execute("UPDATE password_resets SET used = TRUE WHERE id = %s;", (reset_id,))
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"Error consume_password_reset: {e}")
+        return False
+    finally:
+        cur.close()
+        conn.close()
         
