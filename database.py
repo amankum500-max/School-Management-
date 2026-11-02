@@ -4106,4 +4106,182 @@ def close_thread(thread_id):
     finally:
         cur.close()
         conn.close()
+# ============================================================
+# COMPLETE CHAT FUNCTIONS (For chat.py)
+# ============================================================
+
+def get_admin_threads():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT t.id, p.name as parent_name, t.subject, t.updated_at, t.status,
+                   (SELECT COUNT(*) FROM chat_messages m WHERE m.thread_id = t.id AND m.sender_type = 'parent' AND m.is_read = FALSE) as unread_count
+            FROM chat_threads t
+            JOIN parents p ON t.parent_id = p.id
+            ORDER BY t.updated_at DESC;
+        """)
+        rows = cur.fetchall()
+        keys = ["id", "parent_name", "subject", "updated_at", "status", "unread_count"]
+        return [dict(zip(keys, r)) for r in rows]
+    except Exception as e:
+        print(f"Error get_admin_threads: {e}")
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+def get_thread(thread_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT t.id, t.parent_id, t.subject, t.status, t.updated_at, p.name as parent_name
+            FROM chat_threads t
+            JOIN parents p ON t.parent_id = p.id
+            WHERE t.id = %s;
+        """, (thread_id,))
+        row = cur.fetchone()
+        if row:
+            keys = ["id", "parent_id", "subject", "status", "updated_at", "parent_name"]
+            return dict(zip(keys, row))
+        return None
+    finally:
+        cur.close()
+        conn.close()
+
+def get_thread_messages(thread_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, thread_id, sender_type, sender_id, message, is_read, created_at
+            FROM chat_messages
+            WHERE thread_id = %s
+            ORDER BY created_at ASC;
+        """, (thread_id,))
+        rows = cur.fetchall()
+        keys = ["id", "thread_id", "sender_type", "sender_id", "message", "is_read", "created_at"]
+        return [dict(zip(keys, r)) for r in rows]
+    except Exception as e:
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+def post_message(thread_id, sender_type, sender_id, message):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO chat_messages (thread_id, sender_type, sender_id, message)
+            VALUES (%s, %s, %s, %s) RETURNING id;
+        """, (thread_id, sender_type, sender_id, message))
+        
+        # Thread ka time update karein taaki list mein upar aaye
+        cur.execute("UPDATE chat_threads SET updated_at = NOW() WHERE id = %s;", (thread_id,))
+        
+        msg_id = cur.fetchone()[0]
+        conn.commit()
+        return msg_id
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cur.close()
+        conn.close()
+
+def mark_thread_read(thread_id, reader_type):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Agar admin padh raha hai toh 'parent' ke messages read mark honge
+        target_sender = 'parent' if reader_type == 'admin' else 'admin'
+        cur.execute("""
+            UPDATE chat_messages 
+            SET is_read = TRUE 
+            WHERE thread_id = %s AND sender_type = %s;
+        """, (thread_id, target_sender))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+    finally:
+        cur.close()
+        conn.close()
+
+def close_thread(thread_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE chat_threads SET status = 'closed' WHERE id = %s;", (thread_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
+def reopen_thread(thread_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE chat_threads SET status = 'open' WHERE id = %s;", (thread_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        return False
+    finally:
+        cur.close()
+        conn.close()
+
+def count_unread_threads_for_admin():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT COUNT(DISTINCT thread_id) FROM chat_messages WHERE sender_type = 'parent' AND is_read = FALSE;")
+        res = cur.fetchone()
+        return res[0] if res else 0
+    except Exception:
+        return 0
+    finally:
+        cur.close()
+        conn.close()
+
+def get_parent_info(parent_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Parents table se info fetch karein
+        cur.execute("SELECT id, name, phone, email FROM parents WHERE id = %s;", (parent_id,))
+        row = cur.fetchone()
+        if row:
+            keys = ["id", "name", "phone", "email"]
+            return dict(zip(keys, row))
+        return None
+    finally:
+        cur.close()
+        conn.close()
+
+def get_parent_threads(parent_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT t.id, t.subject, t.status, t.updated_at,
+                   (SELECT COUNT(*) FROM chat_messages m WHERE m.thread_id = t.id AND m.sender_type = 'admin' AND m.is_read = FALSE) as unread_count
+            FROM chat_threads t
+            WHERE t.parent_id = %s
+            ORDER BY t.updated_at DESC;
+        """, (parent_id,))
+        rows = cur.fetchall()
+        keys = ["id", "subject", "status", "updated_at", "unread_count"]
+        return [dict(zip(keys, r)) for r in rows]
+    except Exception as e:
+        return []
+    finally:
+        cur.close()
+        conn.close()
         
