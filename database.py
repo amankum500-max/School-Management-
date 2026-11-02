@@ -3706,7 +3706,7 @@ def get_staff_list():
     finally:
         cur.close()
         conn.close()
-        def create_advance(staff_id, amount, advance_date, reason, status="pending"):
+def create_advance(staff_id, amount, advance_date, reason, status="pending"):
     conn = get_conn()
     cur = conn.cursor()
     try:
