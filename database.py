@@ -3724,4 +3724,206 @@ def get_staff_list():
     finally:
         cur.close()
         conn.close()
+        # ============================================================
+# ADVANCES FUNCTIONS (Naye add kiye gaye hain)
+# ============================================================
+
+def create_advance(staff_id, amount, reason, advance_type="advance"):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO advances (staff_id, amount, remaining_amount, reason, advance_type, status) 
+            VALUES (%s, %s, %s, %s, %s, 'active') RETURNING id;
+        """, (staff_id, amount, amount, reason, advance_type))
+        aid = cur.fetchone()[0]
+        conn.commit()
+        return aid
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cur.close()
+        conn.close()
+
+def get_advance(advance_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT a.*, s.name as staff_name 
+            FROM advances a 
+            JOIN staff s ON a.staff_id = s.id 
+            WHERE a.id = %s;
+        """, (advance_id,))
+        row = cur.fetchone()
+        if row:
+            keys = ["id", "staff_id", "amount", "remaining_amount", "reason", "advance_type", "status", "created_at", "staff_name"]
+            return dict(zip(keys, row))
+        return None
+    finally:
+        cur.close()
+        conn.close()
+
+def get_advances(status=None, staff_id=None):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        q = """
+            SELECT a.id, a.staff_id, s.name as staff_name, a.amount, a.remaining_amount, 
+                   a.reason, a.advance_type, a.status, a.created_at 
+            FROM advances a 
+            JOIN staff s ON a.staff_id = s.id 
+            WHERE 1=1
+        """
+        params = []
+        if status and status != 'all':
+            q += " AND a.status = %s"
+            params.append(status)
+        if staff_id:
+            q += " AND a.staff_id = %s"
+            params.append(staff_id)
+        q += " ORDER BY a.created_at DESC;"
+        
+        cur.execute(q, tuple(params))
+        rows = cur.fetchall()
+        keys = ["id", "staff_id", "staff_name", "amount", "remaining_amount", "reason", "advance_type", "status", "created_at"]
+        return [dict(zip(keys, r)) for r in rows]
+    finally:
+        cur.close()
+        conn.close()
+
+def get_active_advance(staff_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, staff_id, amount, remaining_amount, reason, advance_type, status 
+            FROM advances 
+            WHERE staff_id = %s AND status = 'active' AND remaining_amount > 0;
+        """, (staff_id,))
+        rows = cur.fetchall()
+        keys = ["id", "staff_id", "amount", "remaining_amount", "reason", "advance_type", "status"]
+        return [dict(zip(keys, r)) for r in rows]
+    finally:
+        cur.close()
+        conn.close()
+
+def get_advance_repayments(advance_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, advance_id, amount, repayment_date, notes 
+            FROM advance_repayments 
+            WHERE advance_id = %s ORDER BY repayment_date DESC;
+        """, (advance_id,))
+        rows = cur.fetchall()
+        keys = ["id", "advance_id", "amount", "repayment_date", "notes"]
+        return [dict(zip(keys, r)) for r in rows]
+    finally:
+        cur.close()
+        conn.close()
+
+def record_advance_repayment(advance_id, amount, notes=""):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # 1. Insert repayment record
+        cur.execute("""
+            INSERT INTO advance_repayments (advance_id, amount, notes, repayment_date) 
+            VALUES (%s, %s, %s, CURRENT_DATE);
+        """, (advance_id, amount, notes))
+        
+        # 2. Update advance remaining amount
+        cur.execute("""
+            UPDATE advances 
+            SET remaining_amount = remaining_amount - %s 
+            WHERE id = %s;
+        """, (amount, advance_id))
+        
+        # 3. Mark as completed if remaining is 0
+        cur.execute("""
+            UPDATE advances 
+            SET status = 'completed' 
+            WHERE id = %s AND remaining_amount <= 0;
+        """, (advance_id,))
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cur.close()
+        conn.close()
+
+def cancel_advance(advance_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("UPDATE advances SET status = 'cancelled' WHERE id = %s;", (advance_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        cur.close()
+        conn.close()
+
+def get_staff_advances_summary(staff_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT 
+                COALESCE(SUM(amount), 0) as total_taken,
+                COALESCE(SUM(amount - remaining_amount), 0) as total_repaid,
+                COALESCE(SUM(remaining_amount), 0) as total_outstanding
+            FROM advances 
+            WHERE staff_id = %s AND status != 'cancelled';
+        """, (staff_id,))
+        row = cur.fetchone()
+        return {
+            "total_taken": float(row[0]),
+            "total_repaid": float(row[1]),
+            "total_outstanding": float(row[2])
+        }
+    finally:
+        cur.close()
+        conn.close()
+
+def get_total_advance_outstanding():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT COALESCE(SUM(remaining_amount), 0), COUNT(id) 
+            FROM advances 
+            WHERE status = 'active';
+        """)
+        row = cur.fetchone()
+        return {
+            "outstanding": float(row[0]),
+            "active_count": int(row[1])
+        }
+    finally:
+        cur.close()
+        conn.close()
+
+def get_staff(staff_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id, name, phone, role, is_active FROM staff WHERE id = %s;", (staff_id,))
+        row = cur.fetchone()
+        if row:
+            keys = ["id", "name", "phone", "role", "is_active"]
+            return dict(zip(keys, row))
+        return None
+    finally:
+        cur.close()
+        conn.close()
+        
         
