@@ -4604,7 +4604,7 @@ def get_month_fee_progress():
     finally:
         cur.close()
         conn.close()
-      def get_birthdays_today():
+def get_birthdays_today():
     conn = get_conn(); cur = conn.cursor()
     try:
         # Aaj ke din (month aur date) match karne ke liye query
