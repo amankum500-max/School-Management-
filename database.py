@@ -4604,6 +4604,24 @@ def get_month_fee_progress():
     finally:
         cur.close()
         conn.close()
+      def get_birthdays_today():
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        # Aaj ke din (month aur date) match karne ke liye query
+        cur.execute("""
+            SELECT id, name, class_name, section, dob 
+            FROM students 
+            WHERE EXTRACT(MONTH FROM dob) = EXTRACT(MONTH FROM CURRENT_DATE)
+              AND EXTRACT(DAY FROM dob) = EXTRACT(DAY FROM CURRENT_DATE)
+              AND status = 'active';
+        """)
+        rows = cur.fetchall()
+        return [{"id": r[0], "name": r[1], "class_name": r[2], "section": r[3], "dob": r[4]} for r in rows]
+    except Exception as e:
+        print(f"Error fetching birthdays: {e}")
+        return []
+    finally:
+        cur.close(); conn.close()
 
 # ============================================================
 # END OF FILE
