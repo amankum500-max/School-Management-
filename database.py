@@ -4640,6 +4640,27 @@ def get_recent_activity(limit=10):
         return [] # Error aane par khaali list return karein taaki app crash na ho
     finally:
         cur.close(); conn.close()
+def get_top_performers(limit=5):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        # Students aur Marks table ko join karke average nikalne ki query
+        cur.execute("""
+            SELECT s.id, s.name, s.class_name, s.section, AVG(m.marks_obtained) as average_score
+            FROM students s
+            JOIN marks m ON s.id = m.student_id
+            WHERE s.status = 'active'
+            GROUP BY s.id, s.name, s.class_name, s.section
+            ORDER BY average_score DESC
+            LIMIT %s;
+        """, (limit,))
+        rows = cur.fetchall()
+        
+        return [{"id": r[0], "name": r[1], "class_name": r[2], "section": r[3], "average_score": float(r[4]) if r[4] else 0} for r in rows]
+    except Exception as e:
+        print(f"Error in get_top_performers: {e}")
+        return [] # Error aane par khaali list return karein taaki dashboard crash na ho
+    finally:
+        cur.close(); conn.close()
 
 # ============================================================
 # END OF FILE
