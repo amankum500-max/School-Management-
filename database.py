@@ -4567,6 +4567,43 @@ def get_today_snapshot():
         return {"attendance_count": 0, "fees_collected": 0} 
     finally:
         cur.close(); conn.close()
+def get_month_fee_progress():
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Is mahine ki total jama hui fees
+        cur.execute("""
+            SELECT COALESCE(SUM(amount), 0) 
+            FROM fee_payments 
+            WHERE EXTRACT(MONTH FROM paid_at) = EXTRACT(MONTH FROM CURRENT_DATE)
+              AND EXTRACT(YEAR FROM paid_at) = EXTRACT(YEAR FROM CURRENT_DATE);
+        """)
+        collected = cur.fetchone()[0]
+
+        # Is mahine ki total expected fees (fee_structure se)
+        cur.execute("""
+            SELECT COALESCE(SUM(amount), 0) 
+            FROM fee_structure;
+        """)
+        target = cur.fetchone()[0]
+
+        # Progress percentage (agar target 0 hai toh 0)
+        progress_percent = 0
+        if target > 0:
+            progress_percent = round((collected / target) * 100, 2)
+
+        return {
+            "collected": collected,
+            "target": target,
+            "progress_percent": progress_percent
+        }
+
+    except Exception as e:
+        print(f"Error in get_month_fee_progress: {e}")
+        return {"collected": 0, "target": 0, "progress_percent": 0}
+    finally:
+        cur.close()
+        conn.close()
 
 # ============================================================
 # END OF FILE
