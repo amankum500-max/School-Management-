@@ -2849,7 +2849,14 @@ def delete_enquiry(enquiry_id):
         conn.rollback(); raise
     finally:
         cur.close(); conn.close()
-
+def count_new_enquiries():
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT COUNT(*) FROM enquiries WHERE status='new';")
+        count = cur.fetchone()[0]
+        return count
+    finally:
+        cur.close(); conn.close()
 def get_testimonials(limit=10):
     conn = get_conn(); cur = conn.cursor()
     try:
