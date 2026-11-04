@@ -41,18 +41,9 @@ def login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
         
-        # --- FIXED LOGIN CODE START ---
-        # Abhi ke liye database bypass kiya hai taaki aap andar aa sako
-        if username == "admin" and password == "admin123":
-            admin = {
-                "id": 1,
-                "username": "admin",
-                "full_name": "Super Admin",
-                "role": "super_admin"
-            }
-        else:
-            admin = None
-        # --- FIXED LOGIN CODE END ---
+        # --- BYPASS CODE HATA DEIN ---
+        # Database se verify karein (Yeh function database.py se aayega)
+        admin = verify_admin(username, password)
         
         if admin:
             session["admin_id"] = admin["id"]
@@ -60,9 +51,9 @@ def login():
             session["admin_username"] = admin["username"]
             session["admin_role"] = admin["role"]
 
-            # Database error se bachne ke liye abhi inko band rakha hai
-            # update_admin_last_login(admin["id"])
-            # log_audit(admin["id"], admin["username"], "login")
+            # Ab database connected hai, toh inko uncomment kar dein
+            update_admin_last_login(admin["id"])
+            log_audit(admin["id"], admin["username"], "login")
 
             return redirect(url_for("dashboard"))
             
