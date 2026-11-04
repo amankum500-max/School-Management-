@@ -31,6 +31,7 @@ def role_required(*allowed_roles):
             return f(*args, **kwargs)
         return wrapper
     return decorator
+
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if "admin_id" in session:
@@ -39,31 +40,21 @@ def login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-
-        # --- TEMPORARY BYPASS CODE ---
-        if username == "admin" and password == "admin123":
-            admin = {
-                "id": 1,
-                "username": "admin",
-                "full_name": "Super Admin",
-                "role": "super_admin"
-            }
-        else:
-            admin = None
-        # -----------------------------
-
-        if admin:
+        
+        # Ye function database.py se aa raha hai
+        admin = verify_admin(username, password)
+        
+if admin:
             session["admin_id"] = admin["id"]
-            session["admin_name"] = admin["full_name"]
+            session["admin_name"] = admin["full_name"] or admin["username"]
             session["admin_username"] = admin["username"]
             session["admin_role"] = admin["role"]
 
-            # Database error se bachne ke liye inko comment kiya hai
-            # update_admin_last_login(admin["id"])
-            # log_audit(admin["id"], admin["username"], "login")
+        # last_login + audit
+        update_admin_last_login(admin["id"])
+        log_audit(admin["id"], admin["use...
 
             return redirect(url_for("dashboard"))
-        
         flash("Galat username ya password", "error")
 
     return render_template("login.html")
