@@ -4622,6 +4622,24 @@ def get_birthdays_today():
         return []
     finally:
         cur.close(); conn.close()
+      def get_recent_activity(limit=10):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        # Audit logs table se recent activity uthane ke liye
+        cur.execute("""
+            SELECT admin_username, action, details, created_at 
+            FROM audit_logs 
+            ORDER BY created_at DESC 
+            LIMIT %s;
+        """, (limit,))
+        rows = cur.fetchall()
+        
+        return [{"username": r[0], "action": r[1], "details": r[2], "created_at": r[3]} for r in rows]
+    except Exception as e:
+        print(f"Error fetching recent activity: {e}")
+        return [] # Error aane par khaali list return karein taaki app crash na ho
+    finally:
+        cur.close(); conn.close()
 
 # ============================================================
 # END OF FILE
