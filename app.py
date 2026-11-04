@@ -175,11 +175,6 @@ app.register_blueprint(password_reset_bp)
 # ============================================================
 # DIRECT ROUTES
 # ============================================================
-@app.route("/generate-hash")
-def generate_hash():
-    from werkzeug.security import generate_password_hash
-    new_hash = generate_password_hash('admin123')
-    return f"<h3>Naya Hash (Copy karo):</h3><p style='font-size:18px; word-wrap:break-word;'>{new_hash}</p>"
 @app.route("/")
 def home():
     """Homepage — gradient landing with login links"""
