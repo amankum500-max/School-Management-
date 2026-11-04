@@ -4544,7 +4544,7 @@ def get_system_stats():
         return {"total_students": 0, "total_staff": 0, "status": "Error"}
     finally:
         cur.close(); conn.close()
-  def get_today_snapshot():
+def get_today_snapshot():
     conn = get_conn(); cur = conn.cursor()
     try:
         today = datetime.now().date()
