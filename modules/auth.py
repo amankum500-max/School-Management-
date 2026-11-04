@@ -53,7 +53,7 @@ if username == "admin" and password == "admin123":
 else:
     admin = None
         
- if admin:
+if admin:
             session["admin_id"] = admin["id"]
             session["admin_name"] = admin["full_name"] or admin["username"]
             session["admin_username"] = admin["username"]
