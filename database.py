@@ -4544,6 +4544,29 @@ def get_system_stats():
         return {"total_students": 0, "total_staff": 0, "status": "Error"}
     finally:
         cur.close(); conn.close()
+      def get_today_snapshot():
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        today = datetime.now().date()
+        
+        # Aaj ki attendance ka count (agar table hai toh)
+        cur.execute("SELECT COUNT(*) FROM attendance WHERE date = %s;", (today,))
+        attendance_count = cur.fetchone()[0]
+        
+        # Aaj jama hui fees (agar table hai toh)
+        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM fee_payments WHERE DATE(paid_at) = %s;", (today,))
+        fees_collected = cur.fetchone()[0]
+        
+        return {
+            "attendance_count": attendance_count,
+            "fees_collected": fees_collected
+        }
+    except Exception as e:
+        print(f"Snapshot error: {e}")
+        # Error aane par khaali values return karein taaki dashboard crash na ho
+        return {"attendance_count": 0, "fees_collected": 0} 
+    finally:
+        cur.close(); conn.close()
 
 # ============================================================
 # END OF FILE
