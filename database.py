@@ -4622,7 +4622,7 @@ def get_birthdays_today():
         return []
     finally:
         cur.close(); conn.close()
-      def get_recent_activity(limit=10):
+def get_recent_activity(limit=10):
     conn = get_conn(); cur = conn.cursor()
     try:
         # Audit logs table se recent activity uthane ke liye
