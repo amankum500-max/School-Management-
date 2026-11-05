@@ -4661,7 +4661,7 @@ def get_top_performers(limit=5):
         return [] # Error aane par khaali list return karein taaki dashboard crash na ho
     finally:
         cur.close(); conn.close()
-      # ============================================================
+# ============================================================
 # BRIDGE FUNCTIONS (To fix ImportError from app.py)
 # ============================================================
 
