@@ -4661,13 +4661,6 @@ def get_top_performers(limit=5):
         return [] # Error aane par khaali list return karein taaki dashboard crash na ho
     finally:
         cur.close(); conn.close()
-def get_class_attendance_today():
-    # Yeh function app.py ki requirement puri karne ke liye hai
-    try:
-        return class_attendance_today()
-    except Exception as e:
-        print(f"Error: {e}")
-        return []
 
 # ============================================================
 # END OF FILE
