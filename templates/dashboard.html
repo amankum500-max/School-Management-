@@ -4,87 +4,54 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="card">
-    <h2 style="margin-bottom:0.5rem;">Welcome, {{ session.admin_name }} 👋</h2>
-    <p style="color:#64748b;">Ye tumhara dashboard hai. Abhi modules add karna baaki hai.</p>
+
+<!-- ========================================== -->
+<!-- HERO SECTION / TODAY'S SNAPSHOT            -->
+<!-- ========================================== -->
+<div class="card" style="background:linear-gradient(135deg,#1e293b 0%,#3b82f6 100%); color:white; margin-bottom:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
+        <div>
+            <h2 style="font-size:1.15rem; margin-bottom:0.25rem;">
+                Welcome back, {{ session.admin_name or 'Admin' }} 👋
+            </h2>
+            <p style="font-size:0.82rem; opacity:0.9;">
+                {{ school.school_name if school else 'School Management' }} — Management Dashboard
+                {% if birthdays %} • 🎂 {{ birthdays|length }} birthdays today{% endif %}
+            </p>
+        </div>
+        <a href="{{ url_for('attendance.index') }}" style="padding:0.5rem 1rem; background:rgba(255,255,255,0.2); color:white; border-radius:6px; text-decoration:none; font-size:0.82rem; font-weight:600;">
+            Mark Attendance →
+        </a>
+    </div>
+
+    <!-- Today's Snapshot Mini Stats -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); gap:0.5rem;">
+        <div style="background:rgba(255,255,255,0.15); padding:0.55rem; border-radius:6px; text-align:center;">
+            <div style="font-size:0.7rem; opacity:0.85;">Present</div>
+            <div style="font-size:1.3rem; font-weight:700;">{{ today_snap.get('attendance', {}).get('present', 0) if today_snap else 0 }}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.15); padding:0.55rem; border-radius:6px; text-align:center;">
+            <div style="font-size:0.7rem; opacity:0.85;">Absent</div>
+            <div style="font-size:1.3rem; font-weight:700;">{{ today_snap.get('attendance', {}).get('absent', 0) if today_snap else 0 }}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.15); padding:0.55rem; border-radius:6px; text-align:center;">
+            <div style="font-size:0.7rem; opacity:0.85;">Fees Today</div>
+            <div style="font-size:1.3rem; font-weight:700;">₹{{ "%.0f"|format(today_snap.get('fees_today', {}).get('amount', 0)) if today_snap else 0 }}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.15); padding:0.55rem; border-radius:6px; text-align:center;">
+            <div style="font-size:0.7rem; opacity:0.85;">HW Due</div>
+            <div style="font-size:1.3rem; font-weight:700;">{{ today_snap.get('homework_due', 0) if today_snap else 0 }}</div>
+        </div>
+    </div>
 </div>
 
-<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; margin-top:1.25rem;">
-    <div class="card">
-        <div style="color:#64748b; font-size:0.85rem;">Total Students</div>
-        <div style="font-size:1.8rem; font-weight:700; margin-top:0.25rem;">0</div>
-    </div>
-    <div class="card">
-        <div style="color:#64748b; font-size:0.85rem;">Fees Collected</div>
-        <div style="font-size:1.8rem; font-weight:700; margin-top:0.25rem;">₹0</div>
-    </div>
-    <div class="card">
-        <div style="color:#64748b; font-size:0.85rem;">Today's Attendance</div>
-        <div style="font-size:1.8rem; font-weight:700; margin-top:0.25rem;">—</div>
-    </div>
-    <div class="card">
-    <div style="color:#64748b; font-size:0.8rem;">Expenses (Month)</div>
-    <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem; color:#ef4444;">
-        ₹{{ "%.0f"|format(expenses_month or 0) }}
-    </div>
-    </div>
-    <div class="card">
-        <div style="color:#64748b; font-size:0.85rem;">Pending Fees</div>
-        <div style="font-size:1.8rem; font-weight:700; margin-top:0.25rem;">₹0</div>
-    </div>
-</div>
-<div class="card">
-    <div style="color:#64748b; font-size:0.8rem;">Certificates (Month)</div>
-    <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem; color:#8b5cf6;">
-        {{ certificates_month or 0 }}
-    </div>
-</div>
-<div class="card">
-    <div style="color:#64748b; font-size:0.8rem;">Active Staff</div>
-    <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem; color:#8b5cf6;">
-        {{ total_staff or 0 }}
-    </di
-        <div class="card">
-    <div style="color:#64748b; font-size:0.8rem;">Transport Students</div>
-    <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem; color:#0ea5e9;">
-        {{ transport_students or 0 }}
-    </div>
-        </div>v>
-</div>
-{% endblock %}
-<div style="font-size:1.8rem; font-weight:700; margin-top:0.25rem;">{{ total_students or 0 }}</div>
-<div style="font-size:1.8rem; font-weight:700; margin-top:0.25rem;">₹0</div>
-<div style="font-size:1.8rem; font-weight:700; margin-top:0.25rem;">₹{{ "%.0f"|format(fees_collected or 0) }}</div>
-<div style="font-size:1.8rem; font-weight:700; margin-top:0.25rem;">
-    {{ (attendance_today|string + '%') if attendance_today is not none else '—' }}
-</div>
-<div class="card">
-    <div style="color:#64748b; font-size:0.85rem;">New Notices (7d)</div>
-    <div style="font-size:1.8rem; font-weight:700; margin-top:0.25rem;">{{ recent_notices or 0 }}</div>
-</div>
-{% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
-
-{% block content %}
-<div class="card" style="margin-bottom:1rem;">
-    <h2 style="margin-bottom:0.35rem; font-size:1.15rem;">Welcome, {{ session.admin_name }} 👋</h2>
-    <p style="color:#64748b; font-size:0.88rem;">
-        {{ school.school_name }} — Management Dashboard
-    </p>
-</div>
-
-<!-- KPI Cards -->
-    <div class="card">
-    <div style="color:#64748b; font-size:0.8rem;">Events (7d)</div>
-    <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem; color:#ec4899;">
-        {{ upcoming_events_count or 0 }}
-    </div>
-    </div>
+<!-- ========================================== -->
+<!-- KPI CARDS ROW (ALL VARIABLES COVERED)      -->
+<!-- ========================================== -->
 <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:0.75rem; margin-bottom:1rem;">
     <div class="card">
         <div style="color:#64748b; font-size:0.8rem;">Total Students</div>
-        <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem;">{{ total_students or 0 }}</div>
+        <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem; color:#1e293b;">{{ total_students or 0 }}</div>
     </div>
     <div class="card">
         <div style="color:#64748b; font-size:0.8rem;">Fees Collected</div>
@@ -93,42 +60,85 @@
         </div>
     </div>
     <div class="card">
-        <div style="color:#64748b; font-size:0.8rem;">Today's Attendance</div>
+        <div style="color:#64748b; font-size:0.8rem;">Attendance Today</div>
         <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem; color:#3b82f6;">
             {{ (attendance_today|string + '%') if attendance_today is not none else '—' }}
         </div>
     </div>
     <div class="card">
+        <div style="color:#64748b; font-size:0.8rem;">Active Staff</div>
+        <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem; color:#8b5cf6;">{{ total_staff or 0 }}</div>
+    </div>
+    <div class="card">
+        <div style="color:#64748b; font-size:0.8rem;">Transport Students</div>
+        <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem; color:#0ea5e9;">{{ transport_students or 0 }}</div>
+    </div>
+    <div class="card">
         <div style="color:#64748b; font-size:0.8rem;">New Notices (7d)</div>
-        <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem;">{{ recent_notices or 0 }}</div>
+        <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem; color:#f59e0b;">{{ recent_notices or 0 }}</div>
+    </div>
+    <div class="card">
+        <div style="color:#64748b; font-size:0.8rem;">New Enquiries</div>
+        <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem; color:#ec4899;">{{ new_enquiries or 0 }}</div>
+    </div>
+    <div class="card">
+        <div style="color:#64748b; font-size:0.8rem;">Homework (Week)</div>
+        <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem; color:#f97316;">{{ homework_week or 0 }}</div>
+    </div>
+    <div class="card">
+        <div style="color:#64748b; font-size:0.8rem;">Visitors Today</div>
+        <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem; color:#14b8a6;">{{ visitors_today.get('total', 0) if visitors_today else 0 }}</div>
+    </div>
+    <div class="card">
+        <div style="color:#64748b; font-size:0.8rem;">Advance Outstanding</div>
+        <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem; color:#ef4444;">
+            ₹{{ "%.0f"|format(advance_outstanding.get('outstanding', 0)) if advance_outstanding else 0 }}
+        </div>
     </div>
 </div>
-<!-- Alerts -->
-{% if computed_alerts or custom_alerts %}
+
+<!-- ========================================== -->
+<!-- FEE PROGRESS BAR                           -->
+<!-- ========================================== -->
+{% if fee_progress and fee_progress.get('target', 0) > 0 %}
+<div class="card" style="margin-bottom:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; flex-wrap:wrap; gap:0.5rem;">
+        <h3 style="font-size:0.95rem; color:#1e293b;">💰 Fee Collection — {{ fee_progress.get('month', 'This Month') }}</h3>
+        <span style="font-size:0.82rem; color:#64748b;">
+            ₹{{ "%.0f"|format(fee_progress.get('collected', 0)) }} / ₹{{ "%.0f"|format(fee_progress.get('target', 0)) }}
+            <strong style="color:{{ '#10b981' if fee_progress.get('percent', 0) >= 80 else ('#f59e0b' if fee_progress.get('percent', 0) >= 50 else '#ef4444') }};">
+                ({{ fee_progress.get('percent', 0) }}%)
+            </strong>
+        </span>
+    </div>
+    <div style="width:100%; height:10px; background:#f1f5f9; border-radius:5px; overflow:hidden;">
+        <div style="width:{{ fee_progress.get('percent', 0) }}%; height:100%; background:{{ '#10b981' if fee_progress.get('percent', 0) >= 80 else ('#f59e0b' if fee_progress.get('percent', 0) >= 50 else '#ef4444') }}; border-radius:5px; transition:width 0.3s ease;"></div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ========================================== -->
+<!-- ALERTS SECTION                             -->
+<!-- ========================================== -->
+{% if computed_alerts or custom_alerts or pending_leave > 0 %}
 <div class="card" style="margin-bottom:1rem;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.65rem;">
         <h3 style="font-size:0.95rem; color:#1e293b;">🔔 Alerts & Reminders</h3>
-        {% if pending_leave and pending_leave > 0 %}
-<a href="{{ url_for('leave.index') }}"
-   style="text-decoration:none; color:inherit;">
-    <div class="card" style="background:#fef3c7; border-left:4px solid #f59e0b;
-        margin-bottom:1rem; display:flex; align-items:center; gap:0.75rem;">
-        <div style="font-size:1.5rem;">🌴</div>
-        <div style="flex:1;">
-            <div style="font-size:0.95rem; font-weight:600; color:#92400e;">
-                {{ pending_leave }} leave application{{ 's' if pending_leave > 1 }} pending
+        <a href="{{ url_for('alerts.index') }}" style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">View All →</a>
+    </div>
+
+    {% if pending_leave > 0 %}
+    <a href="{{ url_for('leave.index') }}" style="text-decoration:none; color:inherit;">
+        <div style="display:flex; align-items:center; gap:0.75rem; background:#fef3c7; border-left:4px solid #f59e0b; border-radius:6px; padding:0.6rem; margin-bottom:0.5rem;">
+            <div style="font-size:1.5rem;">🌴</div>
+            <div style="flex:1;">
+                <div style="font-size:0.88rem; font-weight:600; color:#92400e;">{{ pending_leave }} leave application{{ 's' if pending_leave > 1 }} pending</div>
+                <div style="font-size:0.78rem; color:#92400e; opacity:0.85;">Approval ke liye review karo</div>
             </div>
-            <div style="font-size:0.78rem; color:#92400e; opacity:0.85;">
-                Approval ke liye review karo
-            </div>
+            <div style="color:#92400e; font-size:1.2rem;">→</div>
         </div>
-        <div style="color:#92400e; font-size:1.2rem;">→</div>
-    </div>
-</a>
-{% endif %}
-        <a href="{{ url_for('alerts.index') }}"
-           style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">View All →</a>
-    </div>
+    </a>
+    {% endif %}
 
     {% set type_colors = {
         'danger': ('#fee2e2', '#991b1b', '#ef4444'),
@@ -139,139 +149,171 @@
 
     {% if custom_alerts %}
         {% for a in custom_alerts %}
-        {% set c = type_colors.get(a.alert_type, type_colors['info']) %}
+        {% set c = type_colors.get(a.get('alert_type', 'info'), type_colors['info']) %}
         <a href="{{ url_for('alerts.index') }}" style="text-decoration:none; color:inherit;">
-            <div style="display:flex; gap:0.6rem; padding:0.6rem;
-                background:{{ c[0] }}; border-radius:6px; margin-bottom:0.4rem;
-                border-left:3px solid {{ c[2] }};">
+            <div style="display:flex; gap:0.6rem; padding:0.6rem; background:{{ c[0] }}; border-radius:6px; margin-bottom:0.4rem; border-left:3px solid {{ c[2] }};">
                 <div style="flex:1;">
-                    <div style="font-size:0.88rem; font-weight:600; color:{{ c[1] }};">
-                        📢 {{ a.title }}
-                    </div>
-                    {% if a.message %}
-                    <div style="font-size:0.78rem; color:{{ c[1] }}; margin-top:0.1rem; opacity:0.85;">
-                        {{ a.message }}
-                    </div>
-                    {% endif %}
+                    <div style="font-size:0.88rem; font-weight:600; color:{{ c[1] }};">📢 {{ a.get('title', 'Alert') }}</div>
+                    {% if a.get('message') %}<div style="font-size:0.78rem; color:{{ c[1] }}; margin-top:0.1rem; opacity:0.85;">{{ a.get('message') }}</div>{% endif %}
                 </div>
             </div>
         </a>
         {% endfor %}
     {% endif %}
 
-    {% for a in computed_alerts %}
-    {% set c = type_colors.get(a.type, type_colors['info']) %}
-    <a href="{{ a.link }}" style="text-decoration:none; color:inherit;">
-        <div style="display:flex; gap:0.6rem; padding:0.6rem; align-items:center;
-            background:{{ c[0] }}; border-radius:6px; margin-bottom:0.4rem;
-            border-left:3px solid {{ c[2] }};">
-            <div style="font-size:1.2rem;">{{ a.icon }}</div>
-            <div style="flex:1;">
-                <div style="font-size:0.88rem; font-weight:600; color:{{ c[1] }};">
-                    {{ a.title }}
+    {% if computed_alerts %}
+        {% for a in computed_alerts %}
+        {% set c = type_colors.get(a.get('type', 'info'), type_colors['info']) %}
+        <a href="{{ a.get('link', '#') }}" style="text-decoration:none; color:inherit;">
+            <div style="display:flex; gap:0.6rem; padding:0.6rem; align-items:center; background:{{ c[0] }}; border-radius:6px; margin-bottom:0.4rem; border-left:3px solid {{ c[2] }};">
+                <div style="font-size:1.2rem;">{{ a.get('icon', 'ℹ️') }}</div>
+                <div style="flex:1;">
+                    <div style="font-size:0.88rem; font-weight:600; color:{{ c[1] }};">{{ a.get('title', 'Notice') }}</div>
+                    <div style="font-size:0.75rem; color:{{ c[1] }}; opacity:0.85; margin-top:0.1rem;">{{ a.get('message', '') }}</div>
                 </div>
-                <div style="font-size:0.75rem; color:{{ c[1] }}; opacity:0.85; margin-top:0.1rem;">
-                    {{ a.message }}
-                </div>
+                <div style="font-size:1.2rem; color:{{ c[2] }};">→</div>
             </div>
-            <div style="font-size:1.2rem; color:{{ c[2] }};">→</div>
-        </div>
-    </a>
-    {% endfor %}
+        </a>
+        {% endfor %}
+    {% endif %}
 </div>
 {% endif %}
-<!-- Charts Row -->
+
+<!-- ========================================== -->
+<!-- CHARTS ROW                                 -->
+<!-- ========================================== -->
 <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1rem; margin-bottom:1rem;">
     <div class="card">
         <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:#1e293b;">📈 Fees (Last 6 Months)</h3>
-        <div style="height:180px; position:relative;">
-            <canvas id="feesChart"></canvas>
-        </div>
+        <div style="height:180px; position:relative;"><canvas id="feesChart"></canvas></div>
     </div>
     <div class="card">
         <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:#1e293b;">📊 Attendance (Last 7 Days)</h3>
-        <div style="height:180px; position:relative;">
-            <canvas id="attChart"></canvas>
-        </div>
+        <div style="height:180px; position:relative;"><canvas id="attChart"></canvas></div>
     </div>
     <div class="card">
         <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:#1e293b;">🎓 Students by Class</h3>
-        <div style="height:180px; position:relative;">
-            <canvas id="classChart"></canvas>
-        </div>
+        <div style="height:180px; position:relative;"><canvas id="classChart"></canvas></div>
     </div>
 </div>
-<div class="card">
-    <div style="color:#64748b; font-size:0.8rem;">Homework (7d)</div>
-    <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem; color:#f59e0b;">
-        {{ homework_week or 0 }}
-    </div>
-</div>
-<!-- Quick links -->
-<div class="card">
-    {% if upcoming_events_list %}
+
+<!-- ========================================== -->
+<!-- CLASS ATTENDANCE BARS (Newly Added)        -->
+<!-- ========================================== -->
+{% if class_att_bars %}
 <div class="card" style="margin-bottom:1rem;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.65rem;">
-        <h3 style="font-size:0.95rem; color:#1e293b;">📅 Upcoming Events</h3>
-        <a href="{{ url_for('events.index') }}"
-           style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">View All →</a>
-    </div>
-    {% for ev in upcoming_events_list %}
-    <div style="display:flex; gap:0.5rem; padding:0.5rem 0; border-top:1px solid #f1f5f9; align-items:start;">
-        <div style="background:#eff6ff; color:#1e40af; padding:0.35rem 0.6rem;
-            border-radius:5px; font-size:0.7rem; font-weight:600; min-width:60px; text-align:center;">
-            {{ ev.start_date.strftime('%d %b') }}
-        </div>
-        <div style="flex:1;">
-            <div style="font-size:0.88rem; color:#1e293b; font-weight:500;">{{ ev.title }}</div>
-            {% if ev.venue or ev.start_time %}
-            <div style="font-size:0.72rem; color:#94a3b8; margin-top:0.1rem;">
-                {% if ev.start_time %}{{ ev.start_time }}{% endif %}
-                {% if ev.venue %} • {{ ev.venue }}{% endif %}
+    <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:#1e293b;">🏫 Today's Class-wise Attendance</h3>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:0.75rem;">
+        {% for c in class_att_bars %}
+        <div>
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:0.2rem;">
+                <span>{{ c.get('class_name', 'Class') }}</span>
+                <span style="font-weight:600; color:#3b82f6;">{{ c.get('percent', 0) }}%</span>
             </div>
-            {% endif %}
-        </div>
-    </div>
-    {% endfor %}
-</div>
-    {% if notifications_preview %}
-<div class="card" style="margin-bottom:1rem;
-    border-left:4px solid {{ '#ef4444' if notifications_urgent > 0 else '#3b82f6' }};">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.65rem;">
-        <h3 style="font-size:0.95rem; color:#1e293b;">
-            🔔 Alerts
-            {% if notifications_urgent > 0 %}
-            <span style="font-size:0.7rem; background:#fee2e2; color:#991b1b;
-                padding:0.1rem 0.45rem; border-radius:3px; margin-left:0.35rem;">
-                {{ notifications_urgent }} urgent
-            </span>
-            {% endif %}
-        </h3>
-        <a href="{{ url_for('notifications_page') }}"
-           style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">
-            View All ({{ notifications_count }}) →
-        </a>
-    </div>
-    {% for n in notifications_preview %}
-    <a href="{{ n.link }}" style="text-decoration:none; color:inherit; display:block;">
-    <div style="display:flex; gap:0.5rem; padding:0.5rem 0; border-top:1px solid #f1f5f9;
-        align-items:center;">
-        <span style="font-size:1.1rem;">{{ n.icon }}</span>
-        <div style="flex:1; min-width:0;">
-            <div style="font-size:0.85rem; color:#1e293b; font-weight:500;
-                overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                {{ n.title }}
-            </div>
-            <div style="font-size:0.72rem; color:#94a3b8;">
-                {{ n.subtitle }}
+            <div style="width:100%; height:6px; background:#f1f5f9; border-radius:3px; overflow:hidden;">
+                <div style="width:{{ c.get('percent', 0) }}%; height:100%; background:#3b82f6; border-radius:3px;"></div>
             </div>
         </div>
+        {% endfor %}
     </div>
-    </a>
-    {% endfor %}
 </div>
 {% endif %}
-{% endif %}
+
+<!-- ========================================== -->
+<!-- EVENTS, BIRTHDAYS & RECENT ACTIVITY        -->
+<!-- ========================================== -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:1rem; margin-bottom:1rem;">
+    
+    <!-- Upcoming Events -->
+    {% if upcoming_events_list %}
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.65rem;">
+            <h3 style="font-size:0.95rem; color:#1e293b;">📅 Upcoming Events</h3>
+            <a href="{{ url_for('events.index') }}" style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">View All →</a>
+        </div>
+        {% for ev in upcoming_events_list %}
+        <div style="display:flex; gap:0.5rem; padding:0.5rem 0; border-top:1px solid #f1f5f9; align-items:start;">
+            <div style="background:#eff6ff; color:#1e40af; padding:0.35rem 0.6rem; border-radius:5px; font-size:0.7rem; font-weight:600; min-width:60px; text-align:center;">
+                {{ ev.get('start_date', '').strftime('%d %b') if ev.get('start_date') else 'TBA' }}
+            </div>
+            <div style="flex:1;">
+                <div style="font-size:0.88rem; color:#1e293b; font-weight:500;">{{ ev.get('title', 'Event') }}</div>
+                {% if ev.get('venue') or ev.get('start_time') %}
+                <div style="font-size:0.72rem; color:#94a3b8; margin-top:0.1rem;">
+                    {% if ev.get('start_time') %}{{ ev.get('start_time') }}{% endif %}{% if ev.get('venue') %} • {{ ev.get('venue') }}{% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Recent Activity -->
+    {% if recent_activity %}
+    <div class="card">
+        <h3 style="font-size:0.95rem; margin-bottom:0.65rem; color:#1e293b;">🕒 Recent Activity</h3>
+        {% for act in recent_activity %}
+        <div style="display:flex; gap:0.5rem; padding:0.5rem 0; border-top:1px solid #f1f5f9;">
+            <div style="font-size:0.8rem; color:#64748b;">
+                {{ act.get('time', '') }} - {{ act.get('description', 'Activity') }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Birthdays Today -->
+    {% if birthdays %}
+    <div class="card">
+        <h3 style="font-size:0.95rem; margin-bottom:0.65rem; color:#1e293b;">🎂 Birthdays Today</h3>
+        {% for b in birthdays %}
+        <div style="display:flex; gap:0.5rem; padding:0.5rem 0; border-top:1px solid #f1f5f9; align-items:center;">
+            <div style="font-size:1.2rem;">🎉</div>
+            <div style="font-size:0.88rem; color:#1e293b; font-weight:500;">
+                {{ b.get('name', 'Student/Staff') }} 
+                <span style="font-size:0.75rem; color:#64748b;">({{ b.get('type', '') }})</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- ========================================== -->
+<!-- TOP PERFORMERS & STAFF ATTENDANCE          -->
+<!-- ========================================== -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:1rem; margin-bottom:1rem;">
+    
+    {% if top_performers and top_performers.get('students') %}
+    <div class="card">
+        <h3 style="font-size:0.95rem; margin-bottom:0.65rem; color:#1e293b;">🏆 Top Performers ({{ top_performers.get('exam', 'Recent Exam') }})</h3>
+        {% for student in top_performers.get('students', []) %}
+        <div style="display:flex; justify-content:space-between; padding:0.4rem 0; border-top:1px solid #f1f5f9; font-size:0.85rem;">
+            <span>{{ student.get('name', 'Student') }} ({{ student.get('class_name', '') }})</span>
+            <strong style="color:#10b981;">{{ student.get('marks', 0) }} marks</strong>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if staff_att_today %}
+    <div class="card">
+        <h3 style="font-size:0.95rem; margin-bottom:0.65rem; color:#1e293b;">👥 Staff Attendance Today</h3>
+        <div style="display:flex; justify-content:space-between; padding:0.4rem 0; font-size:0.85rem;">
+            <span>Present:</span> <strong style="color:#10b981;">{{ staff_att_today.get('present', 0) }}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:0.4rem 0; font-size:0.85rem; border-top:1px solid #f1f5f9;">
+            <span>Absent:</span> <strong style="color:#ef4444;">{{ staff_att_today.get('absent', 0) }}</strong>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ========================================== -->
+<!-- QUICK ACTIONS                              -->
+<!-- ========================================== -->
+<div class="card">
     <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:#1e293b;">⚡ Quick Actions</h3>
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
         <a href="{{ url_for('students.add_student') }}" class="btn" style="font-size:0.85rem;">+ Student</a>
@@ -281,80 +323,63 @@
         <a href="{{ url_for('exams.add') }}" class="btn" style="background:#8b5cf6; font-size:0.85rem;">+ Exam</a>
     </div>
 </div>
+
 {% endblock %}
 
+<!-- ========================================== -->
+<!-- JAVASCRIPT (CHARTS)                        -->
+<!-- ========================================== -->
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-    const feesData = {{ fees_trend | tojson }};
-    const attData = {{ att_trend | tojson }};
-    const classData = {{ class_dist | tojson }};
+    // Safe data parsing using Jinja's tojson
+    const feesData = {{ fees_trend | tojson | safe }};
+    const attData = {{ att_trend | tojson | safe }};
+    const classData = {{ class_dist | tojson | safe }};
 
-    // Fees bar chart
-    if (feesData.length) {
+    // 1. Fees Bar Chart
+    if (feesData && feesData.length > 0) {
         new Chart(document.getElementById('feesChart'), {
             type: 'bar',
             data: {
                 labels: feesData.map(d => d.label),
-                datasets: [{
-                    data: feesData.map(d => d.value),
-                    backgroundColor: '#3b82f6',
-                    borderRadius: 6
-                }]
+                datasets: [{ data: feesData.map(d => d.value), backgroundColor: '#3b82f6', borderRadius: 6 }]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true, ticks: { callback: v => '₹' + v } }
-                }
+                scales: { y: { beginAtZero: true, ticks: { callback: v => '₹' + v } } }
             }
         });
     } else {
-        document.getElementById('feesChart').parentElement.innerHTML =
-            '<p style="color:#94a3b8; font-size:0.85rem; padding:1rem; text-align:center;">Abhi koi payment nahi</p>';
+        document.getElementById('feesChart').parentElement.innerHTML = '<p style="color:#94a3b8; font-size:0.85rem; padding:1rem; text-align:center;">Abhi koi payment data nahi hai</p>';
     }
 
-    // Attendance line chart
-    if (attData.length) {
+    // 2. Attendance Line Chart
+    if (attData && attData.length > 0) {
         new Chart(document.getElementById('attChart'), {
             type: 'line',
             data: {
                 labels: attData.map(d => d.label),
-                datasets: [{
-                    data: attData.map(d => d.value),
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16,185,129,0.1)',
-                    fill: true, tension: 0.35, pointRadius: 3
-                }]
+                datasets: [{ data: attData.map(d => d.value), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, tension: 0.35, pointRadius: 3 }]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } }
-                }
+                scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }
             }
         });
     } else {
-        document.getElementById('attChart').parentElement.innerHTML =
-            '<p style="color:#94a3b8; font-size:0.85rem; padding:1rem; text-align:center;">Abhi koi attendance nahi</p>';
+        document.getElementById('attChart').parentElement.innerHTML = '<p style="color:#94a3b8; font-size:0.85rem; padding:1rem; text-align:center;">Abhi koi attendance data nahi hai</p>';
     }
 
-    // Class distribution pie
-    if (classData.length) {
+    // 3. Class Distribution Doughnut Chart
+    if (classData && classData.length > 0) {
         new Chart(document.getElementById('classChart'), {
             type: 'doughnut',
             data: {
                 labels: classData.map(d => d.label),
-                datasets: [{
-                    data: classData.map(d => d.value),
-                    backgroundColor: [
-                        '#3b82f6','#10b981','#f59e0b','#ef4444',
-                        '#8b5cf6','#06b6d4','#f97316','#ec4899',
-                        '#14b8a6','#a855f7'
-                    ]
-                }]
+                datasets: [{ data: classData.map(d => d.value), backgroundColor: ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#ec4899','#14b8a6','#a855f7'] }]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
@@ -362,542 +387,7 @@
             }
         });
     } else {
-        document.getElementById('classChart').parentElement.innerHTML =
-            '<p style="color:#94a3b8; font-size:0.85rem; padding:1rem; text-align:center;">Koi student nahi</p>';
-    }
-</script>
-{% endblock %}
-<div class="card">
-    <div style="color:#64748b; font-size:0.8rem;">New Enquiries</div>
-    <div style="font-size:1.7rem; font-weight:700; margin-top:0.15rem; color:#8b5cf6;">
-        {{ new_enquiries or 0 }}
-    </div>
-</div>
-{% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
-
-{% block content %}
-
-<!-- Today's Snapshot -->
-<div class="card" style="background:linear-gradient(135deg,#1e293b 0%,#3b82f6 100%);
-    color:white; margin-bottom:1rem;">
-    <div style="display:flex; justify-content:space-between; align-items:start;
-        flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
-        <div>
-            <h2 style="font-size:1.15rem; margin-bottom:0.25rem;">
-                Welcome back, {{ session.admin_name }} 👋
-            </h2>
-            <p style="font-size:0.82rem; opacity:0.9;">
-                {{ today_snap.attendance.marked }} attendance marked today
-                • {{ today_snap.fees_today.count }} payments
-                {% if birthdays %} • 🎂 {{ birthdays|length }} birthdays{% endif %}
-            </p>
-        </div>
-        <a href="{{ url_for('attendance.index') }}"
-           style="padding:0.5rem 1rem; background:rgba(255,255,255,0.2);
-           color:white; border-radius:6px; text-decoration:none;
-           font-size:0.82rem; font-weight:600;">
-            Mark Attendance →
-        </a>
-    </div>
-
-    <!-- Mini stats inside hero -->
-    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr));
-        gap:0.5rem;">
-        <div style="background:rgba(255,255,255,0.15); padding:0.55rem;
-            border-radius:6px; text-align:center;">
-            <div style="font-size:0.7rem; opacity:0.85;">Present</div>
-            <div style="font-size:1.3rem; font-weight:700;">
-                {{ today_snap.attendance.present }}
-            </div>
-        </div>
-        <div style="background:rgba(255,255,255,0.15); padding:0.55rem;
-            border-radius:6px; text-align:center;">
-            <div style="font-size:0.7rem; opacity:0.85;">Absent</div>
-            <div style="font-size:1.3rem; font-weight:700;">
-                {{ today_snap.attendance.absent }}
-            </div>
-        </div>
-        <div style="background:rgba(255,255,255,0.15); padding:0.55rem;
-            border-radius:6px; text-align:center;">
-            <div style="font-size:0.7rem; opacity:0.85;">Fees Today</div>
-            <div style="font-size:1.3rem; font-weight:700;">
-                ₹{{ "%.0f"|format(today_snap.fees_today.amount) }}
-            </div>
-        </div>
-        <div style="background:rgba(255,255,255,0.15); padding:0.55rem;
-            border-radius:6px; text-align:center;">
-            <div style="font-size:0.7rem; opacity:0.85;">HW Due</div>
-            <div style="font-size:1.3rem; font-weight:700;">
-                {{ today_snap.homework_due }}
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Month Fee Progress -->
-{% if fee_progress.target > 0 %}
-<div class="card" style="margin-bottom:1rem;">
-    <div style="display:flex; justify-content:space-between; align-items:center;
-        margin-bottom:0.5rem; flex-wrap:wrap; gap:0.5rem;">
-        <h3 style="font-size:0.95rem; color:#1e293b;">
-            💰 Fee Collection — {{ fee_progress.month }}
-        </h3>
-        <span style="font-size:0.82rem; color:#64748b;">
-            ₹{{ "%.0f"|format(fee_progress.collected) }} /
-            ₹{{ "%.0f"|format(fee_progress.target) }}
-            <strong style="color:{{ '#10b981' if fee_progress.percent >= 80 else ('#f59e0b' if fee_progress.percent >= 50 else '#ef4444') }};">
-                ({{ fee_progress.percent }}%)
-            </strong>
-        </span>
-    </div>
-    <div style="width:100%; height:10px; background:#f1f5f9; border-radius:5px;
-        overflow:hidden;">
-        <div style="width:{{ fee_progress.percent }}%; height:100%;
-            background:{{ '#10b981' if fee_progress.percent >= 80 else ('#f59e0b' if fee_progress.percent >= 50 else '#ef4444') }};
-            transition:width 0.5s;"></div>
-    </div>
-    <div style="margin-top:0.5rem; display:flex; justify-content:space-between;
-        font-size:0.78rem;">
-        <span style="color:#ef4444;">
-            Pending: ₹{{ "%.0f"|format(fee_progress.pending) }}
-        </span>
-        <a href="{{ url_for('fees.defaulters', month=fee_progress.month) }}"
-           style="color:#3b82f6; text-decoration:none; font-weight:600;">
-            View Defaulters →
-        </a>
-    </div>
-</div>
-{% endif %}
-{% if advance_outstanding and advance_outstanding.active_count > 0 %}
-<div class="card" style="margin-bottom:1rem; border-left:4px solid #f59e0b;">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div>
-            <div style="font-size:0.75rem; color:#64748b;">
-                💵 Staff Advance Outstanding
-            </div>
-            <div style="font-size:1.5rem; font-weight:700; color:#f59e0b;">
-                ₹{{ "%.0f"|format(advance_outstanding.outstanding) }}
-            </div>
-            <div style="font-size:0.72rem; color:#94a3b8;">
-                {{ advance_outstanding.active_count }} active advance{{ 's' if advance_outstanding.active_count > 1 }}
-            </div>
-        </div>
-        <a href="{{ url_for('advances.index') }}"
-           style="padding:0.5rem 1rem; background:#f59e0b; color:white;
-           border-radius:6px; text-decoration:none; font-size:0.82rem;
-           font-weight:600;">Manage →</a>
-    </div>
-</div>
-{% endif %}
-<!-- Alerts -->
-{% if computed_alerts or custom_alerts %}
-<div class="card" style="margin-bottom:1rem;">
-    <div style="display:flex; justify-content:space-between; align-items:center;
-        margin-bottom:0.65rem;">
-        <h3 style="font-size:0.95rem; color:#1e293b;">🔔 Alerts</h3>
-        <a href="{{ url_for('alerts.index') }}"
-           style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">
-            View All →
-        </a>
-    </div>
-
-    {% set type_colors = {
-        'danger': ('#fee2e2', '#991b1b', '#ef4444'),
-        'warning': ('#fef3c7', '#92400e', '#f59e0b'),
-        'success': ('#d1fae5', '#065f46', '#10b981'),
-        'info': ('#dbeafe', '#1e40af', '#3b82f6')
-    } %}
-
-    {% for a in custom_alerts %}
-    {% set c = type_colors.get(a.alert_type, type_colors['info']) %}
-    <a href="{{ url_for('alerts.index') }}"
-       style="text-decoration:none; color:inherit; display:block;">
-        <div style="display:flex; gap:0.6rem; padding:0.6rem;
-            background:{{ c[0] }}; border-radius:6px; margin-bottom:0.4rem;
-            border-left:3px solid {{ c[2] }};">
-            <div style="flex:1;">
-                <div style="font-size:0.88rem; font-weight:600; color:{{ c[1] }};">
-                    📢 {{ a.title }}
-                </div>
-                {% if a.message %}
-                <div style="font-size:0.75rem; color:{{ c[1] }}; opacity:0.85;
-                    margin-top:0.1rem;">{{ a.message }}</div>
-                {% endif %}
-            </div>
-        </div>
-    </a>
-    {% endfor %}
-
-    {% for a in computed_alerts %}
-    {% set c = type_colors.get(a.type, type_colors['info']) %}
-    <a href="{{ a.link }}" style="text-decoration:none; color:inherit;">
-        <div style="display:flex; gap:0.6rem; padding:0.6rem;
-            background:{{ c[0] }}; border-radius:6px; margin-bottom:0.4rem;
-            border-left:3px solid {{ c[2] }}; align-items:center;">
-            <div style="font-size:1.1rem;">{{ a.icon }}</div>
-            <div style="flex:1;">
-                <div style="font-size:0.88rem; font-weight:600; color:{{ c[1] }};">
-                    {{ a.title }}
-                </div>
-            </div>
-            <div style="color:{{ c[2] }}; font-size:1.1rem;">→</div>
-        </div>
-    </a>
-    {% endfor %}
-</div>
-{% endif %}
-
-<!-- Quick Actions -->
-<div class="card" style="margin-bottom:1rem;">
-    <h3 style="font-size:0.95rem; margin-bottom:0.65rem; color:#1e293b;">
-        ⚡ Quick Actions
-    </h3>
-    <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
-        gap:0.5rem;">
-        <a href="{{ url_for('students.add_student') }}"
-           style="padding:0.6rem; background:#eff6ff; color:#1e40af;
-           text-decoration:none; border-radius:6px; font-size:0.82rem;
-           font-weight:600; text-align:center;">
-            + Student
-        </a>
-        <a href="{{ url_for('fees.collect') }}"
-           style="padding:0.6rem; background:#d1fae5; color:#065f46;
-           text-decoration:none; border-radius:6px; font-size:0.82rem;
-           font-weight:600; text-align:center;">
-            + Payment
-        </a>
-        <a href="{{ url_for('attendance.index') }}"
-           style="padding:0.6rem; background:#fef3c7; color:#92400e;
-           text-decoration:none; border-radius:6px; font-size:0.82rem;
-           font-weight:600; text-align:center;">
-            Mark Att.
-        </a>
-        <a href="{{ url_for('notices.add') }}"
-           style="padding:0.6rem; background:#fee2e2; color:#991b1b;
-           text-decoration:none; border-radius:6px; font-size:0.82rem;
-           font-weight:600; text-align:center;">
-            + Notice
-        </a>
-        <a href="{{ url_for('homework.add') }}"
-           style="padding:0.6rem; background:#ede9fe; color:#5b21b6;
-           text-decoration:none; border-radius:6px; font-size:0.82rem;
-           font-weight:600; text-align:center;">
-            + Homework
-        </a>
-        <a href="{{ url_for('qr_attendance.scan') }}"
-           style="padding:0.6rem; background:#fce7f3; color:#9d174d;
-           text-decoration:none; border-radius:6px; font-size:0.82rem;
-           font-weight:600; text-align:center;">
-            📷 Scan QR
-        </a>
-    </div>
-</div>
-
-<!-- Two column: Birthdays + Top performers -->
-<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
-    gap:1rem; margin-bottom:1rem;">
-
-    <!-- Birthdays -->
-    {% if birthdays %}
-    <div class="card">
-        <h3 style="font-size:0.95rem; margin-bottom:0.65rem; color:#1e293b;">
-            🎂 Birthdays Today
-        </h3>
-        {% for b in birthdays %}
-        <div style="display:flex; justify-content:space-between; align-items:center;
-            padding:0.5rem 0; border-bottom:1px solid #f1f5f9;">
-            <div>
-                <a href="{{ url_for('students.view_student', student_id=b.id) }}"
-                   style="color:#1e293b; text-decoration:none; font-weight:500;
-                   font-size:0.88rem;">{{ b.name }}</a>
-                <div style="font-size:0.72rem; color:#94a3b8;">
-                    {{ b.class_name or '—' }}{% if b.section %}-{{ b.section }}{% endif %}
-                    {% if b.age %} • {{ b.age }} years{% endif %}
-                </div>
-            </div>
-            <span style="font-size:1.3rem;">🎉</span>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <!-- Top performers -->
-    {% if top_performers.students %}
-    <div class="card">
-        <h3 style="font-size:0.95rem; margin-bottom:0.65rem; color:#1e293b;">
-            🏆 Top Performers
-            <span style="font-size:0.72rem; color:#94a3b8; font-weight:400;">
-                — {{ top_performers.exam.name }}
-            </span>
-        </h3>
-        {% for s in top_performers.students %}
-        <div style="display:flex; justify-content:space-between; align-items:center;
-            padding:0.5rem 0; border-bottom:1px solid #f1f5f9;">
-            <div style="display:flex; gap:0.5rem; align-items:center;">
-                <span style="background:{{ '#f59e0b' if loop.index == 1 else ('#94a3b8' if loop.index == 2 else ('#b45309' if loop.index == 3 else '#e2e8f0')) }};
-                    color:{{ 'white' if loop.index <= 3 else '#64748b' }};
-                    width:22px; height:22px; border-radius:50%;
-                    display:flex; align-items:center; justify-content:center;
-                    font-size:0.72rem; font-weight:700;">
-                    {{ loop.index }}
-                </span>
-                <div>
-                    <a href="{{ url_for('students.view_student', student_id=s.id) }}"
-                       style="color:#1e293b; text-decoration:none; font-weight:500;
-                       font-size:0.88rem;">{{ s.name }}</a>
-                    <div style="font-size:0.7rem; color:#94a3b8;">
-                        Roll {{ s.roll or '—' }}
-                    </div>
-                </div>
-            </div>
-            <div style="text-align:right;">
-                <div style="font-weight:700; color:#10b981; font-size:0.92rem;">
-                    {{ "%.0f"|format(s.total) }}
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-</div>
-
-<!-- Class attendance bars -->
-{% if class_att_bars %}
-    <!-- Staff attendance today -->
-{% if staff_att_today %}
-<div class="card" style="margin-bottom:1rem;">
-    <div style="display:flex; justify-content:space-between; align-items:center;
-        margin-bottom:0.5rem;">
-        <h3 style="font-size:0.95rem; color:#1e293b;">
-            👨‍🏫 Staff Attendance Today
-        </h3>
-        <a href="{{ url_for('staff_attendance.index') }}"
-           style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">
-            Mark →
-        </a>
-    </div>
-    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr));
-        gap:0.5rem;">
-        <div style="background:#d1fae5; padding:0.5rem; border-radius:6px;
-            text-align:center;">
-            <div style="font-size:0.7rem; color:#065f46;">Present</div>
-            <div style="font-size:1.3rem; font-weight:700; color:#065f46;">
-                {{ staff_att_today.present }}
-            </div>
-        </div>
-        <div style="background:#fee2e2; padding:0.5rem; border-radius:6px;
-            text-align:center;">
-            <div style="font-size:0.7rem; color:#991b1b;">Absent</div>
-            <div style="font-size:1.3rem; font-weight:700; color:#991b1b;">
-                {{ staff_att_today.absent }}
-            </div>
-        </div>
-        <div style="background:#dbeafe; padding:0.5rem; border-radius:6px;
-            text-align:center;">
-            <div style="font-size:0.7rem; color:#1e40af;">Leave</div>
-            <div style="font-size:1.3rem; font-weight:700; color:#1e40af;">
-                {{ staff_att_today.leave }}
-            </div>
-        </div>
-        <div style="background:#f1f5f9; padding:0.5rem; border-radius:6px;
-            text-align:center;">
-            <div style="font-size:0.7rem; color:#475569;">Unmarked</div>
-            <div style="font-size:1.3rem; font-weight:700; color:#475569;">
-                {{ staff_att_today.unmarked }}
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
-    {% if visitors_today %}
-<div class="card" style="margin-bottom:1rem;">
-    <div style="display:flex; justify-content:space-between; align-items:center;
-        margin-bottom:0.5rem;">
-        <h3 style="font-size:0.95rem; color:#1e293b;">🚶 Visitors Today</h3>
-        <a href="{{ url_for('visitors.index') }}"
-           style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">
-            View All →
-        </a>
-    </div>
-    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr));
-        gap:0.5rem;">
-        <div style="background:#dbeafe; padding:0.5rem; border-radius:6px;
-            text-align:center;">
-            <div style="font-size:0.7rem; color:#1e40af;">Currently In</div>
-            <div style="font-size:1.3rem; font-weight:700; color:#1e40af;">
-                {{ visitors_today.currently_in }}
-            </div>
-        </div>
-        <div style="background:#f1f5f9; padding:0.5rem; border-radius:6px;
-            text-align:center;">
-            <div style="font-size:0.7rem; color:#475569;">Total Today</div>
-            <div style="font-size:1.3rem; font-weight:700; color:#475569;">
-                {{ visitors_today.total_today }}
-            </div>
-        </div>
-        <div style="background:#fef3c7; padding:0.5rem; border-radius:6px;
-            text-align:center;">
-            <div style="font-size:0.7rem; color:#92400e;">Meetings</div>
-            <div style="font-size:1.3rem; font-weight:700; color:#92400e;">
-                {{ visitors_today.meetings }}
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
-<div class="card" style="margin-bottom:1rem;">
-    <h3 style="font-size:0.95rem; margin-bottom:0.65rem; color:#1e293b;">
-        📊 Class-wise Attendance Today
-    </h3>
-    {% for c in class_att_bars %}
-    <div style="margin-bottom:0.55rem;">
-        <div style="display:flex; justify-content:space-between;
-            font-size:0.82rem; margin-bottom:0.15rem;">
-            <span style="color:#334155; font-weight:500;">Class {{ c.class_name }}</span>
-            <span style="color:{{ '#10b981' if c.percent >= 75 else ('#f59e0b' if c.percent >= 50 else '#ef4444') }};
-                font-weight:600;">
-                {{ c.percent }}% ({{ c.present }}/{{ c.total }})
-            </span>
-        </div>
-        <div style="height:6px; background:#f1f5f9; border-radius:3px;
-            overflow:hidden;">
-            <div style="width:{{ c.percent }}%; height:100%;
-                background:{{ '#10b981' if c.percent >= 75 else ('#f59e0b' if c.percent >= 50 else '#ef4444') }};"></div>
-        </div>
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
-
-<!-- Charts Row -->
-<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
-    gap:1rem; margin-bottom:1rem;">
-    <div class="card">
-        <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:#1e293b;">
-            📈 Fees (Last 6 Months)
-        </h3>
-        <div style="height:180px; position:relative;">
-            <canvas id="feesChart"></canvas>
-        </div>
-    </div>
-    <div class="card">
-        <h3 style="font-size:0.95rem; margin-bottom:0.75rem; color:#1e293b;">
-            📊 Attendance Trend (7d)
-        </h3>
-        <div style="height:180px; position:relative;">
-            <canvas id="attChart"></canvas>
-        </div>
-    </div>
-</div>
-
-<!-- Recent Activity -->
-{% if recent_activity %}
-<div class="card" style="margin-bottom:1rem;">
-    <div style="display:flex; justify-content:space-between; align-items:center;
-        margin-bottom:0.5rem;">
-        <h3 style="font-size:0.95rem; color:#1e293b;">📋 Recent Activity</h3>
-        <a href="{{ url_for('admin_users.audit') }}"
-           style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">
-            View All →
-        </a>
-    </div>
-    {% for a in recent_activity %}
-    <div style="display:flex; justify-content:space-between; padding:0.4rem 0;
-        border-bottom:1px solid #f8fafc; font-size:0.82rem;">
-        <div>
-            <strong style="color:#334155;">{{ a.admin or '?' }}</strong>
-            <span style="color:#64748b;">— {{ a.action|replace('_', ' ') }}</span>
-            {% if a.entity %}<span style="color:#94a3b8;"> ({{ a.entity }})</span>{% endif %}
-        </div>
-        <span style="font-size:0.72rem; color:#94a3b8;">
-            {{ a.created_at.strftime('%H:%M') if a.created_at else '' }}
-        </span>
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
-
-<!-- Upcoming Events -->
-{% if upcoming_events_list %}
-<div class="card" style="margin-bottom:1rem;">
-    <div style="display:flex; justify-content:space-between; align-items:center;
-        margin-bottom:0.65rem;">
-        <h3 style="font-size:0.95rem; color:#1e293b;">📅 Upcoming Events</h3>
-        <a href="{{ url_for('events.index') }}"
-           style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">
-            View All →
-        </a>
-    </div>
-    {% for ev in upcoming_events_list %}
-    <div style="display:flex; gap:0.5rem; padding:0.5rem 0;
-        border-top:1px solid #f1f5f9; align-items:start;">
-        <div style="background:#eff6ff; color:#1e40af; padding:0.35rem 0.6rem;
-            border-radius:5px; font-size:0.7rem; font-weight:600; min-width:60px;
-            text-align:center;">
-            {{ ev.start_date.strftime('%d %b') }}
-        </div>
-        <div style="flex:1;">
-            <div style="font-size:0.88rem; color:#1e293b; font-weight:500;">
-                {{ ev.title }}
-            </div>
-            {% if ev.venue or ev.start_time %}
-            <div style="font-size:0.72rem; color:#94a3b8; margin-top:0.1rem;">
-                {% if ev.start_time %}{{ ev.start_time }}{% endif %}
-                {% if ev.venue %} • {{ ev.venue }}{% endif %}
-            </div>
-            {% endif %}
-        </div>
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
-
-{% endblock %}
-
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script>
-    const feesData = {{ fees_trend | tojson }};
-    const attData = {{ att_trend | tojson }};
-
-    if (feesData && feesData.length) {
-        new Chart(document.getElementById('feesChart'), {
-            type: 'bar',
-            data: {
-                labels: feesData.map(d => d.label),
-                datasets: [{ data: feesData.map(d => d.value),
-                    backgroundColor: '#3b82f6', borderRadius: 6 }]
-            },
-            options: { responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true,
-                    ticks: { callback: v => '₹' + v } } } }
-        });
-    } else {
-        document.getElementById('feesChart').parentElement.innerHTML =
-            '<p style="color:#94a3b8; font-size:0.85rem; padding:1rem; text-align:center;">Abhi koi payment nahi</p>';
-    }
-
-    if (attData && attData.length) {
-        new Chart(document.getElementById('attChart'), {
-            type: 'line',
-            data: {
-                labels: attData.map(d => d.label),
-                datasets: [{ data: attData.map(d => d.value),
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16,185,129,0.1)',
-                    fill: true, tension: 0.35, pointRadius: 3 }]
-            },
-            options: { responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, max: 100,
-                    ticks: { callback: v => v + '%' } } } }
-        });
-    } else {
-        document.getElementById('attChart').parentElement.innerHTML =
-            '<p style="color:#94a3b8; font-size:0.85rem; padding:1rem; text-align:center;">Abhi koi attendance nahi</p>';
+        document.getElementById('classChart').parentElement.innerHTML = '<p style="color:#94a3b8; font-size:0.85rem; padding:1rem; text-align:center;">Koi student data nahi hai</p>';
     }
 </script>
 {% endblock %}
