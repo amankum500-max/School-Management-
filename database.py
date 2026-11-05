@@ -4661,6 +4661,51 @@ def get_top_performers(limit=5):
         return [] # Error aane par khaali list return karein taaki dashboard crash na ho
     finally:
         cur.close(); conn.close()
+      # ============================================================
+# BRIDGE FUNCTIONS (To fix ImportError from app.py)
+# ============================================================
+
+def get_class_attendance_today():
+    try:
+        return class_attendance_today()
+    except Exception as e:
+        print(f"Error in get_class_attendance_today: {e}")
+        return []
+
+def get_staff_attendance_today_summary():
+    try:
+        return staff_attendance_today_summary()
+    except Exception as e:
+        print(f"Error: {e}")
+        return {}
+
+def count_transport_students():
+    try:
+        return transport_students()
+    except Exception as e:
+        print(f"Error: {e}")
+        return 0
+
+def get_visitors_summary():
+    try:
+        return visitors_summary()
+    except Exception as e:
+        print(f"Error: {e}")
+        return {}
+
+def get_pending_leave_count():
+    try:
+        return pending_leave_count()
+    except Exception as e:
+        print(f"Error: {e}")
+        return 0
+
+def get_total_advance_outstanding():
+    try:
+        return total_advance_outstanding()
+    except Exception as e:
+        print(f"Error: {e}")
+        return {"outstanding": 0, "active_count": 0}
 
 # ============================================================
 # END OF FILE
