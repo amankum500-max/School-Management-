@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Staff List — School Management{% endblock %}
+{% block page_title %}Staff Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h2 style="font-size:1.1rem; color:#1e293b;">All Staff Members</h2>
+        <!-- Yahan aap "Add Staff" ka button laga sakte hain -->
+    </div>
+
+    {% if staff_list %}
+    <table style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr style="background:#f8fafc; text-align:left;">
+                <th style="padding:0.75rem; border-bottom:1px solid #e2e8f0;">Name</th>
+                <th style="padding:0.75rem; border-bottom:1px solid #e2e8f0;">Role</th>
+                <th style="padding:0.75rem; border-bottom:1px solid #e2e8f0;">Phone</th>
+                <th style="padding:0.75rem; border-bottom:1px solid #e2e8f0;">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for staff in staff_list %}
+            <tr>
+                <td style="padding:0.75rem; border-bottom:1px solid #e2e8f0;">{{ staff.name }}</td>
+                <td style="padding:0.75rem; border-bottom:1px solid #e2e8f0;">{{ staff.role }}</td>
+                <td style="padding:0.75rem; border-bottom:1px solid #e2e8f0;">{{ staff.phone or '—' }}</td>
+                <td style="padding:0.75rem; border-bottom:1px solid #e2e8f0;">
+                    <span style="padding:0.2rem 0.5rem; border-radius:4px; font-size:0.8rem;
+                        background:{{ '#d1fae5' if staff.status == 'active' else '#fee2e2' }};
+                        color:{{ '#065f46' if staff.status == 'active' else '#991b1b' }};">
+                        {{ staff.status }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color:#64748b; font-size:0.9rem; text-align:center; padding:2rem 0;">
+        Abhi tak koi staff member add nahi kiya gaya hai.
+    </p>
+    {% endif %}
+</div>
+{% endblock %}
