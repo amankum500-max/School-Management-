@@ -5,7 +5,8 @@ from flask import (
 from modules.auth import login_required
 from database import (
     create_staff, get_staff_list, get_staff,
-    update_staff, delete_staff, get_classes_list
+    update_staff, delete_staff, get_classes_list,
+    get_staff_salary_history  # <-- Yahan import add kar diya
 )
 
 staff_bp = Blueprint("staff", __name__, url_prefix="/staff")
@@ -49,13 +50,15 @@ def add():
     return render_template("staff/form.html", member=None, mode="add",
                            roles=ROLES, classes=get_classes_list())
 
+# Yahan dono 'view' functions ko merge kar diya gaya hai
 @staff_bp.route("/<int:staff_id>")
 @login_required
 def view(staff_id):
     m = get_staff(staff_id)
     if not m:
         abort(404)
-    return render_template("staff/profile.html", m=m)
+    salary_history = get_staff_salary_history(staff_id, 12)
+    return render_template("staff/profile.html", m=m, salary_history=salary_history)
 
 @staff_bp.route("/<int:staff_id>/edit", methods=["GET", "POST"])
 @login_required
@@ -79,13 +82,3 @@ def remove(staff_id):
     delete_staff(staff_id)
     flash("Staff delete ho gaya", "success")
     return redirect(url_for("staff.index"))
-from database import get_staff_salary_history
-
-@staff_bp.route("/<int:staff_id>")
-@login_required
-def view(staff_id):
-    m = get_staff(staff_id)
-    if not m:
-        abort(404)
-    salary_history = get_staff_salary_history(staff_id, 12)
-    return render_template("staff/profile.html", m=m, salary_history=salary_history)
