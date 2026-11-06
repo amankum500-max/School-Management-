@@ -1,7 +1,5 @@
 """
-School Management System — Complete Application
-================================================
-Combines all 51 phases into a single app.py
+School Management System — Complete Application (Fully Connected)
 """
 
 import os
@@ -26,7 +24,7 @@ Session(app)
 # ============================================================
 # BLUEPRINT IMPORTS
 # ============================================================
-# Phase 1 — Auth
+# Phase 1 — Auth (Connected to auth.py)
 from modules.auth import auth_bp, login_required, role_required
 
 # Phase 2-8 — Core Modules
@@ -94,9 +92,12 @@ from modules.password_reset import password_reset_bp
 
 
 # ============================================================
-# REGISTER ALL BLUEPRINTS (Phase 1 → Phase 51)
+# REGISTER ALL BLUEPRINTS
 # ============================================================
+# Auth Blueprint sabse pehle register hoga
 app.register_blueprint(auth_bp)
+
+# Baaki saare blueprints
 app.register_blueprint(students_bp)
 app.register_blueprint(fees_bp)
 app.register_blueprint(attendance_bp)
@@ -182,7 +183,7 @@ def health_check():
 
 
 @app.route("/dashboard")
-@login_required
+@login_required  # <--- AUTH SE CONNECTED (Agar login nahi hai toh auth.login par bhej dega)
 def dashboard():
     """
     Main dashboard — Phase 38 V2 with all widgets.
@@ -198,7 +199,6 @@ def dashboard():
         get_today_snapshot, get_month_fee_progress,
         get_birthdays_today, get_recent_activity,
         get_top_performers, get_class_attendance_today,
-        # Yahan function names update kiye gaye hain database.py se match karne ke liye
         get_staff_attendance_today_summary_dashboard as get_staff_attendance_today_summary,
         count_transport_students,
         get_visitors_summary_dashboard as get_visitors_summary,
@@ -263,7 +263,6 @@ def quick_search_api():
         q = request.args.get("q", "").strip()
         return jsonify(quick_search(q))
     except ImportError:
-        # Agar database mein quick_search nahi hai toh crash na ho
         return jsonify([])
 
 
@@ -349,7 +348,7 @@ def inject_help_context():
 
 
 # ============================================================
-# ERROR HANDLERS (Phase 33)
+# ERROR HANDLERS
 # ============================================================
 @app.errorhandler(404)
 def not_found(e):
@@ -382,7 +381,7 @@ def catch_all(e):
 
 
 # ============================================================
-# BEFORE REQUEST — Rate Limiting (Phase 33)
+# BEFORE REQUEST — Rate Limiting
 # ============================================================
 from collections import defaultdict
 from time import time as _time
