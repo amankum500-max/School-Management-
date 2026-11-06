@@ -207,6 +207,37 @@ def dashboard():
         get_pending_leave_count,
         get_total_advance_outstanding,
     )
+    # ============================================================
+# NOTIFICATIONS (Tarika 2)
+# ============================================================
+@app.route("/notifications")
+@login_required
+def notifications_page():
+    """Saare notifications dikhane ke liye page"""
+    from database import get_computed_alerts, get_custom_alerts
+    try:
+        computed = get_computed_alerts()
+        custom = get_custom_alerts(active_only=True)
+        # Dono ko mila kar ek list bana rahe hain
+        all_notifs = computed + [dict(c, type='info', icon='📢', link='#') for c in custom]
+    except Exception:
+        all_notifs = []
+    
+    return render_template("notifications.html", notifications=all_notifs)
+
+@app.route("/notifications/count")
+@login_required
+def notifications_count_api():
+    """Bell icon par number dikhane ke liye API"""
+    from database import get_computed_alerts, get_custom_alerts
+    try:
+        computed = get_computed_alerts()
+        custom = get_custom_alerts(active_only=True)
+        total = len(computed) + len(custom)
+        urgent = sum(1 for n in computed if n.get('type') == 'danger')
+        return jsonify({"count": total, "urgent": urgent})
+    except Exception:
+        return jsonify({"count": 0, "urgent": 0})
 
     today_str = datetime.now().strftime("%Y-%m-%d")
 
