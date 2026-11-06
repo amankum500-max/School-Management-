@@ -1,12 +1,11 @@
 """
-School Management System — Database Layer (Complete, Merged)
+School Management System — Database Layer (Complete, Merged & FIXED)
 ============================================================
 Single-file consolidation of Phase 1 + Phase 2 + Phase 3.
 • No duplicate functions
-• No hardcoded DB credentials
-• No shadowed imports
-• Uses `message_threads` (not `chat_threads`)
-• Uses `online_exam_questions` (not `exam_questions`)
+• Fixed Dashboard Data Formats (Dict vs List)
+• Removed recursive Bridge Functions
+• Fixed SQL column errors (marks_obtained -> obtained)
 """
 import os
 import json as _json
@@ -547,7 +546,6 @@ def get_exam(exam_id):
     row = cur.fetchone(); cur.close(); conn.close(); return row
 
 def get_exam_details(exam_id):
-    """Dict-based variant for template rendering (hall_ticket, etc.)."""
     conn = get_conn(); cur = conn.cursor()
     cur.execute("SELECT * FROM exams WHERE id=%s;", (exam_id,))
     row = cur.fetchone()
@@ -692,7 +690,6 @@ def phone_exists_in_students(phone):
     cur.close(); conn.close(); return exists
 
 def get_children_for_parent(identifier):
-    """Auto-detects parent_id OR phone. Returns enriched child list."""
     conn = get_conn(); cur = conn.cursor()
     try:
         try:
@@ -3705,9 +3702,6 @@ def get_total_advance_outstanding():
 
 # ============================================================
 # SECTION 38 — CHAT ADMIN HELPERS
-# (Parent-side: create_message_thread, get_thread, get_thread_messages,
-#  post_message, mark_thread_read, get_parent_threads, count_unread_threads_for_parent
-#  are already defined in Phase 1 — this section adds admin-side helpers only)
 # ============================================================
 def create_message_thread(parent_id, student_id, subject, first_message, parent_name):
     conn = get_conn(); cur = conn.cursor()
@@ -3927,7 +3921,6 @@ def get_attempt(attempt_id):
         cur.close(); conn.close()
 
 def get_online_exam(eid):
-    """Superset: returns both start_date/start_time, end_date/end_time, is_published/is_active."""
     conn = get_conn(); cur = conn.cursor()
     try:
         cur.execute("SELECT id, title, class_name, subject, duration_minutes, total_marks, instructions, start_date, end_date, is_published, shuffle_questions, created_at FROM online_exams WHERE id=%s;", (eid,))
@@ -3942,7 +3935,6 @@ def get_online_exam(eid):
         cur.close(); conn.close()
 
 def get_exam_questions(eid, shuffle=False):
-    """Superset: returns both short and long key names."""
     conn = get_conn(); cur = conn.cursor()
     try:
         cur.execute("SELECT id, question_no, question_text, option_a, option_b, option_c, option_d, correct_option, marks FROM online_exam_questions WHERE exam_id=%s ORDER BY question_no;", (eid,))
@@ -4532,7 +4524,7 @@ def get_students_with_low_attendance_for_sms(threshold=75):
         cur.close(); conn.close()
 
 # ============================================================
-# SECTION 44 — SYSTEM
+# SECTION 44 — SYSTEM & DASHBOARD WIDGETS
 # ============================================================
 def get_system_stats():
     conn = get_conn(); cur = conn.cursor()
@@ -4544,70 +4536,54 @@ def get_system_stats():
         return {"total_students": 0, "total_staff": 0, "status": "Error"}
     finally:
         cur.close(); conn.close()
+
 def get_today_snapshot():
     conn = get_conn(); cur = conn.cursor()
     try:
         today = datetime.now().date()
+        # Attendance
+        cur.execute("SELECT COUNT(*) FILTER (WHERE status='present'), COUNT(*) FILTER (WHERE status='absent'), COUNT(*) FROM attendance WHERE date = %s;", (today,))
+        att_row = cur.fetchone()
+        att_present, att_absent, att_total = att_row[0] or 0, att_row[1] or 0, att_row[2] or 0
         
-        # Aaj ki attendance ka count (agar table hai toh)
-        cur.execute("SELECT COUNT(*) FROM attendance WHERE date = %s;", (today,))
-        attendance_count = cur.fetchone()[0]
+        # Fees
+        cur.execute("SELECT COALESCE(SUM(amount), 0), COUNT(*) FROM fee_payments WHERE DATE(paid_at) = %s;", (today,))
+        fee_row = cur.fetchone()
+        fees_amount, fees_count = float(fee_row[0] or 0), fee_row[1] or 0
         
-        # Aaj jama hui fees (agar table hai toh)
-        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM fee_payments WHERE DATE(paid_at) = %s;", (today,))
-        fees_collected = cur.fetchone()[0]
+        # Homework due
+        cur.execute("SELECT COUNT(*) FROM homework WHERE due_date = %s;", (today,))
+        hw_due = cur.fetchone()[0] or 0
         
         return {
-            "attendance_count": attendance_count,
-            "fees_collected": fees_collected
+            "attendance": {"marked": att_total, "present": att_present, "absent": att_absent},
+            "fees_today": {"amount": fees_amount, "count": fees_count},
+            "homework_due": hw_due
         }
     except Exception as e:
         print(f"Snapshot error: {e}")
-        # Error aane par khaali values return karein taaki dashboard crash na ho
-        return {"attendance_count": 0, "fees_collected": 0} 
+        return {"attendance": {"marked": 0, "present": 0, "absent": 0}, "fees_today": {"amount": 0, "count": 0}, "homework_due": 0}
     finally:
         cur.close(); conn.close()
+
 def get_month_fee_progress():
-    conn = get_conn()
-    cur = conn.cursor()
+    conn = get_conn(); cur = conn.cursor()
     try:
-        # Is mahine ki total jama hui fees
-        cur.execute("""
-            SELECT COALESCE(SUM(amount), 0) 
-            FROM fee_payments 
-            WHERE EXTRACT(MONTH FROM paid_at) = EXTRACT(MONTH FROM CURRENT_DATE)
-              AND EXTRACT(YEAR FROM paid_at) = EXTRACT(YEAR FROM CURRENT_DATE);
-        """)
-        collected = cur.fetchone()[0]
-
-        # Is mahine ki total expected fees (fee_structure se)
-        cur.execute("""
-            SELECT COALESCE(SUM(amount), 0) 
-            FROM fee_structure;
-        """)
-        target = cur.fetchone()[0]
-
-        # Progress percentage (agar target 0 hai toh 0)
-        progress_percent = 0
-        if target > 0:
-            progress_percent = round((collected / target) * 100, 2)
-
-        return {
-            "collected": collected,
-            "target": target,
-            "progress_percent": progress_percent
-        }
-
+        month_str = datetime.now().strftime("%Y-%m")
+        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM fee_payments WHERE month = %s;", (month_str,))
+        collected = float(cur.fetchone()[0] or 0)
+        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM fee_structure;")
+        target = float(cur.fetchone()[0] or 0)
+        percent = round((collected / target) * 100, 1) if target > 0 else 0
+        return {"month": month_str, "collected": collected, "target": target, "percent": percent, "pending": max(target - collected, 0)}
     except Exception as e:
-        print(f"Error in get_month_fee_progress: {e}")
-        return {"collected": 0, "target": 0, "progress_percent": 0}
+        return {"month": "", "collected": 0, "target": 0, "percent": 0, "pending": 0}
     finally:
-        cur.close()
-        conn.close()
+        cur.close(); conn.close()
+
 def get_birthdays_today():
     conn = get_conn(); cur = conn.cursor()
     try:
-        # Aaj ke din (month aur date) match karne ke liye query
         cur.execute("""
             SELECT id, name, class_name, section, dob 
             FROM students 
@@ -4616,96 +4592,125 @@ def get_birthdays_today():
               AND status = 'active';
         """)
         rows = cur.fetchall()
-        return [{"id": r[0], "name": r[1], "class_name": r[2], "section": r[3], "dob": r[4]} for r in rows]
-    except Exception as e:
-        print(f"Error fetching birthdays: {e}")
+        out = []
+        for r in rows:
+            age = None
+            if r[4]:
+                today = date.today()
+                age = today.year - r[4].year - ((today.month, today.day) < (r[4].month, r[4].day))
+            out.append({"id": r[0], "name": r[1], "class_name": r[2], "section": r[3], "age": age})
+        return out
+    except Exception:
         return []
     finally:
         cur.close(); conn.close()
+
 def get_recent_activity(limit=10):
     conn = get_conn(); cur = conn.cursor()
     try:
-        # Audit logs table se recent activity uthane ke liye
-        cur.execute("""
-            SELECT admin_username, action, details, created_at 
-            FROM audit_logs 
-            ORDER BY created_at DESC 
-            LIMIT %s;
-        """, (limit,))
+        cur.execute("SELECT admin_username, action, details, created_at FROM audit_logs ORDER BY created_at DESC LIMIT %s;", (limit,))
         rows = cur.fetchall()
-        
-        return [{"username": r[0], "action": r[1], "details": r[2], "created_at": r[3]} for r in rows]
-    except Exception as e:
-        print(f"Error fetching recent activity: {e}")
-        return [] # Error aane par khaali list return karein taaki app crash na ho
+        return [{"admin": r[0], "action": r[1], "entity": r[2], "created_at": r[3]} for r in rows]
+    except Exception:
+        return []
     finally:
         cur.close(); conn.close()
+
 def get_top_performers(limit=5):
     conn = get_conn(); cur = conn.cursor()
     try:
-        # Students aur Marks table ko join karke average nikalne ki query
+        cur.execute("SELECT id, name FROM exams ORDER BY id DESC LIMIT 1;")
+        exam_row = cur.fetchone()
+        exam = {"id": exam_row[0], "name": exam_row[1]} if exam_row else {"id": None, "name": "N/A"}
+        
+        if not exam["id"]:
+            return {"exam": exam, "students": []}
+
         cur.execute("""
-            SELECT s.id, s.name, s.class_name, s.section, AVG(m.marks_obtained) as average_score
+            SELECT s.id, s.name, s.roll_no, SUM(m.obtained) as total
             FROM students s
             JOIN marks m ON s.id = m.student_id
-            WHERE s.status = 'active'
-            GROUP BY s.id, s.name, s.class_name, s.section
-            ORDER BY average_score DESC
+            WHERE s.status = 'active' AND m.exam_id = %s
+            GROUP BY s.id, s.name, s.roll_no
+            ORDER BY total DESC
             LIMIT %s;
-        """, (limit,))
+        """, (exam["id"], limit))
         rows = cur.fetchall()
-        
-        return [{"id": r[0], "name": r[1], "class_name": r[2], "section": r[3], "average_score": float(r[4]) if r[4] else 0} for r in rows]
+        students = [{"id": r[0], "name": r[1], "roll": r[2], "total": float(r[3] or 0)} for r in rows]
+        return {"exam": exam, "students": students}
     except Exception as e:
         print(f"Error in get_top_performers: {e}")
-        return [] # Error aane par khaali list return karein taaki dashboard crash na ho
+        return {"exam": {"name": "N/A"}, "students": []}
     finally:
         cur.close(); conn.close()
-# ============================================================
-# BRIDGE FUNCTIONS (To fix ImportError from app.py)
-# ============================================================
 
 def get_class_attendance_today():
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    conn = get_conn(); cur = conn.cursor()
     try:
-        return class_attendance_today()
-    except Exception as e:
-        print(f"Error in get_class_attendance_today: {e}")
+        cur.execute("""
+            SELECT s.class_name, 
+                   COUNT(a.id) FILTER (WHERE a.status='present') as present,
+                   COUNT(s.id) as total
+            FROM students s
+            LEFT JOIN attendance a ON a.student_id = s.id AND a.date = %s
+            WHERE s.status = 'active'
+            GROUP BY s.class_name
+            ORDER BY s.class_name;
+        """, (date_str,))
+        rows = cur.fetchall()
+        out = []
+        for r in rows:
+            c_name, present, total = r[0] or "Unassigned", r[1] or 0, r[2] or 0
+            percent = round((present / total) * 100, 1) if total > 0 else 0
+            out.append({"class_name": c_name, "present": present, "total": total, "percent": percent})
+        return out
+    except Exception:
         return []
+    finally:
+        cur.close(); conn.close()
 
-def get_staff_attendance_today_summary():
+def get_staff_attendance_today_summary_dashboard():
+    """Specific summary for dashboard"""
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    conn = get_conn(); cur = conn.cursor()
     try:
-        return staff_attendance_today_summary()
-    except Exception as e:
-        print(f"Error: {e}")
-        return {}
+        cur.execute("""
+            SELECT COUNT(*) FILTER (WHERE sa.status='present'), 
+                   COUNT(*) FILTER (WHERE sa.status='absent'), 
+                   COUNT(*) FILTER (WHERE sa.status='leave'),
+                   COUNT(s.id)
+            FROM staff s
+            LEFT JOIN staff_attendance sa ON sa.staff_id = s.id AND sa.date = %s
+            WHERE s.status = 'active';
+        """, (date_str,))
+        row = cur.fetchone()
+        present, absent, leave, total = row[0] or 0, row[1] or 0, row[2] or 0, row[3] or 0
+        unmarked = total - (present + absent + leave)
+        return {"present": present, "absent": absent, "leave": leave, "unmarked": unmarked}
+    except Exception:
+        return {"present": 0, "absent": 0, "leave": 0, "unmarked": 0}
+    finally:
+        cur.close(); conn.close()
 
-def count_transport_students():
+def get_visitors_summary_dashboard():
+    """Specific summary for dashboard"""
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    conn = get_conn(); cur = conn.cursor()
     try:
-        return transport_students()
-    except Exception as e:
-        print(f"Error: {e}")
-        return 0
-
-def get_visitors_summary():
-    try:
-        return visitors_summary()
-    except Exception as e:
-        print(f"Error: {e}")
-        return {}
-
-def get_pending_leave_count():
-    try:
-        return pending_leave_count()
-    except Exception as e:
-        print(f"Error: {e}")
-        return 0
-
-def get_total_advance_outstanding():
-    try:
-        return total_advance_outstanding()
-    except Exception as e:
-        print(f"Error: {e}")
-        return {"outstanding": 0, "active_count": 0}
+        cur.execute("""
+            SELECT COUNT(*) FILTER (WHERE check_out IS NULL) as currently_in,
+                   COUNT(*) as total_today,
+                   COUNT(*) FILTER (WHERE purpose = 'meeting') as meetings
+            FROM visitors
+            WHERE DATE(check_in) = %s;
+        """, (date_str,))
+        row = cur.fetchone()
+        return {"currently_in": row[0] or 0, "total_today": row[1] or 0, "meetings": row[2] or 0}
+    except Exception:
+        return {"currently_in": 0, "total_today": 0, "meetings": 0}
+    finally:
+        cur.close(); conn.close()
 
 # ============================================================
 # END OF FILE
