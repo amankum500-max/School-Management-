@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+    <div class="alert alert-warning">
+        <h4 class="alert-heading">⚠️ Duplicate Record Detected!</h4>
+        <p>The student information you submitted already exists in the database.</p>
+        <hr>
+        <p class="mb-0">If you believe this is an error, please contact the administrator.</p>
+    </div>
+    <a href="{{ url_for('students.list') }}" class="btn btn-primary">Back to Student List</a>
+    <a href="{{ url_for('students.add_student') }}" class="btn btn-secondary">Try Again</a>
+</div>
+{% endblock %}
