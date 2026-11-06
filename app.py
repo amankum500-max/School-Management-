@@ -35,6 +35,7 @@ from modules.exams import exams_bp
 from modules.notices import notices_bp
 from modules.parent import parent_bp
 from modules.settings import settings_bp
+from modules.staff import staff_bp
 
 # Phase 9-17 — Reports, Bulk, WhatsApp, Backup, Bills, ID Card
 from modules.reports import reports_bp
@@ -105,6 +106,7 @@ app.register_blueprint(exams_bp)
 app.register_blueprint(notices_bp)
 app.register_blueprint(parent_bp)
 app.register_blueprint(settings_bp)
+app.register_blueprint(staff_bp)
 app.register_blueprint(reports_bp)
 app.register_blueprint(bulk_bp)
 app.register_blueprint(whatsapp_bp)
