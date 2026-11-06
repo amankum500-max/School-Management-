@@ -151,13 +151,24 @@ def update_admin_last_login(admin_id):
     cur.execute("UPDATE admins SET last_login=NOW() WHERE id=%s;", (admin_id,))
     conn.commit(); cur.close(); conn.close()
 
-def log_audit(admin_id, username, action, method=None, path=None, details=None):
+def log_audit(admin_id, username, action, method=None, path=None, details=None, entity=None, ip=None, **kwargs):
     try:
         conn = get_conn(); cur = conn.cursor()
-        cur.execute("INSERT INTO audit_logs (admin_id, admin_username, action, method, path, details) VALUES (%s,%s,%s,%s,%s,%s);",
-                    (admin_id, username, action, method, path, details))
+        
+        # app.py se aane wale entity aur ip ko details mein jod rahe hain
+        final_details = details or ""
+        if entity:
+            final_details += f" | Entity: {entity}"
+        if ip:
+            final_details += f" | IP: {ip}"
+
+        cur.execute(
+            "INSERT INTO audit_logs (admin_id, admin_username, action, method, path, details) VALUES (%s,%s,%s,%s,%s,%s);",
+            (admin_id, username, action, method, path, final_details.strip())
+        )
         conn.commit(); cur.close(); conn.close()
-    except Exception: pass
+    except Exception: 
+        pass
 
 def get_audit_logs(limit=100):
     conn = get_conn(); cur = conn.cursor()
