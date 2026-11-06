@@ -24,7 +24,7 @@ Session(app)
 # ============================================================
 # BLUEPRINT IMPORTS
 # ============================================================
-# Phase 1 — Auth (Connected to auth.py)
+# Phase 1 — Auth
 from modules.auth import auth_bp, login_required, role_required
 
 # Phase 2-8 — Core Modules
@@ -76,8 +76,7 @@ from modules.public_content import public_content_bp
 from modules.payments import payments_bp
 from modules.admin_payments import admin_payments_bp
 
-# Phase 39-51 — Staff Attendance, Leave, Discounts, Visitors, Advances, Chat,
-# Online Exams, Automation, Hall Tickets, Photos, Report Cards, Password Reset
+# Phase 39-51 — Staff Attendance, Leave, Discounts, Visitors, Advances, Chat, Online Exams...
 from modules.staff_attendance import staff_att_bp
 from modules.leave import leave_bp
 from modules.discounts import discounts_bp
@@ -95,10 +94,7 @@ from modules.password_reset import password_reset_bp
 # ============================================================
 # REGISTER ALL BLUEPRINTS
 # ============================================================
-# Auth Blueprint sabse pehle register hoga
 app.register_blueprint(auth_bp)
-
-# Baaki saare blueprints
 app.register_blueprint(students_bp)
 app.register_blueprint(fees_bp)
 app.register_blueprint(attendance_bp)
@@ -185,12 +181,9 @@ def health_check():
 
 
 @app.route("/dashboard")
-@login_required  # <--- AUTH SE CONNECTED (Agar login nahi hai toh auth.login par bhej dega)
+@login_required
 def dashboard():
-    """
-    Main dashboard — Phase 38 V2 with all widgets.
-    Defensive coding: missing functions default to safe values.
-    """
+    """Main dashboard"""
     from database import (
         count_students, total_collected, today_attendance_percent,
         count_unread_notices, get_fees_monthly_trend,
@@ -207,50 +200,18 @@ def dashboard():
         get_pending_leave_count,
         get_total_advance_outstanding,
     )
-    # ============================================================
-# NOTIFICATIONS (Tarika 2)
-# ============================================================
-@app.route("/notifications")
-@login_required
-def notifications_page():
-    """Saare notifications dikhane ke liye page"""
-    from database import get_computed_alerts, get_custom_alerts
-    try:
-        computed = get_computed_alerts()
-        custom = get_custom_alerts(active_only=True)
-        # Dono ko mila kar ek list bana rahe hain
-        all_notifs = computed + [dict(c, type='info', icon='📢', link='#') for c in custom]
-    except Exception:
-        all_notifs = []
-    
-    return render_template("notifications.html", notifications=all_notifs)
-
-@app.route("/notifications/count")
-@login_required
-def notifications_count_api():
-    """Bell icon par number dikhane ke liye API"""
-    from database import get_computed_alerts, get_custom_alerts
-    try:
-        computed = get_computed_alerts()
-        custom = get_custom_alerts(active_only=True)
-        total = len(computed) + len(custom)
-        urgent = sum(1 for n in computed if n.get('type') == 'danger')
-        return jsonify({"count": total, "urgent": urgent})
-    except Exception:
-        return jsonify({"count": 0, "urgent": 0})
 
     today_str = datetime.now().strftime("%Y-%m-%d")
 
     def safe(fn, default=None, *args, **kwargs):
-        """Defensive caller — never crash dashboard"""
         try:
             return fn(*args, **kwargs)
         except Exception:
             return default
 
+    # YE RETURN DASHBOARD FUNCTION KE ANDAR HONA CHAHIYE THA
     return render_template(
         "dashboard.html",
-        # ---- Phase 2-8 core KPIs ----
         total_students=safe(count_students, 0),
         fees_collected=safe(total_collected, 0),
         attendance_today=safe(today_attendance_percent, None, today_str),
@@ -259,32 +220,78 @@ def notifications_count_api():
         total_staff=safe(count_active_staff, 0),
         homework_week=safe(count_homework_this_week, 0),
         upcoming_events_count=safe(count_upcoming_events, 0, 7),
-
-        # ---- Phase 8 charts ----
         fees_trend=safe(get_fees_monthly_trend, [], 6),
         att_trend=safe(get_attendance_trend, [], 7),
         class_dist=safe(get_students_by_class, []),
-
-        # ---- Phase 24, 29 alerts & events ----
         computed_alerts=safe(get_computed_alerts, []),
         custom_alerts=safe(get_custom_alerts, [], True, 2),
         upcoming_events_list=safe(get_upcoming_events, [], 30, None, 5),
-
-        # ---- Phase 38 Dashboard V2 ----
         today_snap=safe(get_today_snapshot, {}),
         fee_progress=safe(get_month_fee_progress, {}),
         birthdays=safe(get_birthdays_today, []),
         recent_activity=safe(get_recent_activity, [], 8),
         top_performers=safe(get_top_performers, {"exam": None, "students": []}, 5),
         class_att_bars=safe(get_class_attendance_today, []),
-
-        # ---- Phase 39-44 newer widgets ----
         staff_att_today=safe(get_staff_attendance_today_summary, {}),
         transport_students=safe(count_transport_students, 0),
         visitors_today=safe(get_visitors_summary, {}),
         pending_leave=safe(get_pending_leave_count, 0),
         advance_outstanding=safe(get_total_advance_outstanding, {"outstanding": 0, "active_count": 0}),
     )
+
+
+# ============================================================
+# NOTIFICATIONS ROUTES (ALAG SE BAHAR NIKALE GAYE HAIN)
+# ============================================================
+@app.route("/notifications")
+@login_required
+def notifications_page():
+    """Saare notifications dikhane ke liye page"""
+    from database import get_computed_alerts, get_custom_alerts
+    try:
+        computed = get_computed_alerts() or []
+        custom = get_custom_alerts(active_only=True) or []
+        
+        all_notifs = []
+        for c in computed:
+            all_notifs.append({
+                "title": c.get("title", "Alert"),
+                "message": c.get("message", ""),
+                "type": c.get("type", "info"),
+                "icon": c.get("icon", "🔔"),
+                "link": c.get("link", "#"),
+                "severity": "high" if c.get("type") == "danger" else "medium"
+            })
+        for c in custom:
+            all_notifs.append({
+                "title": c.get("title", "Custom Alert"),
+                "message": c.get("message", ""),
+                "type": "info",
+                "icon": "📢",
+                "link": "#",
+                "severity": "low"
+            })
+    except Exception as e:
+        print("Error loading notifications:", e)
+        all_notifs = []
+        
+    notif_data = {"items": all_notifs, "total": len(all_notifs)}
+    return render_template("notifications.html", notifications=notif_data)
+
+
+@app.route("/notifications/count")
+@login_required
+def notifications_count_api():
+    """Bell icon par number dikhane ke liye API"""
+    from database import get_computed_alerts, get_custom_alerts
+    try:
+        computed = get_computed_alerts() or []
+        custom = get_custom_alerts(active_only=True) or []
+        total = len(computed) + len(custom)
+        urgent = sum(1 for n in computed if n.get('type') == 'danger')
+        return jsonify({"count": total, "urgent": urgent})
+    except Exception:
+        return jsonify({"count": 0, "urgent": 0})
 
 
 @app.route("/quick-search")
@@ -301,7 +308,6 @@ def quick_search_api():
 
 @app.route("/manifest.json")
 def manifest_route():
-    """Phase 10 — PWA manifest with dynamic school name"""
     from database import get_settings
     try:
         s = get_settings()
@@ -317,19 +323,13 @@ def manifest_route():
         "orientation": "portrait",
         "background_color": "#f5f6fa",
         "theme_color": "#1e293b",
-        "icons": [{
-            "src": "/static/icon.svg",
-            "sizes": "any",
-            "type": "image/svg+xml",
-            "purpose": "any maskable",
-        }],
+        "icons": [{"src": "/static/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}],
     }
     return jsonify(manifest)
 
 
 @app.route("/sw.js")
 def sw_route():
-    """Phase 10 — Service worker at root scope"""
     resp = send_from_directory(app.static_folder, "sw.js")
     resp.headers["Service-Worker-Allowed"] = "/"
     resp.headers["Cache-Control"] = "no-cache"
@@ -348,7 +348,6 @@ def inject_school():
     except Exception:
         return {"school": {"school_name": "School Management"}}
 
-
 @app.context_processor
 def inject_alert_count():
     if "admin_id" not in session:
@@ -359,7 +358,6 @@ def inject_alert_count():
     except Exception:
         return {"alert_count": 0}
 
-
 @app.context_processor
 def inject_chat_unread():
     if "admin_id" not in session:
@@ -369,7 +367,6 @@ def inject_chat_unread():
         return {"chat_unread": count_unread_threads_for_admin()}
     except Exception:
         return {"chat_unread": 0}
-
 
 @app.context_processor
 def inject_help_context():
@@ -389,20 +386,17 @@ def not_found(e):
         return jsonify({"error": "not found"}), 404
     return render_template("errors/404.html"), 404
 
-
 @app.errorhandler(403)
 def forbidden(e):
     if request.path.startswith(("/api", "/qr-attendance")):
         return jsonify({"error": "forbidden"}), 403
     return render_template("errors/403.html"), 403
 
-
 @app.errorhandler(500)
 def server_error(e):
     import traceback
     traceback.print_exc()
     return render_template("errors/500.html"), 500
-
 
 @app.errorhandler(Exception)
 def catch_all(e):
@@ -430,22 +424,16 @@ def _rate_limit_check(ip, endpoint, max_per_minute=60):
     _rate_store[key].append(now)
     return True
 
-
 @app.before_request
 def rate_limit_guard():
-    sensitive = [
-        "/qr-attendance/mark", "/login", "/parent/login",
-        "/teacher/login", "/reset/",
-    ]
+    sensitive = ["/qr-attendance/mark", "/login", "/parent/login", "/teacher/login", "/reset/"]
     path = request.path
     if any(path.startswith(p) for p in sensitive):
         ip = request.headers.get("X-Forwarded-For", request.remote_addr or "?")
         ip = ip.split(",")[0].strip()
         max_per_min = 300 if "qr-attendance" in path else 20
         if not _rate_limit_check(ip, path, max_per_min):
-            return jsonify({
-                "error": "Too many requests — thodi der baad try karo"
-            }), 429
+            return jsonify({"error": "Too many requests — thodi der baad try karo"}), 429
 
 
 # ============================================================
@@ -461,7 +449,6 @@ def add_security_headers(response):
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
-
 @app.after_request
 def cache_static(response):
     if request.path.startswith("/static/"):
@@ -471,11 +458,7 @@ def cache_static(response):
     return response
 
 
-_AUDIT_EXCLUDE = [
-    "/login", "/teacher/", "/parent/", "/site",
-    "/reset/", "/alerts/log-send", "/pay/", "/automation/cron",
-]
-
+_AUDIT_EXCLUDE = ["/login", "/teacher/", "/parent/", "/site", "/reset/", "/alerts/log-send", "/pay/", "/automation/cron"]
 
 @app.after_request
 def auto_audit(response):
@@ -490,14 +473,11 @@ def auto_audit(response):
         if 200 <= response.status_code < 400:
             entity = None
             entity_map = {
-                "/students/": "student", "/fees/": "fees",
-                "/staff/": "staff", "/exams/": "exams",
-                "/salary/": "salary", "/admin-users/": "admin_users",
-                "/notices/": "notices", "/events/": "events",
-                "/library/": "library", "/hostel/": "hostel",
-                "/transport/": "transport", "/visitors/": "visitors",
-                "/advances/": "advances", "/leave/": "leave",
-                "/automation/": "automation",
+                "/students/": "student", "/fees/": "fees", "/staff/": "staff",
+                "/exams/": "exams", "/salary/": "salary", "/admin-users/": "admin_users",
+                "/notices/": "notices", "/events/": "events", "/library/": "library",
+                "/hostel/": "hostel", "/transport/": "transport", "/visitors/": "visitors",
+                "/advances/": "advances", "/leave/": "leave", "/automation/": "automation",
             }
             for prefix, ent in entity_map.items():
                 if path.startswith(prefix):
