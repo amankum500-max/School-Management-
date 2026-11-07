@@ -1,49 +1,122 @@
 {% extends "base.html" %}
-{% block title %}New Exam{% endblock %}
-{% block page_title %}New Exam{% endblock %}
+{% block title %}Create Exam & Question Paper{% endblock %}
+{% block page_title %}Exam Management{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width:600px;">
-<form method="POST">
-    <div style="margin-bottom:1rem;">
-        <label style="font-size:0.85rem; color:#334155;">Exam Name *</label>
-        <input name="name" required placeholder="e.g. Mid Term"
-            style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+<div class="card" style="max-width: 650px; margin: auto; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; background: #ffffff;">
+    <!-- Tab Navigation -->
+    <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid #e2e8f0; margin-bottom: 1.5rem;">
+        <button id="tab-manual-btn" type="button" onclick="switchTab('manual')" 
+            style="padding: 0.6rem 1rem; border: none; background: none; font-weight: 600; color: #2563eb; border-bottom: 2px solid #2563eb; margin-bottom: -2px; cursor: pointer;">
+            📋 Manual Exam Entry
+        </button>
+        <button id="tab-ai-btn" type="button" onclick="switchTab('ai')" 
+            style="padding: 0.6rem 1rem; border: none; background: none; font-weight: 600; color: #64748b; margin-bottom: -2px; cursor: pointer;">
+            ✨ Generate AI Paper
+        </button>
     </div>
 
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-        <div>
-            <label style="font-size:0.85rem; color:#334155;">Class *</label>
-            <select name="class_name" required
-                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
-                <option value="">Select</option>
-                {% for c in classes %}
-                <option value="{{ c }}">{{ c }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div>
-            <label style="font-size:0.85rem; color:#334155;">Exam Date</label>
-            <input type="date" name="exam_date"
-                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
-        </div>
-        <div style="grid-column:1/-1;">
-            <label style="font-size:0.85rem; color:#334155;">Subjects * <small>(comma separated)</small></label>
-            <input name="subjects" required placeholder="Math, Science, English, Hindi"
-                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
-        </div>
-        <div>
-            <label style="font-size:0.85rem; color:#334155;">Max Marks per Subject</label>
-            <input name="max_marks" type="number" value="100" min="1"
-                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
-        </div>
+    <!-- Form 1: Manual Exam Creation -->
+    <div id="tab-manual" style="display: block;">
+        <h4 style="margin-top: 0; margin-bottom: 1rem; color: #1e293b;">Create New Exam</h4>
+        <form method="POST" action="{{ url_for('exams.create_manual') if url_for is defined else '' }}">
+            <input type="hidden" name="form_type" value="manual">
+            
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.85rem; color: #334155; margin-bottom: 0.25rem;">Exam Name *</label>
+                <input name="name" required placeholder="e.g. Mid Term / Final Exam"
+                    style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #334155; margin-bottom: 0.25rem;">Class / Grade *</label>
+                    <select name="class_name" required
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                        <option value="">Select</option>
+                        {% for c in classes %}
+                        <option value="{{ c }}">{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.85rem; color: #334155; margin-bottom: 0.25rem;">Exam Date</label>
+                    <input type="date" name="exam_date"
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.85rem; color: #334155; margin-bottom: 0.25rem;">Subjects * <small style="color: #64748b;">(comma separated)</small></label>
+                <input name="subjects" required placeholder="Math, Science, English, Hindi"
+                    style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.85rem; color: #334155; margin-bottom: 0.25rem;">Max Marks per Subject</label>
+                <input name="max_marks" type="number" value="100" min="1"
+                    style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-top: 1.25rem; display: flex; align-items: center; gap: 0.75rem;">
+                <button type="submit" class="btn btn-primary" style="padding: 0.6rem 1.2rem; cursor: pointer;">Create & Enter Marks</button>
+                <a href="{{ url_for('exams.index') if url_for is defined else '#' }}" style="color: #64748b; text-decoration: none;">Cancel</a>
+            </div>
+        </form>
     </div>
 
-    <div style="margin-top:1.25rem; display:flex; gap:0.75rem;">
-        <button type="submit" class="btn">Create & Enter Marks</button>
-        <a href="{{ url_for('exams.index') }}"
-           style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Cancel</a>
+    <!-- Form 2: AI Question Paper Generator -->
+    <div id="tab-ai" style="display: none;">
+        <h4 style="margin-top: 0; margin-bottom: 1rem; color: #1e293b;">📝 Create Exam Paper using AI</h4>
+        <form method="POST" action="{{ url_for('exams.generate_ai') if url_for is defined else '' }}">
+            <input type="hidden" name="form_type" value="ai">
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.85rem; color: #334155; margin-bottom: 0.25rem;">Subject Name *</label>
+                <input type="text" name="subject" class="form-control" placeholder="e.g., Science, Mathematics" required
+                    style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.85rem; color: #334155; margin-bottom: 0.25rem;">Class / Grade *</label>
+                <select name="grade" required
+                    style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                    <option value="">Select Class</option>
+                    {% for c in classes %}
+                    <option value="{{ c }}">{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-top: 1.25rem;">
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.6rem 1.2rem; cursor: pointer;">✨ Generate Paper (AI)</button>
+            </div>
+        </form>
     </div>
-</form>
 </div>
+
+<script>
+function switchTab(tab) {
+    const manualTab = document.getElementById('tab-manual');
+    const aiTab = document.getElementById('tab-ai');
+    const manualBtn = document.getElementById('tab-manual-btn');
+    const aiBtn = document.getElementById('tab-ai-btn');
+
+    if (tab === 'manual') {
+        manualTab.style.display = 'block';
+        aiTab.style.display = 'none';
+        manualBtn.style.color = '#2563eb';
+        manualBtn.style.borderBottom = '2px solid #2563eb';
+        aiBtn.style.color = '#64748b';
+        aiBtn.style.borderBottom = 'none';
+    } else {
+        manualTab.style.display = 'none';
+        aiTab.style.display = 'block';
+        aiBtn.style.color = '#2563eb';
+        aiBtn.style.borderBottom = '2px solid #2563eb';
+        manualBtn.style.color = '#64748b';
+        manualBtn.style.borderBottom = 'none';
+    }
+}
+</script>
 {% endblock %}
