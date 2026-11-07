@@ -3,7 +3,11 @@ School Management System — Complete Application (Fully Connected)
 """
 
 import os
+import sys
 from datetime import datetime
+
+# रिकर्सन लिमिट बढ़ा दी है ताकि कोई इंटरनल एरर न आए
+sys.setrecursionlimit(2000)
 
 from flask import (
     Flask, render_template, request, session,
@@ -16,15 +20,6 @@ from config import Config
 import google.generativeai as genai
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 ai_model = genai.GenerativeModel('gemini-1.5-flash')
-import cloudinary
-import cloudinary.uploader
-
-# Cloudinary कॉन्फ़िगरेशन (Render के Environment Variables से)
-cloudinary.config( 
-  cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME'), 
-  api_key = os.environ.get('CLOUDINARY_API_KEY'), 
-  api_secret = os.environ.get('CLOUDINARY_API_SECRET') 
-)
 
 # ============================================================
 # APP INITIALIZATION
@@ -221,7 +216,6 @@ def dashboard():
         except Exception:
             return default
 
-    # YE RETURN DASHBOARD FUNCTION KE ANDAR HONA CHAHIYE THA
     return render_template(
         "dashboard.html",
         total_students=safe(count_students, 0),
@@ -253,7 +247,7 @@ def dashboard():
 
 
 # ============================================================
-# NOTIFICATIONS ROUTES (ALAG SE BAHAR NIKALE GAYE HAIN)
+# NOTIFICATIONS ROUTES
 # ============================================================
 @app.route("/notifications")
 @login_required
@@ -347,6 +341,7 @@ def sw_route():
     resp.headers["Cache-Control"] = "no-cache"
     resp.headers["Content-Type"] = "application/javascript"
     return resp
+
 @app.route('/api/ask-ai', methods=['POST'])
 def ask_ai():
     data = request.get_json()
@@ -356,12 +351,12 @@ def ask_ai():
         return jsonify({'error': 'No message provided'}), 400
 
     try:
-        # AI को इंस्ट्रक्शन दें
         prompt = f"You are a helpful AI assistant for a School Management System. Keep your answers short, professional, and helpful. Query: {user_message}"
         response = ai_model.generate_content(prompt)
         return jsonify({'reply': response.text})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 @app.route('/admin/generate-exam', methods=['GET', 'POST'])
 def generate_exam():
     if request.method == 'POST':
@@ -385,35 +380,6 @@ def generate_exam():
             return f"Error: {e}"
             
     return render_template('generate_exam_form.html')
-@app.route('/students/add', methods=['GET', 'POST'])
-def add_student():
-    if request.method == 'POST':
-        name = request.form.get('name')
-        # ... बाकी डेटा (class, roll number आदि) ...
-        
-        # फोटो अपलोड लॉजिक
-        file_to_upload = request.files.get('profile_pic')
-        image_url = None
-        
-        if file_to_upload and file_to_upload.filename != '':
-            try:
-                # Cloudinary पर अपलोड करें
-                upload_result = cloudinary.uploader.upload(file_to_upload)
-                image_url = upload_result['secure_url'] # यह एक लाइव इंटरनेट लिंक होगा
-            except Exception as e:
-                print(f"Cloudinary Error: {e}")
-                flash('Error uploading image.', 'danger')
-                return redirect(request.url)
-
-        # डेटाबेस में सेव करें (मान लीजिए आपके मॉडल में 'image_file' कॉलम है)
-        new_student = Student(name=name, image_file=image_url) 
-        db.session.add(new_student)
-        db.session.commit()
-        
-        flash('Student added successfully!', 'success')
-        return redirect(url_for('students.list_students'))
-        
-    return render_template('students/form.html')
 
 # ============================================================
 # CONTEXT PROCESSORS
