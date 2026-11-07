@@ -488,5 +488,30 @@ document.getElementById('cmdPalette').addEventListener('click', (e) => {
     if (e.target.id === 'cmdPalette') closeCommandPalette();
 });
 </script>
+    <script>
+    // Theme Toggle Logic
+    function toggleTheme() {
+        const body = document.body;
+        const btn = document.getElementById('themeToggle');
+        
+        body.classList.toggle('dark-mode');
+        
+        if (body.classList.contains('dark-mode')) {
+            btn.innerHTML = '☀️ Light';
+            localStorage.setItem('theme', 'dark');
+        } else {
+            btn.innerHTML = '🌙 Dark';
+            localStorage.setItem('theme', 'light');
+        }
+    }
+
+    // Check saved theme on load
+    document.addEventListener('DOMContentLoaded', () => {
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-mode');
+            document.getElementById('themeToggle').innerHTML = '☀️ Light';
+        }
+    });
+    </script>
 </body>
 </html>
