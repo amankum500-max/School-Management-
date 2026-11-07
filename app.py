@@ -13,6 +13,7 @@ from flask_session import Session
 from werkzeug.exceptions import HTTPException
 
 from config import Config
+import google.generativeai as genai
 
 # ============================================================
 # APP INITIALIZATION
