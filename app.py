@@ -20,6 +20,7 @@ from config import Config
 import google.generativeai as genai
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 ai_model = genai.GenerativeModel('gemini-1.5-flash')
+from PIL import Image
 
 # ============================================================
 # APP INITIALIZATION
