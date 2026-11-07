@@ -2,24 +2,19 @@ import os
 import cloudinary
 import cloudinary.uploader
 
-# Cloudinary कॉन्फ़िगरेशन (Render के Environment Variables से)
-cloudinary.config(
-    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
-    api_key=os.environ.get('CLOUDINARY_API_KEY'),
-    api_secret=os.environ.get('CLOUDINARY_API_SECRET')
-)
+# Cloudinary को सीधे URL से कॉन्फ़िगर करें
+# यह Render के Environment Variables से अपने आप उठा लेगा
+cloudinary.config(cloudinary_url=os.environ.get('CLOUDINARY_URL'))
 
 def is_configured():
-    """चेक करता है कि Cloudinary सेट है या नहीं"""
-    return bool(os.environ.get('CLOUDINARY_CLOUD_NAME'))
+    return bool(os.environ.get('CLOUDINARY_URL'))
 
 def upload_student_photo(student_id, file):
-    """फोटो को Cloudinary पर अपलोड करता है और URL लौटाता है"""
     try:
+        # फोटो को Cloudinary पर अपलोड करें
         result = cloudinary.uploader.upload(
             file, 
-            folder=f"student_photos/{student_id}", 
-            resource_type="image"
+            folder=f"student_photos/{student_id}"
         )
         return {"ok": True, "url": result['secure_url']}
     except Exception as e:
@@ -27,7 +22,6 @@ def upload_student_photo(student_id, file):
         return {"ok": False, "error": str(e)}
 
 def upload_student_document(student_id, doc_type, file, doc_name):
-    """डॉक्यूमेंट को Cloudinary पर अपलोड करता है"""
     try:
         result = cloudinary.uploader.upload(
             file,
@@ -45,5 +39,4 @@ def upload_student_document(student_id, doc_type, file, doc_name):
         return {"ok": False, "error": str(e)}
 
 def delete_student_photo(student_id):
-    """डेटाबेस से फोटो हटाने के लिए (फिलहाल True लौटा रहे हैं)"""
     return True
