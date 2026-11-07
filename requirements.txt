@@ -9,3 +9,8 @@ werkzeug
 razorpay
 requests
 supabase
+google-genai
+cloudinary
+twilio
+Pillow
+Flask-Mail
