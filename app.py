@@ -353,6 +353,29 @@ def ask_ai():
         return jsonify({'reply': response.text})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+        @app.route('/admin/generate-exam', methods=['GET', 'POST'])
+def generate_exam():
+    if request.method == 'POST':
+        subject = request.form.get('subject')
+        grade = request.form.get('grade')
+        
+        prompt = f"""
+        Create a school exam question paper for Class {grade}, Subject: {subject}.
+        Format it beautifully using HTML tags like <h4>, <ol>, <li>. 
+        Do NOT use markdown like ```html. Just return the raw HTML.
+        Sections:
+        - Section A: 5 MCQs (1 mark each)
+        - Section B: 3 Short Questions (5 marks each)
+        - Section C: 2 Long Questions (10 marks each)
+        """
+        try:
+            response = ai_model.generate_content(prompt)
+            clean_html = response.text.replace('```html', '').replace('```', '').strip()
+            return render_template('exam_paper_result.html', exam_content=clean_html, subject=subject, grade=grade)
+        except Exception as e:
+            return f"Error: {e}"
+            
+    return render_template('generate_exam_form.html')
 
 # ============================================================
 # CONTEXT PROCESSORS
