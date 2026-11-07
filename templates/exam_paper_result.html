@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Exam Paper{% endblock %}
+{% block page_title %}{{ subject }} - Class {{ grade }}{% endblock %}
+
+{% block content %}
+<div class="card p-4">
+    <div class="d-flex justify-content-between mb-3">
+        <h4>AI Generated Exam Paper</h4>
+        <button class="btn btn-success" onclick="window.print()">🖨️ Print Paper</button>
+    </div>
+    <div style="background: white; color: black; padding: 20px; border-radius: 8px;">
+        <!-- AI का जनरेट किया हुआ HTML यहाँ आएगा -->
+        {{ exam_content | safe }}
+    </div>
+</div>
+{% endblock %}
