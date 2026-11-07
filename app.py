@@ -353,7 +353,7 @@ def ask_ai():
         return jsonify({'reply': response.text})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-        @app.route('/admin/generate-exam', methods=['GET', 'POST'])
+@app.route('/admin/generate-exam', methods=['GET', 'POST'])
 def generate_exam():
     if request.method == 'POST':
         subject = request.form.get('subject')
