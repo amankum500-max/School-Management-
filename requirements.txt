@@ -1,9 +1,10 @@
-flask
+Flask
+Flask-SocketIO
+gevent
+gunicorn
 flask-session
 psycopg2-binary
 python-dotenv
-gunicorn==23.0.0
-eventlet==0.33.3
 werkzeug
 razorpay
 requests
