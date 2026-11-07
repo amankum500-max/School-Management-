@@ -7,7 +7,7 @@ from datetime import datetime
 
 from flask import (
     Flask, render_template, request, session,
-    redirect, url_for, jsonify, Response, send_from_directory
+    redirect, url_for, jsonify, Response, send_from_directory,send_file
 )
 from flask_session import Session
 from werkzeug.exceptions import HTTPException
@@ -16,6 +16,15 @@ from config import Config
 import google.generativeai as genai
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 ai_model = genai.GenerativeModel('gemini-1.5-flash')
+import cloudinary
+import cloudinary.uploader
+
+# Cloudinary कॉन्फ़िगरेशन (Render के Environment Variables से)
+cloudinary.config( 
+  cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME'), 
+  api_key = os.environ.get('CLOUDINARY_API_KEY'), 
+  api_secret = os.environ.get('CLOUDINARY_API_SECRET') 
+)
 
 # ============================================================
 # APP INITIALIZATION
