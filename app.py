@@ -385,7 +385,7 @@ def generate_exam():
             return f"Error: {e}"
             
     return render_template('generate_exam_form.html')
-    @app.route('/students/add', methods=['GET', 'POST'])
+@app.route('/students/add', methods=['GET', 'POST'])
 def add_student():
     if request.method == 'POST':
         name = request.form.get('name')
