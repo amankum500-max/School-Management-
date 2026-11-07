@@ -147,6 +147,38 @@
             cursor: pointer;
         }
         .btn:hover { background: #2563eb; }
+        /* === ADVANCED UI ADDITIONS === */
+/* Dark Mode Variables */
+body.dark-mode {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%) !important;
+    color: #e2e8f0 !important;
+}
+body.dark-mode .topbar {
+    background: rgba(15, 23, 42, 0.8) !important;
+    backdrop-filter: blur(10px) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: white;
+}
+body.dark-mode .topbar h1 { color: white; }
+body.dark-mode .card {
+    background: rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #e2e8f0 !important;
+}
+body.dark-mode table { color: #e2e8f0; }
+
+/* Neon Buttons */
+.btn { 
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6) !important; 
+    border: none; 
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.4); 
+    transition: 0.3s;
+}
+.btn:hover { 
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); 
+    transform: translateY(-1px);
+}
     </style>
     {% block extra_css %}{% endblock %}
 </head>
