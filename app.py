@@ -14,6 +14,8 @@ from werkzeug.exceptions import HTTPException
 
 from config import Config
 import google.generativeai as genai
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+ai_model = genai.GenerativeModel('gemini-1.5-flash')
 
 # ============================================================
 # APP INITIALIZATION
@@ -336,7 +338,21 @@ def sw_route():
     resp.headers["Cache-Control"] = "no-cache"
     resp.headers["Content-Type"] = "application/javascript"
     return resp
+@app.route('/api/ask-ai', methods=['POST'])
+def ask_ai():
+    data = request.get_json()
+    user_message = data.get('message')
+    
+    if not user_message:
+        return jsonify({'error': 'No message provided'}), 400
 
+    try:
+        # AI को इंस्ट्रक्शन दें
+        prompt = f"You are a helpful AI assistant for a School Management System. Keep your answers short, professional, and helpful. Query: {user_message}"
+        response = ai_model.generate_content(prompt)
+        return jsonify({'reply': response.text})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # ============================================================
 # CONTEXT PROCESSORS
