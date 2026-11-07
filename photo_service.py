@@ -18,7 +18,7 @@ def upload_student_photo(student_id, file):
     try:
         result = cloudinary.uploader.upload(
             file, 
-            folder=f"student_photos/{student_id}", # फोल्डर में सेव होगी
+            folder=f"student_photos/{student_id}", 
             resource_type="image"
         )
         return {"ok": True, "url": result['secure_url']}
