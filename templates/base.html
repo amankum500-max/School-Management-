@@ -513,5 +513,76 @@ document.getElementById('cmdPalette').addEventListener('click', (e) => {
         }
     });
     </script>
+    <!-- AI Floating Chatbot -->
+<div style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;">
+    <!-- Chat Window (Hidden by default) -->
+    <div id="aiChatWindow" class="card shadow-lg" style="display: none; width: 320px; height: 420px; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255,255,255,0.1);">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center p-2" style="border-radius: 16px 16px 0 0;">
+            <span class="fw-bold" style="font-size:0.95rem;">🤖 AI Assistant</span>
+            <button class="btn btn-sm btn-close btn-close-white" onclick="toggleAiChat()"></button>
+        </div>
+        <div class="card-body overflow-auto p-2" id="aiChatBody" style="font-size: 0.85rem; flex: 1;">
+            <div class="mb-2 text-muted">Hello! Main aapka AI assistant hoon. Kuch bhi puchhiye.</div>
+        </div>
+        <div class="card-footer p-2 bg-transparent border-top border-secondary">
+            <div class="input-group">
+                <input type="text" id="aiChatInput" class="form-control form-control-sm" placeholder="Type here..." onkeypress="if(event.key==='Enter') sendAiMessage()">
+                <button class="btn btn-primary btn-sm" onclick="sendAiMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Button -->
+    <button class="btn btn-primary rounded-circle shadow-lg p-3 fs-4" onclick="toggleAiChat()" id="aiChatBtn" style="width: 60px; height: 60px;">
+        💬
+    </button>
+</div>
+
+<script>
+    function toggleAiChat() {
+        const win = document.getElementById('aiChatWindow');
+        const btn = document.getElementById('aiChatBtn');
+        if (win.style.display === 'none') {
+            win.style.display = 'flex';
+            btn.style.display = 'none';
+        } else {
+            win.style.display = 'none';
+            btn.style.display = 'block';
+        }
+    }
+
+    async function sendAiMessage() {
+        const input = document.getElementById('aiChatInput');
+        const message = input.value.trim();
+        if (!message) return;
+
+        const chatBody = document.getElementById('aiChatBody');
+        
+        // User message
+        chatBody.innerHTML += `<div class="text-end mb-2"><span class="badge bg-secondary p-2 text-wrap text-start" style="max-width: 85%;">${message}</span></div>`;
+        input.value = '';
+        chatBody.scrollTop = chatBody.scrollHeight;
+
+        // Loading
+        const loadId = 'ai-load-' + Date.now();
+        chatBody.innerHTML += `<div id="${loadId}" class="text-start mb-2 text-info" style="font-size:0.75rem;">Typing...</div>`;
+        chatBody.scrollTop = chatBody.scrollHeight;
+
+        try {
+            const res = await fetch('/api/ask-ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            });
+            const data = await res.json();
+            
+            document.getElementById(loadId).remove();
+            chatBody.innerHTML += `<div class="text-start mb-2"><span class="badge bg-primary p-2 text-wrap text-start" style="max-width: 85%; font-weight:normal;">${data.reply || data.error}</span></div>`;
+        } catch (error) {
+            document.getElementById(loadId).innerHTML = '<span class="text-danger">Error connecting to AI.</span>';
+        }
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+</script>
 </body>
 </html>
