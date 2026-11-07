@@ -385,6 +385,35 @@ def generate_exam():
             return f"Error: {e}"
             
     return render_template('generate_exam_form.html')
+    @app.route('/students/add', methods=['GET', 'POST'])
+def add_student():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        # ... बाकी डेटा (class, roll number आदि) ...
+        
+        # फोटो अपलोड लॉजिक
+        file_to_upload = request.files.get('profile_pic')
+        image_url = None
+        
+        if file_to_upload and file_to_upload.filename != '':
+            try:
+                # Cloudinary पर अपलोड करें
+                upload_result = cloudinary.uploader.upload(file_to_upload)
+                image_url = upload_result['secure_url'] # यह एक लाइव इंटरनेट लिंक होगा
+            except Exception as e:
+                print(f"Cloudinary Error: {e}")
+                flash('Error uploading image.', 'danger')
+                return redirect(request.url)
+
+        # डेटाबेस में सेव करें (मान लीजिए आपके मॉडल में 'image_file' कॉलम है)
+        new_student = Student(name=name, image_file=image_url) 
+        db.session.add(new_student)
+        db.session.commit()
+        
+        flash('Student added successfully!', 'success')
+        return redirect(url_for('students.list_students'))
+        
+    return render_template('students/form.html')
 
 # ============================================================
 # CONTEXT PROCESSORS
