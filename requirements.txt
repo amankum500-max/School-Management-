@@ -3,6 +3,7 @@ flask-session
 psycopg2-binary
 python-dotenv
 gunicorn
+eventlet
 werkzeug
 razorpay
 requests
