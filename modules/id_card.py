@@ -17,13 +17,20 @@ def _academic_year():
 
 @id_card_bp.route("/<int:student_id>")
 @login_required
+@id_card_bp.route("/<int:student_id>")
+@login_required
 def single(student_id):
     row = get_student(student_id)
     if not row:
         abort(404)
-    keys = ["id","name","roll_no","class_name","section","gender","dob",
-            "parent_name","parent_phone","address","admission_date","status","created_at"]
+        
+    # Yahan aakhir mein "photo_url" add kar diya hai
+    keys = ["id", "name", "roll_no", "class_name", "section", "gender", "dob",
+            "parent_name", "parent_phone", "address", "admission_date", "status", 
+            "created_at", "photo_url"]
+            
     student = dict(zip(keys, row))
+    
     return render_template(
         "students/id_card.html",
         students=[student],
