@@ -4725,6 +4725,171 @@ def get_visitors_summary_dashboard():
         return {"currently_in": 0, "total_today": 0, "meetings": 0}
     finally:
         cur.close(); conn.close()
+# ==========================================
+# ==== ULTIMATE CLASSES & AUTOMATION ========
+# ==========================================
+
+def get_classes_stats():
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("""
+        SELECT COUNT(DISTINCT c.id), COALESCE(SUM(c.capacity), 0), 
+        (SELECT COUNT(*) FROM students WHERE status='active') 
+        FROM school_classes c WHERE c.is_active = TRUE;
+    """)
+    r = cur.fetchone()
+    cur.close(); conn.close()
+    tc, tcap, ts = r[0] or 0, r[1] or 0, r[2] or 0
+    occ = round((ts / tcap * 100), 1) if tcap > 0 else 0
+    return {"total_classes": tc, "total_capacity": tcap, "total_students": ts, "occupancy": occ}
+
+def get_advanced_classes_list(search=None, is_active=True):
+    conn = get_conn(); cur = conn.cursor()
+    q = """
+        SELECT c.id, c.class_name, c.section, c.capacity, c.class_teacher, c.subjects, c.academic_year, COUNT(s.id)
+        FROM school_classes c
+        LEFT JOIN students s ON s.class_name = c.class_name AND s.section = c.section AND s.status = 'active'
+        WHERE c.is_active = %s
+    """
+    params = [is_active]
+    if search:
+        q += " AND (c.class_name ILIKE %s OR c.class_teacher ILIKE %s)"
+        params.extend([f"%{search}%", f"%{search}%"])
+    q += " GROUP BY c.id ORDER BY c.class_name, c.section;"
+    cur.execute(q, tuple(params))
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return [{"id": r[0], "class_name": r[1], "section": r[2], "capacity": r[3], "class_teacher": r[4], "subjects": r[5], "academic_year": r[6], "student_count": r[7]} for r in rows]
+
+def get_class_by_id(class_id):
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("SELECT id, class_name, section, capacity, class_teacher, subjects, academic_year FROM school_classes WHERE id=%s", (class_id,))
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    if row:
+        return {"id": row[0], "class_name": row[1], "section": row[2], "capacity": row[3], "class_teacher": row[4], "subjects": row[5], "academic_year": row[6]}
+    return None
+
+def create_new_class(class_name, section, capacity, class_teacher, subjects, academic_year):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO school_classes (class_name, section, capacity, class_teacher, subjects, academic_year) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id;", 
+                    (class_name, section, capacity, class_teacher, subjects, academic_year))
+        cid = cur.fetchone()[0]; conn.commit(); return cid
+    except Exception as e:
+        conn.rollback(); print(e); return None
+    finally:
+        cur.close(); conn.close()
+
+def update_class_details(class_id, class_name, section, capacity, class_teacher, subjects, academic_year):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE school_classes SET class_name=%s, section=%s, capacity=%s, class_teacher=%s, subjects=%s, academic_year=%s WHERE id=%s;", 
+                    (class_name, section, capacity, class_teacher, subjects, academic_year, class_id))
+        conn.commit(); return True
+    except Exception as e:
+        conn.rollback(); return False
+    finally:
+        cur.close(); conn.close()
+
+def archive_class(class_id):
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("UPDATE school_classes SET is_active = FALSE WHERE id=%s;", (class_id,))
+    conn.commit(); cur.close(); conn.close()
+
+def restore_class(class_id):
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("UPDATE school_classes SET is_active = TRUE WHERE id=%s;", (class_id,))
+    conn.commit(); cur.close(); conn.close()
+
+def promote_students(old_class, old_sec, new_class, new_sec):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE students SET class_name=%s, section=%s WHERE class_name=%s AND section=%s AND status='active'", 
+                    (new_class, new_sec, old_class, old_sec))
+        conn.commit(); return True
+    except Exception:
+        conn.rollback(); return False
+    finally:
+        cur.close(); conn.close()
+
+def add_section_to_class(class_id, new_section, capacity, class_teacher):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT class_name, subjects, academic_year FROM school_classes WHERE id=%s", (class_id,))
+        row = cur.fetchone()
+        if not row: return False
+        c_name, sub, ay = row
+        cur.execute("INSERT INTO school_classes (class_name, section, capacity, class_teacher, subjects, academic_year) VALUES (%s,%s,%s,%s,%s,%s)", 
+                    (c_name, new_section, capacity, class_teacher, sub, ay))
+        conn.commit(); return True
+    except Exception:
+        conn.rollback(); return False
+    finally:
+        cur.close(); conn.close()
+
+# ==== SUBJECTS ====
+def get_class_subjects(class_id):
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("SELECT id, subject_name, teacher_name FROM class_subjects WHERE class_id=%s ORDER BY id", (class_id,))
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return [{"id": r[0], "subject_name": r[1], "teacher_name": r[2]} for r in rows]
+
+def add_class_subject(class_id, subject_name, teacher_name):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO class_subjects (class_id, subject_name, teacher_name) VALUES (%s,%s,%s)", (class_id, subject_name, teacher_name))
+        conn.commit(); return True
+    except Exception:
+        conn.rollback(); return False
+    finally:
+        cur.close(); conn.close()
+
+def delete_class_subject(subject_id):
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("DELETE FROM class_subjects WHERE id=%s", (subject_id,))
+    conn.commit(); cur.close(); conn.close()
+
+# ==== TRANSFER & AUTOMATION ====
+def transfer_student(student_id, new_class, new_sec):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE students SET class_name=%s, section=%s WHERE id=%s", (new_class, new_sec, student_id))
+        conn.commit(); return True
+    except Exception:
+        conn.rollback(); return False
+    finally:
+        cur.close(); conn.close()
+
+def get_class_students_for_export(class_name, section):
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("SELECT roll_no, name, gender, parent_name, parent_phone FROM students WHERE class_name=%s AND section=%s AND status='active' ORDER BY CAST(roll_no AS INTEGER)", (class_name, section))
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return rows
+
+# 1. Auto Roll Number
+def get_next_roll_number(class_name, section):
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("SELECT MAX(CAST(roll_no AS INTEGER)) FROM students WHERE class_name=%s AND section=%s AND roll_no ~ '^[0-9]+$'", (class_name, section))
+    max_roll = cur.fetchone()[0]
+    cur.close(); conn.close()
+    return (max_roll or 0) + 1
+
+# 2. Auto Default Subjects
+def auto_assign_subjects(class_id):
+    default_subjects = ["Mathematics", "Science", "English", "Hindi", "Social Science"]
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        for sub in default_subjects:
+            cur.execute("SELECT id FROM class_subjects WHERE class_id=%s AND subject_name=%s", (class_id, sub))
+            if not cur.fetchone():
+                cur.execute("INSERT INTO class_subjects (class_id, subject_name) VALUES (%s, %s)", (class_id, sub))
+        conn.commit(); return True
+    except Exception:
+        conn.rollback(); return False
+    finally:
+        cur.close(); conn.close()
 
 # ============================================================
 # END OF FILE
