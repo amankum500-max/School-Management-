@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block page_title %}Class Details{% endblock %}
+{% block content %}
+<div style="max-width:1000px; margin:0 auto;">
+    <div class="card" style="margin-bottom:1.5rem; border-left:4px solid #3b82f6; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+            <h2 style="font-size:1.4rem; font-weight:700;">{{ cls.class_name }} (Section {{ cls.section }})</h2>
+            <p style="color:#64748b; font-size:0.9rem;">Capacity: {{ students|length }}/{{ cls.capacity }}</p>
+        </div>
+        <a href="{{ url_for('classes.export_csv', class_id=cls.id) }}" class="btn" style="background:#10b981; padding:0.5rem 1rem;">⬇️ Export CSV</a>
+    </div>
+
+    <div style="display:flex; gap:0.5rem; margin-bottom:1.5rem;">
+        <button class="tab-btn active btn" onclick="openTab('students')">Students ({{ students|length }})</button>
+        <button class="tab-btn btn" onclick="openTab('subjects')" style="background:#8b5cf6;">Subjects</button>
+    </div>
+
+    <div id="tab-students" class="tab-content active card">
+        <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+            <thead style="background:#f8fafc;">
+                <tr><th style="padding:0.75rem; text-align:left;">Roll No</th><th style="padding:0.75rem; text-align:left;">Name</th><th style="padding:0.75rem; text-align:center;">Action</th></tr>
+            </thead>
+            <tbody>
+                {% for s in students %}
+                <tr style="border-top:1px solid #e2e8f0;">
+                    <td style="padding:0.75rem; font-weight:600;">{{ s.roll_no }}</td>
+                    <td style="padding:0.75rem;">{{ s.name }}</td>
+                    <td style="padding:0.75rem; text-align:center;">
+                        <button onclick="openTransferModal({{ s.id }}, '{{ s.name }}')" style="background:none; border:none; color:#f59e0b; font-weight:600; cursor:pointer;">Transfer</button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="3" style="text-align:center; padding:1rem;">Koi student nahi.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div id="tab-subjects" class="tab-content card" style="display:none;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
+            <div>
+                <h3 style="margin-bottom:1rem;">Mapped Subjects</h3>
+                {% for sub in subjects %}
+                <div style="display:flex; justify-content:space-between; padding:0.5rem; background:#f8fafc; margin-bottom:0.5rem; border-radius:6px;">
+                    <span><strong>{{ sub.subject_name }}</strong> ({{ sub.teacher_name or 'No Teacher' }})</span>
+                    <form method="POST" action="{{ url_for('classes.delete_subject', subject_id=sub.id, class_id=cls.id) }}"><button style="color:red; background:none; border:none;">🗑️</button></form>
+                </div>
+                {% else %}<p>No subjects.</p>{% endfor %}
+            </div>
+            <div>
+                <h3 style="margin-bottom:1rem;">Add Subject</h3>
+                <form method="POST" action="{{ url_for('classes.add_subject', class_id=cls.id) }}">
+                    <input type="text" name="subject_name" placeholder="Subject" required style="width:100%; padding:0.6rem; margin-bottom:0.5rem; border:1px solid #cbd5e1; border-radius:6px;">
+                    <input type="text" name="teacher_name" placeholder="Teacher" style="width:100%; padding:0.6rem; margin-bottom:1rem; border:1px solid #cbd5e1; border-radius:6px;">
+                    <button type="submit" class="btn" style="width:100%;">+ Add</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transfer Modal -->
+<div id="transferModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+    <div class="card" style="width:100%; max-width:400px; margin:1rem;">
+        <h3 style="margin-bottom:1rem;">Transfer <span id="transferName"></span></h3>
+        <form method="POST" id="transferForm">
+            <input type="text" name="new_class" placeholder="New Class" required style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px; margin-bottom:0.5rem;">
+            <select name="new_section" style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px; margin-bottom:1rem;"><option value="A">A</option><option value="B">B</option></select>
+            <button type="submit" class="btn" style="width:100%; background:#f59e0b;">Transfer</button>
+        </form>
+    </div>
+</div>
+<script>
+    function openTab(name) {
+        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+        document.getElementById('tab-' + name).style.display = 'block';
+    }
+    function openTransferModal(id, name) {
+        document.getElementById('transferModal').style.display = 'flex';
+        document.getElementById('transferForm').action = '/classes/transfer_student/' + id + '/{{ cls.id }}';
+        document.getElementById('transferName').innerText = name;
+    }
+</script>
+{% endblock %}
