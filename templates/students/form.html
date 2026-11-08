@@ -5,7 +5,6 @@
 {% block content %}
 <div class="card" style="max-width:700px;">
 
-  {# ✅ single form, enctype sahi jagah #}
   <form method="POST" enctype="multipart/form-data">
 
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
@@ -14,9 +13,10 @@
       <div style="grid-column:1/-1;">
         <label style="font-size:0.85rem; color:#334155;">Student Profile Picture</label>
 
-        {% if student and student.profile_pic %}
+        {# Yahan photo_url use kiya hai Cloudinary ke liye #}
+        {% if student and student.photo_url %}
           <div style="margin:0.4rem 0;">
-            <img src="{{ url_for('static', filename='uploads/' ~ student.profile_pic) }}"
+            <img src="{{ student.photo_url }}" 
                  alt="Profile" style="width:72px; height:72px; object-fit:cover; border-radius:50%; border:1px solid #cbd5e1;">
           </div>
         {% endif %}
@@ -35,27 +35,36 @@
                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
       </div>
 
-      {# Roll No #}
+      {# Roll No - Auto Generate Placeholder Added #}
       <div>
         <label style="font-size:0.85rem; color:#334155;">Roll No</label>
         <input type="text" name="roll_no" value="{{ student.roll_no if student else '' }}"
+               placeholder="Leave blank for Auto-Roll"
                style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
       </div>
 
-      {# Class #}
+      {# Class - Dropdown changed #}
       <div>
         <label style="font-size:0.85rem; color:#334155;">Class</label>
-        <input type="text" name="class_name" value="{{ student.class_name if student else '' }}"
-               placeholder="e.g. 5, 10"
-               style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        <select name="class_name" id="classSelect" style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+          <option value="">Select Class</option>
+          {% for c in classes %}
+            <option value="{{ c }}" {% if student and student.class_name|string == c|string %}selected{% endif %}>
+              Class {{ c }}
+            </option>
+          {% endfor %}
+        </select>
       </div>
 
-      {# Section #}
+      {# Section - Dropdown changed #}
       <div>
         <label style="font-size:0.85rem; color:#334155;">Section</label>
-        <input type="text" name="section" value="{{ student.section if student else '' }}"
-               placeholder="A / B"
-               style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+        <select name="section" style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px;">
+          <option value="">Select Section</option>
+          {% for s in ['A', 'B', 'C', 'D'] %}
+            <option value="{{ s }}" {% if student and student.section == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
       </div>
 
       {# Gender #}
@@ -116,7 +125,7 @@
       </div>
     </div>
 
-    {# ✅ Buttons sabse niche, ek hi submit button #}
+    {# Buttons #}
     <div style="margin-top:1.5rem; display:flex; gap:0.75rem; align-items:center;">
       <button type="submit" class="btn btn-primary">
         {{ 'Add Student' if mode=='add' else 'Save Changes' }}
