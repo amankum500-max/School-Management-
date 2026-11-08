@@ -17,9 +17,13 @@ from flask_session import Session
 from werkzeug.exceptions import HTTPException
 
 from config import Config
-import google.generativeai as genai
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-ai_model = genai.GenerativeModel('gemini-1.5-flash')
+
+# --- NAYA GOOGLE GENAI SETUP ---
+from google import genai
+# नया AI Client सेटअप
+ai_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+# -------------------------------
+
 from PIL import Image
 
 # ============================================================
@@ -353,7 +357,13 @@ def ask_ai():
 
     try:
         prompt = f"You are a helpful AI assistant for a School Management System. Keep your answers short, professional, and helpful. Query: {user_message}"
-        response = ai_model.generate_content(prompt)
+        
+        # --- NAYA CODE YAHAN HAI ---
+        response = ai_client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt
+        )
+        
         return jsonify({'reply': response.text})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -374,7 +384,12 @@ def generate_exam():
         - Section C: 2 Long Questions (10 marks each)
         """
         try:
-            response = ai_model.generate_content(prompt)
+            # --- NAYA CODE YAHAN HAI ---
+            response = ai_client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=prompt
+            )
+            
             clean_html = response.text.replace('```html', '').replace('```', '').strip()
             return render_template('exam_paper_result.html', exam_content=clean_html, subject=subject, grade=grade)
         except Exception as e:
@@ -541,11 +556,3 @@ def auto_audit(response):
     except Exception:
         pass
     return response
-
-
-# ============================================================
-# MAIN
-# ============================================================
-if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
