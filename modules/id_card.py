@@ -15,8 +15,7 @@ def _academic_year():
         return f"{y}-{str(y+1)[-2:]}"
     return f"{y-1}-{str(y)[-2:]}"
 
-@id_card_bp.route("/<int:student_id>")
-@login_required
+# Yahan se duplicate lines hata di hain
 @id_card_bp.route("/<int:student_id>")
 @login_required
 def single(student_id):
@@ -24,7 +23,7 @@ def single(student_id):
     if not row:
         abort(404)
         
-    # Yahan aakhir mein "photo_url" add kar diya hai
+    # Yahan aakhir mein "photo_url" add hai
     keys = ["id", "name", "roll_no", "class_name", "section", "gender", "dob",
             "parent_name", "parent_phone", "address", "admission_date", "status", 
             "created_at", "photo_url"]
