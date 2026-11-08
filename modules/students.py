@@ -80,7 +80,8 @@ def add_student():
                 print(f"Cloudinary Error: {e}")
                 flash("Photo upload fail ho gaya, par baaki data save ho raha hai.", "warning")
 
-        data['image_file'] = image_url 
+        # Yahan image_file ki jagah photo_url kar diya hai
+        data['photo_url'] = image_url 
         # ====================================================
 
         sid = create_student(data)
@@ -91,7 +92,7 @@ def add_student():
 
 
 # ====================================================
-# YAHAN SE BAAKI CODE SHURU HOTA HAI (Jo missing tha)
+# YAHAN SE BAAKI CODE SHURU HOTA HAI
 # ====================================================
 
 @students_bp.route("/<int:student_id>")
@@ -101,9 +102,10 @@ def view_student(student_id):
     if not row:
         abort(404)
         
+    # Yahan image_file ki jagah photo_url kar diya hai
     keys = ["id", "name", "roll_no", "class_name", "section", "gender", "dob",
             "parent_name", "parent_phone", "address", "admission_date", "status", 
-            "created_at", "image_file"]
+            "created_at", "photo_url"]
     student = dict(zip(keys, row))
 
     transport = get_student_transport(student_id)
@@ -127,9 +129,10 @@ def edit_student(student_id):
     if not row:
         abort(404)
         
+    # Yahan bhi image_file ki jagah photo_url kar diya hai
     keys = ["id", "name", "roll_no", "class_name", "section", "gender", "dob",
             "parent_name", "parent_phone", "address", "admission_date", "status", 
-            "created_at", "image_file"]
+            "created_at", "photo_url"]
     student = dict(zip(keys, row))
 
     if request.method == "POST":
@@ -140,7 +143,7 @@ def edit_student(student_id):
         if file_to_upload and file_to_upload.filename != '':
             try:
                 upload_result = cloudinary.uploader.upload(file_to_upload)
-                data['image_file'] = upload_result['secure_url']
+                data['photo_url'] = upload_result['secure_url'] # Yahan bhi photo_url kar diya
             except Exception as e:
                 print(f"Cloudinary Error: {e}")
                 flash("Photo upload fail ho gaya.", "warning")
