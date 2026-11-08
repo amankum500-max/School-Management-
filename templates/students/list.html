@@ -4,42 +4,42 @@
 
 {% block content %}
 <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem; align-items:center;">
+    
+    <!-- Filter Form -->
     <form method="GET" style="display:flex; gap:0.5rem; flex:1; min-width:250px;">
         <input type="text" name="q" value="{{ search }}" placeholder="Search naam, roll, phone..."
             style="flex:1; padding:0.55rem 0.85rem; border:1px solid #cbd5e1; border-radius:8px;">
+        
         <select name="class" style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
             <option value="">All Classes</option>
             {% for c in classes %}
             <option value="{{ c }}" {% if c == selected_class %}selected{% endif %}>{{ c }}</option>
             {% endfor %}
         </select>
+
+        <select name="status" style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
+            <option value="active" {% if request.args.get('status', 'active') == 'active' %}selected{% endif %}>Active</option>
+            <option value="inactive" {% if request.args.get('status') == 'inactive' %}selected{% endif %}>Inactive</option>
+            <option value="all" {% if request.args.get('status') == 'all' %}selected{% endif %}>All</option>
+        </select>
+
         <button type="submit" class="btn">Filter</button>
-        <select name="class" style="...">
-    <option value="">All Classes</option>
-    {% for c in classes %}
-    <option value="{{ c }}" {% if c == selected_class %}selected{% endif %}>{{ c }}</option>
-    {% endfor %}
-</select>
-<select name="status" style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:8px;">
-    <option value="active" {% if request.args.get('status', 'active') == 'active' %}selected{% endif %}>Active</option>
-    <option value="inactive" {% if request.args.get('status') == 'inactive' %}selected{% endif %}>Inactive</option>
-    <option value="all" {% if request.args.get('status') == 'all' %}selected{% endif %}>All</option>
-</select>
     </form>
-    <a href="{{ url_for('id_card.bulk') }}"
-   style="padding:0.6rem 1.1rem; border-radius:6px; background:#f59e0b; color:white; text-decoration:none; font-size:0.9rem;">
-    🪪 Print ID Cards
+
+    <!-- Action Buttons -->
+    <a href="{{ url_for('id_card.bulk') }}" style="padding:0.6rem 1.1rem; border-radius:6px; background:#f59e0b; color:white; text-decoration:none; font-size:0.9rem;">
+        🪪 Print ID Cards
     </a>
+    
+    <a href="{{ url_for('bulk.download_template') }}" style="padding:0.6rem 1.1rem; border-radius:6px; background:#64748b; color:white; text-decoration:none; font-size:0.9rem;">
+        📥 Template
+    </a>
+    
+    <a href="{{ url_for('bulk.upload') }}" style="padding:0.6rem 1.1rem; border-radius:6px; background:#8b5cf6; color:white; text-decoration:none; font-size:0.9rem;">
+        📤 Bulk Import
+    </a>
+
     <a href="{{ url_for('students.add_student') }}" class="btn">+ Add Student</a>
-    <a href="{{ url_for('bulk.download_template') }}"
-   style="padding:0.6rem 1.1rem; border-radius:6px; background:#64748b; color:white; text-decoration:none; font-size:0.9rem;">
-    📥 Template
-</a>
-<a href="{{ url_for('bulk.upload') }}"
-   style="padding:0.6rem 1.1rem; border-radius:6px; background:#8b5cf6; color:white; text-decoration:none; font-size:0.9rem;">
-    📤 Bulk Import
-</a>
-<a href="{{ url_for('students.add_student') }}" class="btn">+ Add Student</a>
 </div>
 
 <div class="card" style="padding:0; overflow:auto;">
@@ -69,8 +69,11 @@
                 </span>
             </td>
             <td style="padding:0.7rem; text-align:right; white-space:nowrap;">
+                <!-- View Button -->
                 <a href="{{ url_for('students.view_student', student_id=s.id) }}"
                    style="color:#3b82f6; text-decoration:none; margin-right:0.5rem;">View</a>
+                
+                <!-- Edit Button -->
                 <a href="{{ url_for('students.edit_student', student_id=s.id) }}"
                    style="color:#f59e0b; text-decoration:none;">Edit</a>
             </td>
