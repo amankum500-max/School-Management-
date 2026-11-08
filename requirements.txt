@@ -9,7 +9,7 @@ werkzeug
 razorpay
 requests
 supabase
-google.generativeai
+google-genai
 cloudinary
 twilio
 Pillow
