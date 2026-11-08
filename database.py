@@ -273,13 +273,14 @@ def update_password_by_token(token, new_password):
 # ============================================================
 def create_student(data):
     conn = get_conn(); cur = conn.cursor()
-    cur.execute("INSERT INTO students (name, roll_no, class_name, section, gender, dob, parent_name, parent_phone, address, admission_date, status) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id;",
+    # Yahan INSERT mein photo_url add kiya hai aur ek extra %s lagaya hai
+    cur.execute("INSERT INTO students (name, roll_no, class_name, section, gender, dob, parent_name, parent_phone, address, admission_date, status, photo_url) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id;",
                 (data.get("name"), data.get("roll_no"), data.get("class_name"), data.get("section"),
                  data.get("gender"), data.get("dob") or None, data.get("parent_name"),
                  data.get("parent_phone"), data.get("address"),
-                 data.get("admission_date") or None, data.get("status") or "active"))
+                 data.get("admission_date") or None, data.get("status") or "active",
+                 data.get("photo_url") or None)) # <-- Yahan data.get("photo_url") add kiya
     sid = cur.fetchone()[0]; conn.commit(); cur.close(); conn.close(); return sid
-
 def get_students(search=None, class_name=None, status="active"):
     conn = get_conn(); cur = conn.cursor()
     q = "SELECT id, name, roll_no, class_name, section, parent_phone, status FROM students WHERE 1=1"
@@ -302,11 +303,13 @@ def get_student(student_id):
 
 def update_student(student_id, data):
     conn = get_conn(); cur = conn.cursor()
-    cur.execute("UPDATE students SET name=%s, roll_no=%s, class_name=%s, section=%s, gender=%s, dob=%s, parent_name=%s, parent_phone=%s, address=%s, admission_date=%s, status=%s WHERE id=%s RETURNING id;",
+    # Yahan query mein photo_url=%s add kiya hai
+    cur.execute("UPDATE students SET name=%s, roll_no=%s, class_name=%s, section=%s, gender=%s, dob=%s, parent_name=%s, parent_phone=%s, address=%s, admission_date=%s, status=%s, photo_url=%s WHERE id=%s RETURNING id;",
                 (data.get("name"), data.get("roll_no"), data.get("class_name"), data.get("section"),
                  data.get("gender"), data.get("dob") or None, data.get("parent_name"),
                  data.get("parent_phone"), data.get("address"),
-                 data.get("admission_date") or None, data.get("status") or "active", student_id))
+                 data.get("admission_date") or None, data.get("status") or "active", 
+                 data.get("photo_url") or None, student_id)) # <-- Yahan data.get("photo_url") add kiya hai
     res = cur.fetchone(); conn.commit(); cur.close(); conn.close(); return res[0] if res else None
 
 def delete_student(student_id):
