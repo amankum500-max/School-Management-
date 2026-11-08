@@ -11,7 +11,7 @@ sys.setrecursionlimit(2000)
 
 from flask import (
     Flask, render_template, request, session,
-    redirect, url_for, jsonify, Response, send_from_directory,send_file
+    redirect, url_for, jsonify, Response, send_from_directory, send_file
 )
 from flask_session import Session
 from werkzeug.exceptions import HTTPException
@@ -41,6 +41,7 @@ from modules.auth import auth_bp, login_required, role_required
 
 # Phase 2-8 — Core Modules
 from modules.students import students_bp
+from modules.classes import classes_bp  # <--- YEH NAYA ADD KIYA HAI
 from modules.fees import fees_bp
 from modules.attendance import attendance_bp
 from modules.exams import exams_bp
@@ -108,6 +109,7 @@ from modules.password_reset import password_reset_bp
 # ============================================================
 app.register_blueprint(auth_bp)
 app.register_blueprint(students_bp)
+app.register_blueprint(classes_bp)  # <--- YEH NAYA ADD KIYA HAI
 app.register_blueprint(fees_bp)
 app.register_blueprint(attendance_bp)
 app.register_blueprint(exams_bp)
@@ -533,7 +535,7 @@ def auto_audit(response):
         if 200 <= response.status_code < 400:
             entity = None
             entity_map = {
-                "/students/": "student", "/fees/": "fees", "/staff/": "staff",
+                "/students/": "student", "/classes/": "classes", "/fees/": "fees", "/staff/": "staff",
                 "/exams/": "exams", "/salary/": "salary", "/admin-users/": "admin_users",
                 "/notices/": "notices", "/events/": "events", "/library/": "library",
                 "/hostel/": "hostel", "/transport/": "transport", "/visitors/": "visitors",
@@ -544,15 +546,15 @@ def auto_audit(response):
                     entity = ent
                     break
             from database import log_audit
+            
+            # Aakhri code jo cut gaya tha, use complete kiya hai
             log_audit(
                 session["admin_id"],
                 session.get("admin_username", "?"),
-                action=f"{request.method.lower()}_request",
-                method=request.method,
-                path=path[:255],
-                entity=entity,
-                ip=request.remote_addr,
+                action=f"{request.method} {path}",
+                entity_type=entity,
+                details=f"Path: {path}"
             )
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Audit Error: {e}")
     return response
