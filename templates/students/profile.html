@@ -6,31 +6,36 @@
 <div class="card" style="max-width:800px;">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
         <div style="display:flex; gap:1rem; align-items:flex-start;">
-            <!-- Photo -->
+            
+            <!-- Photo Section Start -->
             <div style="flex-shrink:0;">
                 {% if student.photo_url %}
-                <img src="{{ student.photo_url }}" alt="{{ student.name }}"
+                <!-- Yahan ID add ki hai -->
+                <img id="profilePic" src="{{ student.photo_url }}" alt="{{ student.name }}"
                     style="width:80px; height:105px; object-fit:cover;
                     border-radius:8px; border:2px solid #cbd5e1;">
                 {% else %}
-                <div style="width:80px; height:105px; background:#f1f5f9;
+                <!-- Placeholder ko ID di hai -->
+                <div id="profilePlaceholder" style="width:80px; height:105px; background:#f1f5f9;
                     border:2px solid #cbd5e1; border-radius:8px;
                     display:flex; align-items:center; justify-content:center;
                     font-size:2rem; font-weight:700; color:#3b82f6;">
                     {{ student.name[0]|upper }}
                 </div>
                 {% endif %}
-                <form method="POST"
+                
+                <!-- Form aur Input ko ID di hai, onchange hataya hai -->
+                <form id="uploadForm" method="POST"
                       action="{{ url_for('photos.upload', student_id=student.id) }}"
                       enctype="multipart/form-data"
                       style="margin-top:0.35rem;">
-                    <label style="display:block; text-align:center;
+                    <label id="uploadLabel" style="display:block; text-align:center;
                         padding:0.25rem 0.4rem; background:#3b82f6; color:white;
                         border-radius:4px; cursor:pointer; font-size:0.7rem;
                         font-weight:600;">
                         📷 {{ 'Change' if student.photo_url else 'Upload' }}
-                        <input type="file" name="photo" accept="image/*"
-                            style="display:none;" onchange="this.form.submit();">
+                        <input type="file" name="photo" accept="image/*" id="photoInput"
+                            style="display:none;">
                     </label>
                 </form>
                 {% if student.photo_url %}
@@ -46,6 +51,7 @@
                 </form>
                 {% endif %}
             </div>
+            <!-- Photo Section End -->
 
             <div>
                 <h2 style="margin-bottom:0.25rem;">{{ student.name }}</h2>
@@ -93,14 +99,16 @@
 <div class="card" style="max-width:800px; margin-top:1rem; color:#64748b; font-size:0.9rem;">
     <strong>Coming soon:</strong> Attendance %, Fee status, Recent marks — ye sab agle modules mein isi profile pe dikhenge.
 </div>
-{% endblock %}
+
 <div class="card" style="max-width:800px; margin-top:1rem;">
     <div style="display:flex; justify-content:space-between; align-items:center;">
         <h3 style="font-size:1rem;">Attendance</h3>
         <a href="{{ url_for('attendance.student_attendance', student_id=student.id) }}"
            class="btn" style="padding:0.4rem 0.9rem; font-size:0.85rem;">View Full</a>
     </div>
-    {% if transport %}
+</div>
+
+{% if transport %}
 <div class="card" style="max-width:800px; margin-top:1rem;">
     <h3 style="font-size:1rem; margin-bottom:0.5rem;">🚌 Transport</h3>
     <div style="font-size:0.88rem; display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
@@ -118,7 +126,9 @@
         </div>
     </div>
 </div>
-    <div class="card" style="max-width:800px; margin-top:1rem;">
+{% endif %}
+
+<div class="card" style="max-width:800px; margin-top:1rem;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
         <h3 style="font-size:1rem;">🩺 Medical</h3>
         <a href="{{ url_for('medical.record', student_id=student.id) }}"
@@ -126,41 +136,6 @@
             {{ 'View/Edit →' if medical else 'Add Record →' }}
         </a>
     </div>
-        <div class="card" style="max-width:800px; margin-top:1rem;">
-    <div style="display:flex; justify-content:space-between; align-items:center;
-        margin-bottom:0.5rem;">
-        <h3 style="font-size:1rem;">🎁 Fee Discounts</h3>
-        <a href="{{ url_for('discounts.student_view', student_id=student.id) }}"
-           style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">
-            Manage →
-        </a>
-    </div>
-    {% if discounts %}
-    <div style="display:flex; flex-direction:column; gap:0.35rem;">
-        {% for d in discounts %}
-        <div style="display:flex; justify-content:space-between; align-items:center;
-            padding:0.4rem 0; border-bottom:1px solid #f1f5f9;">
-            <div>
-                <strong style="font-size:0.88rem; color:#1e293b;">
-                    {{ d.name }}
-                </strong>
-                {% if d.reason %}
-                <div style="font-size:0.72rem; color:#94a3b8;">
-                    {{ d.reason }}
-                </div>
-                {% endif %}
-            </div>
-            <span style="font-weight:700; color:#8b5cf6; font-size:0.9rem;">
-                {% if d.dtype == 'percent' %}{{ "%.0f"|format(d.effective_value) }}%
-                {% else %}₹{{ "%.0f"|format(d.effective_value) }}{% endif %}
-            </span>
-        </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <p style="color:#94a3b8; font-size:0.85rem;">Koi discount nahi.</p>
-    {% endif %}
-        </div>
     {% if medical %}
     <div style="font-size:0.85rem; display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
         {% if medical.blood_group %}
@@ -194,18 +169,22 @@
             </a>
         </div>
         {% endif %}
-        {% if hostel_info %}
+    </div>
+    {% else %}
+    <p style="color:#94a3b8; font-size:0.85rem;">Koi medical record nahi.</p>
+    {% endif %}
+</div>
+
+{% if hostel_info %}
 <div class="card" style="max-width:800px; margin-top:1rem;">
-    <div style="display:flex; justify-content:space-between; align-items:center;
-        margin-bottom:0.5rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
         <h3 style="font-size:1rem;">🏠 Hostel</h3>
         <a href="{{ url_for('hostel.view', hid=hostel_info.hostel_id) }}"
            style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">
             View Hostel →
         </a>
     </div>
-    <div style="font-size:0.88rem; display:grid;
-        grid-template-columns:1fr 1fr; gap:0.5rem;">
+    <div style="font-size:0.88rem; display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
         <div><span style="color:#64748b;">Hostel:</span>
             <strong>{{ hostel_info.hostel_name }}</strong></div>
         <div><span style="color:#64748b;">Room:</span>
@@ -230,13 +209,43 @@
     </div>
 </div>
 {% endif %}
+
+<div class="card" style="max-width:800px; margin-top:1rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+        <h3 style="font-size:1rem;">🎁 Fee Discounts</h3>
+        <a href="{{ url_for('discounts.student_view', student_id=student.id) }}"
+           style="color:#3b82f6; text-decoration:none; font-size:0.82rem;">
+            Manage →
+        </a>
+    </div>
+    {% if discounts %}
+    <div style="display:flex; flex-direction:column; gap:0.35rem;">
+        {% for d in discounts %}
+        <div style="display:flex; justify-content:space-between; align-items:center;
+            padding:0.4rem 0; border-bottom:1px solid #f1f5f9;">
+            <div>
+                <strong style="font-size:0.88rem; color:#1e293b;">
+                    {{ d.name }}
+                </strong>
+                {% if d.reason %}
+                <div style="font-size:0.72rem; color:#94a3b8;">
+                    {{ d.reason }}
+                </div>
+                {% endif %}
+            </div>
+            <span style="font-weight:700; color:#8b5cf6; font-size:0.9rem;">
+                {% if d.dtype == 'percent' %}{{ "%.0f"|format(d.effective_value) }}%
+                {% else %}₹{{ "%.0f"|format(d.effective_value) }}{% endif %}
+            </span>
+        </div>
+        {% endfor %}
     </div>
     {% else %}
-    <p style="color:#94a3b8; font-size:0.85rem;">Koi medical record nahi.</p>
+    <p style="color:#94a3b8; font-size:0.85rem;">Koi discount nahi.</p>
     {% endif %}
-    </div>
-{% endif %}
-    {% if books %}
+</div>
+
+{% if books %}
 <div class="card" style="max-width:800px; margin-top:1rem;">
     <h3 style="font-size:1rem; margin-bottom:0.5rem;">📚 Library Books ({{ books|length }})</h3>
     <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
@@ -270,9 +279,7 @@
     </table>
 </div>
 {% endif %}
-    <div class="card" style="max-width:800px; margin-top:1rem;">
-    <h3 style="font-size:1rem; margin-bottom:0.5rem;">Exams</h3>
-</div>
+
 <div class="card" style="max-width:800px; margin-top:1rem;">
     <h3 style="font-size:1rem; margin-bottom:0.5rem;">Exams</h3>
     <p style="color:#64748b; font-size:0.9rem;">
@@ -281,3 +288,56 @@
         section mein jao aur exam select karo.
     </p>
 </div>
+
+<!-- Yahan se AJAX JavaScript shuru hota hai (Isko add karna zaroori hai) -->
+<script>
+document.getElementById('photoInput').addEventListener('change', function(e) {
+    const form = document.getElementById('uploadForm');
+    const formData = new FormData(form);
+    const label = document.getElementById('uploadLabel');
+    
+    // Button par loading text dikhayein
+    const originalText = label.innerHTML;
+    label.innerHTML = "⏳ Uploading...";
+
+    fetch(form.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.ok) {
+            // Placeholder ko hide karein agar wo dikh raha hai
+            const placeholder = document.getElementById('profilePlaceholder');
+            if(placeholder) {
+                placeholder.style.display = 'none';
+            }
+
+            // Nayi image set karein
+            let img = document.getElementById('profilePic');
+            if(!img) {
+                // Agar img tag pehle nahi tha, toh naya banayenge
+                img = document.createElement('img');
+                img.id = 'profilePic';
+                img.style = "width:80px; height:105px; object-fit:cover; border-radius:8px; border:2px solid #cbd5e1;";
+                form.parentNode.insertBefore(img, form); 
+            }
+            img.src = data.url; 
+            
+            // Button ka text wapas Change kar dein
+            label.innerHTML = "📷 Change";
+        } else {
+            alert("Photo upload failed!");
+            label.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert("Kuch error aaya!");
+        label.innerHTML = originalText;
+    });
+});
+</script>
+<!-- AJAX JavaScript khatam -->
+
+{% endblock %}
