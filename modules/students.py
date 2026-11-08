@@ -14,7 +14,7 @@ from database import (
     update_student, delete_student, get_classes_list,
     get_student_transport, get_student_library_history,
     get_medical_record, get_student_hostel, get_student_discounts,
-    check_duplicate_student,get_next_roll_number
+    check_duplicate_student, get_next_roll_number
 )
 
 students_bp = Blueprint("students", __name__, url_prefix="/students")
@@ -53,6 +53,13 @@ def add_student():
             flash("Name zaroori hai", "error")
             return redirect(url_for("students.add_student"))
             
+        # ====================================================
+        # YAHAN AUTO ROLL NUMBER WALA LOGIC ADD KIYA HAI
+        # ====================================================
+        if not data.get("roll_no") or data.get("roll_no").strip() == "":
+            data["roll_no"] = str(get_next_roll_number(data.get("class_name"), data.get("section")))
+        # ====================================================
+
         # Phase 51D: Duplicate Check
         dups = check_duplicate_student(
             data.get("name"),
@@ -80,7 +87,6 @@ def add_student():
                 print(f"Cloudinary Error: {e}")
                 flash("Photo upload fail ho gaya, par baaki data save ho raha hai.", "warning")
 
-        # Yahan image_file ki jagah photo_url kar diya hai
         data['photo_url'] = image_url 
         # ====================================================
 
@@ -102,7 +108,6 @@ def view_student(student_id):
     if not row:
         abort(404)
         
-    # Yahan image_file ki jagah photo_url kar diya hai
     keys = ["id", "name", "roll_no", "class_name", "section", "gender", "dob",
             "parent_name", "parent_phone", "address", "admission_date", "status", 
             "created_at", "photo_url"]
@@ -129,7 +134,6 @@ def edit_student(student_id):
     if not row:
         abort(404)
         
-    # Yahan bhi image_file ki jagah photo_url kar diya hai
     keys = ["id", "name", "roll_no", "class_name", "section", "gender", "dob",
             "parent_name", "parent_phone", "address", "admission_date", "status", 
             "created_at", "photo_url"]
@@ -143,7 +147,7 @@ def edit_student(student_id):
         if file_to_upload and file_to_upload.filename != '':
             try:
                 upload_result = cloudinary.uploader.upload(file_to_upload)
-                data['photo_url'] = upload_result['secure_url'] # Yahan bhi photo_url kar diya
+                data['photo_url'] = upload_result['secure_url'] 
             except Exception as e:
                 print(f"Cloudinary Error: {e}")
                 flash("Photo upload fail ho gaya.", "warning")
