@@ -14,7 +14,7 @@ from database import (
     update_student, delete_student, get_classes_list,
     get_student_transport, get_student_library_history,
     get_medical_record, get_student_hostel, get_student_discounts,
-    check_duplicate_student
+    check_duplicate_student,get_next_roll_number
 )
 
 students_bp = Blueprint("students", __name__, url_prefix="/students")
