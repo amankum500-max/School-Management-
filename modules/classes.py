@@ -5,8 +5,7 @@ from database import (
     get_advanced_classes_list, create_new_class, archive_class, restore_class,
     get_class_by_id, update_class_details, get_students, promote_students, get_classes_stats,
     add_section_to_class, get_class_subjects, add_class_subject, delete_class_subject,
-    transfer_student, get_class_students_for_export, auto_assign_subjects,
-    get_next_roll_number  # <--- Yahan add kar diya hai
+    transfer_student, get_class_students_for_export, auto_assign_subjects
 )
 
 classes_bp = Blueprint("classes", __name__, url_prefix="/classes")
@@ -111,25 +110,3 @@ def export_csv(class_id):
     output = io.StringIO(); writer = csv.writer(output); writer.writerow(['Roll No', 'Name', 'Gender', 'Parent', 'Phone'])
     for s in students: writer.writerow(s)
     return Response(output.getvalue(), mimetype="text/csv", headers={"Content-Disposition": f"attachment;filename=Class_{cls['class_name']}_{cls['section']}.csv"})
-@students_bp.route("/add", methods=["GET", "POST"])
-@login_required
-def add_student():
-    if request.method == "POST":
-        data = request.form.to_dict()
-        
-        if not data.get("name"):
-            flash("Name zaroori hai", "error")
-            return redirect(url_for("students.add_student"))
-            
-        # YAHAN SE ADD KAREIN
-        if not data.get("roll_no") or data.get("roll_no").strip() == "":
-            data["roll_no"] = str(get_next_roll_number(data.get("class_name"), data.get("section")))
-        # YAHAN TAK
-
-        # Phase 51D: Duplicate Check
-        dups = check_duplicate_student(
-            data.get("name"),
-            data.get("roll_no"),
-            data.get("parent_phone")
-        )
-        # ... (baaki code)
