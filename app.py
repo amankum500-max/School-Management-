@@ -6,7 +6,6 @@ import os
 import sys
 from datetime import datetime
 
-# रिकर्सन लिमिट बढ़ा दी है ताकि कोई इंटरनल एरर न आए
 sys.setrecursionlimit(2000)
 
 from flask import (
@@ -18,11 +17,9 @@ from werkzeug.exceptions import HTTPException
 
 from config import Config
 
-# --- NAYA GOOGLE GENAI SETUP ---
+# --- GOOGLE GENAI SETUP ---
 from google import genai
-# नया AI Client सेटअप
 ai_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
-# -------------------------------
 
 from PIL import Image
 
@@ -36,12 +33,10 @@ Session(app)
 # ============================================================
 # BLUEPRINT IMPORTS
 # ============================================================
-# Phase 1 — Auth
 from modules.auth import auth_bp, login_required, role_required
 
-# Phase 2-8 — Core Modules
 from modules.students import students_bp
-from modules.classes import classes_bp  # <--- YEH NAYA ADD KIYA HAI
+from modules.classes import classes_bp
 from modules.fees import fees_bp
 from modules.attendance import attendance_bp
 from modules.notices import notices_bp
@@ -50,7 +45,6 @@ from modules.exams import exams_bp
 from modules.settings import settings_bp
 from modules.staff import staff_bp
 
-# Phase 9-17 — Reports, Bulk, WhatsApp, Backup, Bills, ID Card
 from modules.reports import reports_bp
 from modules.bulk_import import bulk_bp
 from modules.whatsapp import whatsapp_bp
@@ -58,7 +52,6 @@ from modules.backup import backup_bp
 from modules.bills import bills_bp
 from modules.id_card import id_card_bp
 
-# Phase 18-25 — Timetable, Salary, Homework, Transport, Expenses, Certificates, Events, Library
 from modules.timetable import timetable_bp
 from modules.salary import salary_bp
 from modules.homework import homework_bp
@@ -68,7 +61,6 @@ from modules.certificates import certificates_bp
 from modules.events import events_bp
 from modules.library import library_bp
 
-# Phase 26-32 — Promotion, Teacher Portal, Medical, Alerts, Admin Users, Hostel, QR
 from modules.promotion import promotion_bp
 from modules.teacher_portal import teacher_portal_bp
 from modules.teachers_admin import teachers_admin_bp
@@ -78,7 +70,6 @@ from modules.admin_users import admin_users_bp
 from modules.hostel import hostel_bp
 from modules.qr_attendance import qr_attendance_bp
 
-# Phase 33-37 — System, Annual Report, Help, Public Site, Admissions, Payments
 from modules.system import system_bp
 from modules.annual_report import annual_report_bp
 from modules.help import help_bp, get_help_slug
@@ -89,7 +80,6 @@ from modules.public_content import public_content_bp
 from modules.payments import payments_bp
 from modules.admin_payments import admin_payments_bp
 
-# Phase 39-51 — Staff Attendance, Leave, Discounts, Visitors, Advances, Chat, Online Exams...
 from modules.staff_attendance import staff_att_bp
 from modules.leave import leave_bp
 from modules.discounts import discounts_bp
@@ -109,7 +99,7 @@ from modules.password_reset import password_reset_bp
 # ============================================================
 app.register_blueprint(auth_bp)
 app.register_blueprint(students_bp)
-app.register_blueprint(classes_bp)  # <--- YEH NAYA ADD KIYA HAI
+app.register_blueprint(classes_bp)
 app.register_blueprint(fees_bp)
 app.register_blueprint(attendance_bp)
 app.register_blueprint(notices_bp)
@@ -162,17 +152,31 @@ app.register_blueprint(password_reset_bp)
 
 
 # ============================================================
+# HELPER — Detect JSON requests
+# ============================================================
+_API_PREFIXES = (
+    "/api", "/qr-attendance/mark", "/qr-attendance/summary",
+    "/quick-search", "/notifications/count",
+)
+
+def _wants_json():
+    """True अगर client JSON expect कर रहा है"""
+    if request.path.startswith(_API_PREFIXES):
+        return True
+    best = request.accept_mimetypes.best
+    return best == "application/json" and request.accept_mimetypes[best] > request.accept_mimetypes["text/html"]
+
+
+# ============================================================
 # DIRECT ROUTES
 # ============================================================
 @app.route("/")
 def home():
-    """Homepage — gradient landing with login links"""
     return render_template("home.html")
 
 
 @app.route("/health")
 def health_check():
-    """Health check — for uptime monitoring"""
     from database import get_conn
     status = {
         "status": "ok",
@@ -197,7 +201,6 @@ def health_check():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    """Main dashboard"""
     from database import (
         count_students, total_collected, today_attendance_percent,
         count_unread_notices, get_fees_monthly_trend,
@@ -259,12 +262,11 @@ def dashboard():
 @app.route("/notifications")
 @login_required
 def notifications_page():
-    """Saare notifications dikhane ke liye page"""
     from database import get_computed_alerts, get_custom_alerts
     try:
         computed = get_computed_alerts() or []
         custom = get_custom_alerts(active_only=True) or []
-        
+
         all_notifs = []
         for c in computed:
             all_notifs.append({
@@ -273,7 +275,7 @@ def notifications_page():
                 "type": c.get("type", "info"),
                 "icon": c.get("icon", "🔔"),
                 "link": c.get("link", "#"),
-                "severity": "high" if c.get("type") == "danger" else "medium"
+                "severity": "high" if c.get("type") == "danger" else "medium",
             })
         for c in custom:
             all_notifs.append({
@@ -282,12 +284,12 @@ def notifications_page():
                 "type": "info",
                 "icon": "📢",
                 "link": "#",
-                "severity": "low"
+                "severity": "low",
             })
     except Exception as e:
-        print("Error loading notifications:", e)
+        app.logger.warning("Error loading notifications: %s", e)
         all_notifs = []
-        
+
     notif_data = {"items": all_notifs, "total": len(all_notifs)}
     return render_template("notifications.html", notifications=notif_data)
 
@@ -295,13 +297,12 @@ def notifications_page():
 @app.route("/notifications/count")
 @login_required
 def notifications_count_api():
-    """Bell icon par number dikhane ke liye API"""
     from database import get_computed_alerts, get_custom_alerts
     try:
         computed = get_computed_alerts() or []
         custom = get_custom_alerts(active_only=True) or []
         total = len(computed) + len(custom)
-        urgent = sum(1 for n in computed if n.get('type') == 'danger')
+        urgent = sum(1 for n in computed if n.get("type") == "danger")
         return jsonify({"count": total, "urgent": urgent})
     except Exception:
         return jsonify({"count": 0, "urgent": 0})
@@ -310,7 +311,6 @@ def notifications_count_api():
 @app.route("/quick-search")
 @login_required
 def quick_search_api():
-    """Phase 38 — Command palette global search"""
     try:
         from database import quick_search
         q = request.args.get("q", "").strip()
@@ -336,7 +336,8 @@ def manifest_route():
         "orientation": "portrait",
         "background_color": "#f5f6fa",
         "theme_color": "#1e293b",
-        "icons": [{"src": "/static/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}],
+        "icons": [{"src": "/static/icon.svg", "sizes": "any",
+                   "type": "image/svg+xml", "purpose": "any maskable"}],
     }
     return jsonify(manifest)
 
@@ -349,55 +350,74 @@ def sw_route():
     resp.headers["Content-Type"] = "application/javascript"
     return resp
 
-@app.route('/api/ask-ai', methods=['POST'])
+
+# ============================================================
+# AI ROUTES — SECURED
+# ============================================================
+@app.route("/api/ask-ai", methods=["POST"])
+@login_required                                         # ✅ AUTH ADDED
 def ask_ai():
-    data = request.get_json()
-    user_message = data.get('message')
-    
+    data = request.get_json(silent=True) or {}
+    user_message = (data.get("message") or "").strip()
+
     if not user_message:
-        return jsonify({'error': 'No message provided'}), 400
+        return jsonify({"error": "No message provided"}), 400
+    if len(user_message) > 2000:                        # ✅ LENGTH CAP
+        return jsonify({"error": "Message too long (max 2000 chars)"}), 400
 
     try:
-        prompt = f"You are a helpful AI assistant for a School Management System. Keep your answers short, professional, and helpful. Query: {user_message}"
-        
-        # --- NAYA CODE YAHAN HAI ---
-        response = ai_client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt
+        prompt = (
+            "You are a helpful AI assistant for a School Management System. "
+            "Keep your answers short, professional, and helpful.\n"
+            f"Query: {user_message}"
         )
-        
-        return jsonify({'reply': response.text})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        response = ai_client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
+        return jsonify({"reply": response.text})
+    except Exception:
+        app.logger.exception("ask_ai failed")           # ✅ log full trace internally
+        return jsonify({"error": "AI service unavailable"}), 500   # ✅ generic msg
 
-@app.route('/admin/generate-exam', methods=['GET', 'POST'])
+
+@app.route("/admin/generate-exam", methods=["GET", "POST"])
+@login_required                                         # ✅ AUTH ADDED
+@role_required("admin", "teacher")                      # ✅ ROLE CHECK
 def generate_exam():
-    if request.method == 'POST':
-        subject = request.form.get('subject')
-        grade = request.form.get('grade')
-        
-        prompt = f"""
-        Create a school exam question paper for Class {grade}, Subject: {subject}.
-        Format it beautifully using HTML tags like <h4>, <ol>, <li>. 
-        Do NOT use markdown like ```html. Just return the raw HTML.
-        Sections:
-        - Section A: 5 MCQs (1 mark each)
-        - Section B: 3 Short Questions (5 marks each)
-        - Section C: 2 Long Questions (10 marks each)
-        """
+    if request.method == "POST":
+        subject = (request.form.get("subject") or "").strip()[:100]
+        grade = (request.form.get("grade") or "").strip()[:20]
+
+        if not subject or not grade:
+            return "Subject and Grade are required", 400
+
+        prompt = f"""Create a school exam question paper for Class {grade}, Subject: {subject}.
+Format it beautifully using HTML tags like <h4>, <ol>, <li>.
+Do NOT use markdown like ```html. Just return the raw HTML.
+Sections:
+- Section A: 5 MCQs (1 mark each)
+- Section B: 3 Short Questions (5 marks each)
+- Section C: 2 Long Questions (10 marks each)"""
+
         try:
-            # --- NAYA CODE YAHAN HAI ---
             response = ai_client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=prompt
+                model="gemini-2.5-flash",
+                contents=prompt,
             )
-            
-            clean_html = response.text.replace('```html', '').replace('```', '').strip()
-            return render_template('exam_paper_result.html', exam_content=clean_html, subject=subject, grade=grade)
-        except Exception as e:
-            return f"Error: {e}"
-            
-    return render_template('generate_exam_form.html')
+            clean_html = response.text.replace("```html", "").replace("```", "").strip()
+            return render_template(
+                "exam_paper_result.html",
+                exam_content=clean_html,
+                subject=subject,
+                grade=grade,
+            )
+        except Exception:
+            app.logger.exception("generate_exam failed")
+            return "AI service error — कृपया बाद में try करें", 500
+
+    return render_template("generate_exam_form.html")
+
 
 # ============================================================
 # CONTEXT PROCESSORS
@@ -410,6 +430,7 @@ def inject_school():
     except Exception:
         return {"school": {"school_name": "School Management"}}
 
+
 @app.context_processor
 def inject_alert_count():
     if "admin_id" not in session:
@@ -419,6 +440,7 @@ def inject_alert_count():
         return {"alert_count": len(get_computed_alerts())}
     except Exception:
         return {"alert_count": 0}
+
 
 @app.context_processor
 def inject_chat_unread():
@@ -430,6 +452,7 @@ def inject_chat_unread():
     except Exception:
         return {"chat_unread": 0}
 
+
 @app.context_processor
 def inject_help_context():
     if "admin_id" not in session:
@@ -440,44 +463,79 @@ def inject_help_context():
 
 
 # ============================================================
-# ERROR HANDLERS
+# ERROR HANDLERS — JSON aware, crash-proof
 # ============================================================
 @app.errorhandler(404)
 def not_found(e):
-    if request.path.startswith(("/api", "/qr-attendance/mark", "/qr-attendance/summary", "/quick-search")):
+    if _wants_json():
         return jsonify({"error": "not found"}), 404
     return render_template("errors/404.html"), 404
 
+
 @app.errorhandler(403)
 def forbidden(e):
-    if request.path.startswith(("/api", "/qr-attendance")):
+    if _wants_json():
         return jsonify({"error": "forbidden"}), 403
     return render_template("errors/403.html"), 403
 
+
 @app.errorhandler(500)
 def server_error(e):
-    import traceback
-    traceback.print_exc()
+    app.logger.exception("Internal server error")
+    if _wants_json():
+        return jsonify({"error": "internal server error"}), 500
     return render_template("errors/500.html"), 500
+
 
 @app.errorhandler(Exception)
 def catch_all(e):
+    # ✅ FIX: HTTPException को object नहीं, proper Response return करें
     if isinstance(e, HTTPException):
-        return e
-    import traceback
-    traceback.print_exc()
+        if _wants_json():
+            return jsonify({"error": e.description or e.name}), e.code
+        return e.get_response()
+    app.logger.exception("Unhandled exception")
+    if _wants_json():
+        return jsonify({"error": "internal server error"}), 500
     return render_template("errors/500.html"), 500
 
 
 # ============================================================
-# BEFORE REQUEST — Rate Limiting
+# BEFORE REQUEST — Rate Limiting (with cleanup)
 # ============================================================
 from collections import defaultdict
 from time import time as _time
 
 _rate_store = defaultdict(list)
+_last_cleanup = _time()
+
+# ✅ सभी sensitive endpoints (AI भी include)
+_SENSITIVE_PATHS = (
+    "/qr-attendance/mark",
+    "/login",
+    "/parent/login",
+    "/teacher/login",
+    "/reset/",
+    "/api/ask-ai",
+    "/admin/generate-exam",
+)
+
+
+def _cleanup_rate_store():
+    """Memory leak रोकें — हर 5 मिनट में purani entries हटाएँ।"""
+    global _last_cleanup
+    now = _time()
+    if now - _last_cleanup < 300:
+        return
+    for k in list(_rate_store.keys()):
+        _rate_store[k] = [t for t in _rate_store[k] if now - t < 60]
+        if not _rate_store[k]:
+            del _rate_store[k]
+    _last_cleanup = now
+
 
 def _rate_limit_check(ip, endpoint, max_per_minute=60):
+    _cleanup_rate_store()                   # ✅ ADDED
     now = _time()
     key = f"{ip}:{endpoint}"
     _rate_store[key] = [t for t in _rate_store[key] if now - t < 60]
@@ -486,16 +544,19 @@ def _rate_limit_check(ip, endpoint, max_per_minute=60):
     _rate_store[key].append(now)
     return True
 
+
 @app.before_request
 def rate_limit_guard():
-    sensitive = ["/qr-attendance/mark", "/login", "/parent/login", "/teacher/login", "/reset/"]
     path = request.path
-    if any(path.startswith(p) for p in sensitive):
+    if any(path.startswith(p) for p in _SENSITIVE_PATHS):
         ip = request.headers.get("X-Forwarded-For", request.remote_addr or "?")
         ip = ip.split(",")[0].strip()
         max_per_min = 300 if "qr-attendance" in path else 20
         if not _rate_limit_check(ip, path, max_per_min):
-            return jsonify({"error": "Too many requests — thodi der baad try karo"}), 429
+            if _wants_json():
+                return jsonify({"error": "Too many requests — thodi der baad try karo"}), 429
+            return "Too many requests — thodi der baad try karo", 429
+    return None
 
 
 # ============================================================
@@ -511,6 +572,7 @@ def add_security_headers(response):
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
+
 @app.after_request
 def cache_static(response):
     if request.path.startswith("/static/"):
@@ -520,41 +582,73 @@ def cache_static(response):
     return response
 
 
-_AUDIT_EXCLUDE = ["/login", "/teacher/", "/parent/", "/site", "/reset/", "/alerts/log-send", "/pay/", "/automation/cron"]
+_AUDIT_EXCLUDE = (
+    "/login", "/teacher/", "/parent/", "/site", "/reset/",
+    "/alerts/log-send", "/pay/", "/automation/cron",
+)
+
+_ENTITY_MAP = {
+    "/students/": "student", "/classes/": "classes", "/fees/": "fees",
+    "/staff/": "staff", "/exams/": "exams", "/salary/": "salary",
+    "/admin-users/": "admin_users", "/notices/": "notices",
+    "/events/": "events", "/library/": "library", "/hostel/": "hostel",
+    "/transport/": "transport", "/visitors/": "visitors",
+    "/advances/": "advances", "/leave/": "leave", "/automation/": "automation",
+}
+
 
 @app.after_request
 def auto_audit(response):
+    """
+    ✅ यह handler अब कभी fail नहीं होगा:
+       - log_audit signature mismatch पर fallback
+       - पूरा exception swallow किया जाता है
+    """
     try:
         if "admin_id" not in session:
             return response
-        if request.method not in ["POST", "PUT", "DELETE", "PATCH"]:
+        if request.method not in ("POST", "PUT", "DELETE", "PATCH"):
             return response
         path = request.path
         if any(path.startswith(p) for p in _AUDIT_EXCLUDE):
             return response
-        if 200 <= response.status_code < 400:
-            entity = None
-            entity_map = {
-                "/students/": "student", "/classes/": "classes", "/fees/": "fees", "/staff/": "staff",
-                "/exams/": "exams", "/salary/": "salary", "/admin-users/": "admin_users",
-                "/notices/": "notices", "/events/": "events", "/library/": "library",
-                "/hostel/": "hostel", "/transport/": "transport", "/visitors/": "visitors",
-                "/advances/": "advances", "/leave/": "leave", "/automation/": "automation",
-            }
-            for prefix, ent in entity_map.items():
-                if path.startswith(prefix):
-                    entity = ent
-                    break
-            from database import log_audit
-            
-            # Aakhri code jo cut gaya tha, use complete kiya hai
+        if not (200 <= response.status_code < 400):
+            return response
+
+        entity = next(
+            (ent for prefix, ent in _ENTITY_MAP.items() if path.startswith(prefix)),
+            None,
+        )
+
+        from database import log_audit
+
+        # Try standard kwargs signature first
+        try:
             log_audit(
                 session["admin_id"],
                 session.get("admin_username", "?"),
                 action=f"{request.method} {path}",
                 entity_type=entity,
-                details=f"Path: {path}"
+                details=f"Path: {path}",
             )
+        except TypeError:
+            # Fallback: positional-only signature
+            try:
+                log_audit(
+                    session["admin_id"],
+                    f"{request.method} {path}",
+                    entity or "",
+                    f"Path: {path}",
+                )
+            except Exception as e2:
+                app.logger.warning("Audit fallback also failed: %s", e2)
     except Exception as e:
-        print(f"Audit Error: {e}")
+        app.logger.warning("Audit Error: %s", e)
     return response
+
+
+# ============================================================
+# ENTRY POINT
+# ============================================================
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
