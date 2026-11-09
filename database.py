@@ -1253,7 +1253,31 @@ def save_timetable_cell(class_name, section, day, period, subject, staff_id):
 def get_teacher_timetable(staff_id):
     conn = get_conn(); cur = conn.cursor()
     cur.execute("SELECT day_of_week, period_no, class_name, section, subject FROM timetable WHERE staff_id=%s ORDER BY day_of_week, period_no;", (staff_id,))
-    rows = cur.fetchall(); cur.close(); conn.close(); return rows
+    rows = cur.fetchall(); cur.close(); conn.close()
+    return rows  # <-- YEH LINE ADD KARNA ZAROORI THI
+
+# --- NAYA FUNCTION: Absent Teachers Fetch Karne Ke Liye ---
+def get_absent_teachers(date_str):
+    """Us specific date par absent teachers ki ID list return karta hai"""
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        # Yahan apne database column ka naam check kar lein (teacher_id ya staff_id)
+        cur.execute("""
+            SELECT teacher_id 
+            FROM teacher_attendance 
+            WHERE date = %s AND status = 'Absent'
+        """, (date_str,))
+        rows = cur.fetchall()
+        return [row[0] for row in rows]
+    except Exception as e:
+        print(f"Error fetching absent teachers: {e}")
+        return []
+    finally:
+        cur.close(); conn.close()
+        
+# ============================================================
+# SECTION 16 — SALARY
+# ============================================================
 
 # ============================================================
 # SECTION 16 — SALARY
