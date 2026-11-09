@@ -301,40 +301,53 @@
         updateBulkBar();
     }
 
-    // UPDATED: Actual Bulk Action API Call
-    function executeBulkAction(actionType) {
-        const selectedIds = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(cb => cb.value);
-        
-        if (selectedIds.length === 0) return;
-        if (actionType === 'delete' && !confirm(`Are you sure you want to delete ${selectedIds.length} students?`)) return;
+   // UPDATED: Actual Bulk Action API Call with better error handling
+function executeBulkAction(actionType) {
+    const selectedIds = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(cb => cb.value);
+    
+    if (selectedIds.length === 0) return;
+    if (actionType === 'delete' && !confirm(`Are you sure you want to delete ${selectedIds.length} students?`)) return;
 
-        const bar = document.getElementById('bulkActionBar');
-        bar.style.opacity = '0.5';
-        bar.style.pointerEvents = 'none';
+    const bar = document.getElementById('bulkActionBar');
+    bar.style.opacity = '0.5';
+    bar.style.pointerEvents = 'none';
 
-        fetch('/students/bulk-action', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: actionType, ids: selectedIds })
-        })
-        .then(res => res.json())
-        .then(data => {
-            alert(data.message || data.error);
-            if (data.success) {
-                if (actionType === 'delete') {
-                    window.location.reload(); 
-                } else {
-                    clearSelection(); 
-                }
+    fetch('/students/bulk-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: actionType, ids: selectedIds })
+    })
+    .then(async (res) => {
+        // Check if the response is actually JSON
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Server returned an error");
+            return data;
+        } else {
+            // If it's HTML (meaning Flask crashed), throw a specific error
+            throw new Error("Server crash! Check terminal for Python error.");
+        }
+    })
+    .then(data => {
+        alert(data.message || "Success!");
+        if (data.success) {
+            if (actionType === 'delete') {
+                window.location.reload(); 
+            } else {
+                clearSelection(); 
             }
-        })
-        .catch(err => {
-            alert("Error executing bulk action.");
-        })
-        .finally(() => {
-            bar.style.opacity = '1';
-            bar.style.pointerEvents = 'auto';
-        });
-    }
+        }
+    })
+    .catch(err => {
+        // Now this will show the REAL error
+        alert("Error: " + err.message);
+        console.error("Full Error Details:", err);
+    })
+    .finally(() => {
+        bar.style.opacity = '1';
+        bar.style.pointerEvents = 'auto';
+    });
+} 
 </script>
 {% endblock %}
