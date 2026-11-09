@@ -10,9 +10,11 @@ from database import (
     get_exam_results, get_classes_list
 )
 
-online_exams_bp = Blueprint("online_exams", __name__,
-                             url_prefix="/online-exams")
+online_exams_bp = Blueprint("online_exams", __name__, url_prefix="/online-exams")
 
+# ==========================================
+# 1. REAL ROUTES (Database ke sath)
+# ==========================================
 
 @online_exams_bp.route("/")
 @login_required
@@ -24,7 +26,6 @@ def index():
                            exams=exams,
                            classes=get_classes_list(),
                            selected_class=class_name)
-
 
 @online_exams_bp.route("/add", methods=["GET", "POST"])
 @login_required
@@ -42,7 +43,6 @@ def add():
                            exam=None, mode="add",
                            classes=get_classes_list())
 
-
 @online_exams_bp.route("/<int:eid>")
 @login_required
 @role_required("super_admin", "admin")
@@ -55,7 +55,6 @@ def manage(eid):
     return render_template("online_exams/manage.html",
                            exam=exam, questions=questions,
                            results=results)
-
 
 @online_exams_bp.route("/<int:eid>/edit", methods=["GET", "POST"])
 @login_required
@@ -72,7 +71,6 @@ def edit(eid):
                            exam=exam, mode="edit",
                            classes=get_classes_list())
 
-
 @online_exams_bp.route("/<int:eid>/delete", methods=["POST"])
 @login_required
 @role_required("super_admin", "admin")
@@ -81,7 +79,6 @@ def remove(eid):
     flash("Exam delete ho gaya", "success")
     return redirect(url_for("online_exams.index"))
 
-
 @online_exams_bp.route("/<int:eid>/toggle-publish", methods=["POST"])
 @login_required
 @role_required("super_admin", "admin")
@@ -89,7 +86,6 @@ def toggle_publish(eid):
     exam = get_online_exam(eid)
     if not exam:
         abort(404)
-    # Need at least 1 question to publish
     if not exam["is_published"]:
         qs = get_exam_questions(eid)
         if not qs:
@@ -98,7 +94,6 @@ def toggle_publish(eid):
     toggle_exam_publish(eid, not exam["is_published"])
     flash("Publish status updated", "success")
     return redirect(url_for("online_exams.manage", eid=eid))
-
 
 @online_exams_bp.route("/<int:eid>/questions/add", methods=["POST"])
 @login_required
@@ -127,7 +122,6 @@ def add_question(eid):
         flash(f"Error: {str(e)[:100]}", "error")
     return redirect(url_for("online_exams.manage", eid=eid))
 
-
 @online_exams_bp.route("/questions/<int:qid>/delete", methods=["POST"])
 @login_required
 @role_required("super_admin", "admin")
@@ -137,24 +131,12 @@ def remove_question(qid):
         flash("Question delete ho gaya", "success")
         return redirect(url_for("online_exams.manage", eid=eid))
     return redirect(url_for("online_exams.index"))
-    # ... Aapka purana code upar rahega ...
+
 
 # ==========================================
-# NAYA CODE YAHAN SE SHURU HOTA HAI
-# (Dhyan dein: @exams_bp ki jagah @online_exams_bp kiya gaya hai)
+# 2. NAYA ROUTE (Exam dene ke liye)
 # ==========================================
 
-# 1. Exam List Ka Route (Admin Dashboard)
-@online_exams_bp.route("/")
-@login_required
-def index():
-    # Yahan database se exams fetch karenge. Abhi ke liye khali list hai.
-    exams = [] 
-    classes = [10, 12] 
-    
-    return render_template('online_exams/index.html', exams=exams, classes=classes, selected_class=None)
-
-# 2. Ultimate Exam Dene Ka Route
 @online_exams_bp.route("/take_exam/<int:eid>")
 @login_required
 def take_exam(eid):
@@ -166,23 +148,3 @@ def take_exam(eid):
     ]
 
     return render_template('online_exams/ultimate-exam.html', exam=dummy_exam, questions=dummy_questions)
-
-# 3. New Exam Add Karne ka Route
-@online_exams_bp.route("/add", methods=['GET', 'POST'])
-@login_required
-def add():
-    if request.method == 'POST':
-        pass
-    return "Add Exam Form Yahan Aayega" 
-
-# 4. Manage Exam Route
-@online_exams_bp.route("/manage/<int:eid>")
-@login_required
-def manage(eid):
-    return f"Manage Exam {eid} Yahan Aayega"
-
-# 5. Edit Exam Route
-@online_exams_bp.route("/edit/<int:eid>")
-@login_required
-def edit(eid):
-    return f"Edit Exam {eid} Yahan Aayega"
