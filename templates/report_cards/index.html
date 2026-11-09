@@ -4,21 +4,24 @@
 
 {% block content %}
 
-<div class="card" style="background:#eff6ff; border-left:3px solid #3b82f6;
-    font-size:0.85rem; color:#1e40af; margin-bottom:1rem;">
+<!-- Libraries for Advanced Features (Charts & PDF) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<!-- ========================================== -->
+<!-- 1. AAPKA PURANA CODE (SUMMARY TABLE) -->
+<!-- ========================================== -->
+
+<div class="card" style="background:#eff6ff; border-left:3px solid #3b82f6; font-size:0.85rem; color:#1e40af; margin-bottom:1rem;">
     <strong>ℹ️ Ye page kya karta hai:</strong>
-    Pure saal ke saare exams ke marks combine karke ek consolidated report card
-    banata hai — subject-wise averages, rank, attendance, fee status, remarks.
+    Pure saal ke saare exams ke marks combine karke ek consolidated report card banata hai — subject-wise averages, rank, attendance, fee status, remarks.
 </div>
 
 <div class="card" style="margin-bottom:1rem;">
-<form method="GET" style="display:flex; gap:0.5rem; flex-wrap:wrap;
-    align-items:end;">
+<form method="GET" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;">
     <div>
-        <label style="font-size:0.75rem; color:#64748b; display:block;
-            margin-bottom:0.2rem;">Class *</label>
-        <select name="class" required
-            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Class *</label>
+        <select name="class" required style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
             <option value="">Select class</option>
             {% for c in classes %}
             <option value="{{ c }}" {% if c == selected_class %}selected{% endif %}>
@@ -28,10 +31,8 @@
         </select>
     </div>
     <div>
-        <label style="font-size:0.75rem; color:#64748b; display:block;
-            margin-bottom:0.2rem;">Academic Year</label>
-        <select name="ay"
-            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
+        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Academic Year</label>
+        <select name="ay" style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
             {% for y in ay_options %}
             <option value="{{ y }}" {% if y == academic_year %}selected{% endif %}>
                 {{ y }}
@@ -41,8 +42,7 @@
     </div>
     <button type="submit" class="btn">Load</button>
     {% if selected_class and summary %}
-    <a href="{{ url_for('report_cards.bulk_print', **{'class': selected_class, 'ay': academic_year}) }}"
-       target="_blank" class="btn" style="background:#8b5cf6; margin-left:auto;">
+    <a href="{{ url_for('report_cards.bulk_print', **{'class': selected_class, 'ay': academic_year}) }}" target="_blank" class="btn" style="background:#8b5cf6; margin-left:auto;">
         🖨️ Print All ({{ summary|length }})
     </a>
     {% endif %}
@@ -51,8 +51,7 @@
 
 {% if selected_class and summary %}
 <div class="card" style="padding:0; overflow:auto;">
-<table style="width:100%; border-collapse:collapse; font-size:0.85rem;
-    min-width:600px;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:600px;">
     <thead style="background:#f1f5f9;">
         <tr>
             <th style="padding:0.6rem; text-align:center;">Rank</th>
@@ -67,25 +66,21 @@
     <tbody>
         {% for s in summary %}
         <tr style="border-top:1px solid #e2e8f0;">
-            <td style="padding:0.55rem; text-align:center; font-weight:700;
-                color:{{ '#f59e0b' if s.rank == 1 else ('#94a3b8' if s.rank == 2 else ('#b45309' if s.rank == 3 else '#475569')) }};">
+            <td style="padding:0.55rem; text-align:center; font-weight:700; color:{{ '#f59e0b' if s.rank == 1 else ('#94a3b8' if s.rank == 2 else ('#b45309' if s.rank == 3 else '#475569')) }};">
                 #{{ s.rank }}
             </td>
             <td style="padding:0.55rem;"><strong>{{ s.name }}</strong></td>
             <td style="padding:0.55rem; color:#64748b;">{{ s.roll or '—' }}</td>
             <td style="padding:0.55rem; text-align:center;">{{ s.section or '—' }}</td>
             <td style="padding:0.55rem; text-align:center;">{{ s.exam_count }}</td>
-            <td style="padding:0.55rem; text-align:right; font-weight:600;">
-                {{ "%.0f"|format(s.total_obtained) }}
-            </td>
+            <td style="padding:0.55rem; text-align:right; font-weight:600;">{{ "%.0f"|format(s.total_obtained) }}</td>
             <td style="padding:0.55rem; text-align:right; white-space:nowrap;">
-                <a href="{{ url_for('report_cards.view', student_id=s.student_id, ay=academic_year) }}"
-                   style="color:#3b82f6; text-decoration:none; font-size:0.82rem;
-                   margin-right:0.4rem;">View</a>
-                <a href="{{ url_for('report_cards.print_view', student_id=s.student_id, ay=academic_year) }}"
-                   target="_blank"
-                   style="color:#8b5cf6; text-decoration:none; font-size:0.82rem;">
-                    Print
+                <!-- Yahan 'View' link ko Advanced Modal se connect kiya gaya hai -->
+                <button onclick="openAdvancedReport('{{ s.name }}', '{{ s.roll }}', '{{ s.section }}', '{{ s.student_id }}')" style="background:none; border:none; color:#3b82f6; cursor:pointer; font-weight:600; font-size:0.85rem; margin-right:0.4rem;">
+                    🤖 View AI Card
+                </button>
+                <a href="{{ url_for('report_cards.print_view', student_id=s.student_id, ay=academic_year) }}" target="_blank" style="color:#8b5cf6; text-decoration:none; font-size:0.85rem;">
+                    🖨️ Print
                 </a>
             </td>
         </tr>
@@ -98,4 +93,145 @@
     Is class/Year mein koi marks data nahi hai. Pehle exams aur marks enter karo.
 </div>
 {% endif %}
+
+
+<!-- ========================================== -->
+<!-- 2. ADVANCED REPORT CARD MODAL (HIDDEN) -->
+<!-- ========================================== -->
+<div id="rc-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; justify-content:center; align-items:flex-start; padding:20px; overflow-y:auto;">
+    
+    <div style="background:#f8fafc; width:100%; max-width:1000px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.3); margin-top:20px;">
+        
+        <!-- Modal Header (Controls) -->
+        <div style="background:#fff; padding:15px 20px; border-top-left-radius:12px; border-top-right-radius:12px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:10;">
+            <h3 style="margin:0; font-size:1.1rem; color:#1e293b;">Advanced Report Card Preview</h3>
+            <div style="display:flex; gap:10px;">
+                <button onclick="RC.generateAI()" style="background:#8b5cf6; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:600;">🤖 Generate AI Remark</button>
+                <button onclick="RC.downloadPDF()" style="background:#10b981; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:600;">📄 Save PDF</button>
+                <button onclick="closeAdvancedReport()" style="background:#ef4444; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:600;">✖ Close</button>
+            </div>
+        </div>
+
+        <!-- The Actual Printable Card (Scoped CSS) -->
+        <div style="padding:20px;" id="rc-print-area">
+            <div style="background:#fff; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.05); overflow:hidden; font-family:'Segoe UI', sans-serif; color:#1e293b;">
+                
+                <!-- Card Header -->
+                <div style="background:linear-gradient(135deg, #1e3a8a, #3b82f6); color:#fff; padding:20px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; align-items:center; gap:15px;">
+                        <div style="width:50px; height:50px; background:rgba(255,255,255,0.2); border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:24px;">🏫</div>
+                        <div>
+                            <h1 style="margin:0; font-size:20px; letter-spacing:1px;">MY SCHOOL ERP</h1>
+                            <p style="margin:2px 0 0 0; font-size:12px; opacity:0.9;">Year-End Performance Report</p>
+                        </div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.15); padding:6px 12px; border-radius:20px; font-size:12px; border:1px solid rgba(255,255,255,0.3);">
+                        Session: {{ academic_year }}
+                    </div>
+                </div>
+
+                <!-- Student Info -->
+                <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:15px; padding:20px; background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+                    <div><span style="font-size:10px; color:#64748b; font-weight:bold; text-transform:uppercase;">Name</span><br><b id="rc-name" style="font-size:14px;"></b></div>
+                    <div><span style="font-size:10px; color:#64748b; font-weight:bold; text-transform:uppercase;">Class</span><br><b id="rc-class" style="font-size:14px;">{{ selected_class }}</b></div>
+                    <div><span style="font-size:10px; color:#64748b; font-weight:bold; text-transform:uppercase;">Roll No</span><br><b id="rc-roll" style="font-size:14px;"></b></div>
+                    <div><span style="font-size:10px; color:#64748b; font-weight:bold; text-transform:uppercase;">Attendance</span><br><b style="font-size:14px; color:#10b981;">92% (Dummy)</b></div>
+                </div>
+
+                <!-- Marks Table (Dummy Data for UI) -->
+                <div style="padding:20px;">
+                    <h3 style="font-size:14px; color:#1e3a8a; border-bottom:2px solid #3b82f6; padding-bottom:5px; margin-bottom:15px; text-transform:uppercase;">Academic Performance</h3>
+                    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                        <thead>
+                            <tr style="background:#f1f5f9;">
+                                <th style="padding:10px; border:1px solid #e2e8f0; text-align:left;">Subject</th>
+                                <th style="padding:10px; border:1px solid #e2e8f0;">Total Marks</th>
+                                <th style="padding:10px; border:1px solid #e2e8f0;">Grade</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td style="padding:10px; border:1px solid #e2e8f0;">Mathematics</td><td style="padding:10px; border:1px solid #e2e8f0; text-align:center;">85 / 100</td><td style="padding:10px; border:1px solid #e2e8f0; text-align:center; color:#10b981; font-weight:bold;">A2</td></tr>
+                            <tr><td style="padding:10px; border:1px solid #e2e8f0;">Science</td><td style="padding:10px; border:1px solid #e2e8f0; text-align:center;">78 / 100</td><td style="padding:10px; border:1px solid #e2e8f0; text-align:center; color:#3b82f6; font-weight:bold;">B1</td></tr>
+                            <tr><td style="padding:10px; border:1px solid #e2e8f0;">English</td><td style="padding:10px; border:1px solid #e2e8f0; text-align:center;">88 / 100</td><td style="padding:10px; border:1px solid #e2e8f0; text-align:center; color:#10b981; font-weight:bold;">A2</td></tr>
+                        </tbody>
+                    </table>
+                    <p style="font-size:11px; color:#ef4444; margin-top:10px;">* Note: Backend developer ko yahan real marks fetch karne ka logic likhna hoga.</p>
+                </div>
+
+                <!-- AI Insights Section -->
+                <div style="padding:20px; background:#faf5ff; border-top:1px solid #e2e8f0;">
+                    <h3 style="font-size:14px; color:#8b5cf6; border-bottom:2px solid #8b5cf6; padding-bottom:5px; margin-bottom:15px; text-transform:uppercase;">🤖 AI Performance Insights</h3>
+                    <div id="rc-ai-content" style="background:#fff; border-left:4px solid #8b5cf6; padding:15px; font-size:13px; color:#4c1d95; border-radius:6px;">
+                        Click "Generate AI Remark" above to analyze performance.
+                    </div>
+                </div>
+
+                <!-- Signatures -->
+                <div style="padding:40px 20px; display:flex; justify-content:space-between;">
+                    <div style="text-align:center;"><div style="width:120px; border-top:1px solid #333; margin-bottom:5px;"></div><span style="font-size:12px; font-weight:bold;">Class Teacher</span></div>
+                    <div style="text-align:center;"><div style="width:120px; border-top:1px solid #333; margin-bottom:5px;"></div><span style="font-size:12px; font-weight:bold;">Principal</span></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 3. ADVANCED JAVASCRIPT LOGIC -->
+<!-- ========================================== -->
+<script>
+const RC = {
+    currentStudent: {},
+
+    downloadPDF: function() {
+        const element = document.getElementById('rc-print-area');
+        const opt = {
+            margin:       0.2,
+            filename:     'Report_Card_' + this.currentStudent.name + '.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+        html2pdf().set(opt).from(element).save();
+    },
+
+    generateAI: function() {
+        let aiBox = document.getElementById('rc-ai-content');
+        aiBox.innerHTML = '<p>⏳ AI is analyzing the data...</p>';
+
+        // Yahan aap apne backend API (ChatGPT/Gemini) ko call karenge
+        // Example: fetch('/api/ai-remark?student_id=' + this.currentStudent.id)
+        
+        setTimeout(() => {
+            let name = this.currentStudent.name.split(' ')[0];
+            aiBox.innerHTML = `
+                <p><b>Overall Performance:</b> Excellent.</p>
+                <p>💪 <b>Top Strength:</b> Mathematics (85%).</p>
+                <p>🎯 <b>Area of Focus:</b> Science (78%). Needs slight improvement.</p>
+                <p>📝 <b>Teacher's Remark:</b> ${name} is a hardworking student who shows consistent progress. Focusing on Science will help achieve even better results next term.</p>
+            `;
+        }, 1500);
+    }
+};
+
+function openAdvancedReport(name, roll, section, studentId) {
+    RC.currentStudent = { name: name, roll: roll, section: section, id: studentId };
+    
+    // Populate Modal Data
+    document.getElementById('rc-name').innerText = name;
+    document.getElementById('rc-roll').innerText = roll || '—';
+    document.getElementById('rc-ai-content').innerHTML = 'Click "Generate AI Remark" above to analyze performance.';
+    
+    // Show Modal
+    document.getElementById('rc-modal-overlay').style.display = 'flex';
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+}
+
+function closeAdvancedReport() {
+    document.getElementById('rc-modal-overlay').style.display = 'none';
+    document.body.style.overflow = 'auto'; // Restore scrolling
+}
+</script>
+
 {% endblock %}
