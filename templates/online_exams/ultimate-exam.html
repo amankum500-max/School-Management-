@@ -388,44 +388,7 @@
 
     <!-- JAVASCRIPT LOGIC -->
     <script>
-        // --- MOCK EXAM DATA (With Math and Explanation) ---
-        const examData = [
-            { 
-                id: 1, type: 'mcq', 
-                text: "What is the value of the discriminant for the quadratic equation \\( ax^2 + bx + c = 0 \\)?", 
-                options: ["\\( b^2 - 4ac \\)", "\\( b^2 + 4ac \\)", "\\( 2a \\)", "\\( -b/a \\)"], 
-                correct: 0,
-                explanation: "The discriminant of a quadratic equation \\( ax^2 + bx + c = 0 \\) is given by the formula \\( D = b^2 - 4ac \\). It determines the nature of the roots."
-            },
-            { 
-                id: 2, type: 'mcq', 
-                text: "Evaluate the definite integral: \\( \\int_{0}^{1} x^2 dx \\)", 
-                options: ["\\( 1/3 \\)", "\\( 1/2 \\)", "\\( 1/4 \\)", "\\( 1 \\)"], 
-                correct: 0,
-                explanation: "The integral of \\( x^n \\) is \\( \\frac{x^{n+1}}{n+1} \\). So, \\( \\int x^2 dx = \\frac{x^3}{3} \\). Evaluating from 0 to 1 gives \\( \\frac{1}{3} - 0 = \\frac{1}{3} \\)."
-            },
-            { 
-                id: 3, type: 'tf', 
-                text: "The derivative of \\( \\sin(x) \\) is \\( -\\cos(x) \\).", 
-                options: ["True", "False"], 
-                correct: 1,
-                explanation: "The derivative of \\( \\sin(x) \\) is \\( \\cos(x) \\). The derivative of \\( \\cos(x) \\) is \\( -\\sin(x) \\)."
-            },
-            { 
-                id: 4, type: 'mcq', 
-                text: "What is the value of the limit \\( \\lim_{x \\to 0} \\frac{\\sin x}{x} \\)?", 
-                options: ["0", "1", "\\( \\infty \\)", "Undefined"], 
-                correct: 1,
-                explanation: "This is a standard trigonometric limit. As x approaches 0, the ratio of \\( \\sin x \\) to \\( x \\) approaches 1."
-            },
-            { 
-                id: 5, type: 'mcq', 
-                text: "Find the sum of the roots of the equation \\( x^2 - 5x + 6 = 0 \\).", 
-                options: ["5", "-5", "6", "-6"], 
-                correct: 0,
-                explanation: "For a quadratic equation \\( ax^2 + bx + c = 0 \\), the sum of roots is \\( -b/a \\). Here, a=1, b=-5. So, sum = -(-5)/1 = 5."
-            }
-        ];
+const examData = {{ questions | tojson }};
 
         // --- STATE MANAGEMENT ---
         let currentQuestionIndex = 0;
