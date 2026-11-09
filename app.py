@@ -46,6 +46,7 @@ from modules.fees import fees_bp
 from modules.attendance import attendance_bp
 from modules.notices import notices_bp
 from modules.parent import parent_bp
+from modules.exams import exams_bp
 from modules.settings import settings_bp
 from modules.staff import staff_bp
 
@@ -113,6 +114,7 @@ app.register_blueprint(fees_bp)
 app.register_blueprint(attendance_bp)
 app.register_blueprint(notices_bp)
 app.register_blueprint(parent_bp)
+app.register_blueprint(exams_bp)
 app.register_blueprint(settings_bp)
 app.register_blueprint(staff_bp)
 app.register_blueprint(reports_bp)
