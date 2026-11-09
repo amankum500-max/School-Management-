@@ -27,21 +27,42 @@ def index():
                            classes=get_classes_list(),
                            selected_class=class_name)
 
+
 @online_exams_bp.route("/add", methods=["GET", "POST"])
 @login_required
 @role_required("super_admin", "admin")
 def add():
     if request.method == "POST":
         data = request.form.to_dict()
-        if not data.get("title") or not data.get("class_name"):
-            flash("Title aur class zaroori hain", "error")
+        
+        # Validation: Title, Class aur Subject zaroori hain
+        if not data.get("title") or not data.get("class_name") or not data.get("subject"):
+            flash("Title, Class aur Subject zaroori hain", "error")
             return redirect(url_for("online_exams.add"))
-        eid = create_online_exam(data, session["admin_id"])
-        flash("Exam create ho gaya. Ab questions add karo.", "success")
-        return redirect(url_for("online_exams.manage", eid=eid))
+        
+        try:
+            # Database function ko alag-alag arguments pass kar rahe hain
+            eid = create_online_exam(
+                title=data.get("title"),
+                class_name=data.get("class_name"),
+                subject=data.get("subject"),
+                duration_minutes=int(data.get("duration_minutes") or 30),
+                total_marks=int(data.get("total_marks") or 100),
+                created_by=session.get("admin_id"),
+                start_date=data.get("start_date") or None,
+                end_date=data.get("end_date") or None,
+                instructions=data.get("instructions") or None
+            )
+            flash("Exam create ho gaya. Ab questions add karo.", "success")
+            return redirect(url_for("online_exams.manage", eid=eid))
+        except Exception as e:
+            flash(f"Exam create karne mein error aaya: {str(e)[:100]}", "error")
+            return redirect(url_for("online_exams.add"))
+            
     return render_template("online_exams/form.html",
                            exam=None, mode="add",
                            classes=get_classes_list())
+
 
 @online_exams_bp.route("/<int:eid>")
 @login_required
@@ -56,6 +77,7 @@ def manage(eid):
                            exam=exam, questions=questions,
                            results=results)
 
+
 @online_exams_bp.route("/<int:eid>/edit", methods=["GET", "POST"])
 @login_required
 @role_required("super_admin", "admin")
@@ -64,12 +86,14 @@ def edit(eid):
     if not exam:
         abort(404)
     if request.method == "POST":
+        # Note: Agar edit mein bhi error aaye, toh yahan bhi alag-alag parameters pass karne padenge
         update_online_exam(eid, request.form.to_dict())
         flash("Exam update ho gaya", "success")
         return redirect(url_for("online_exams.manage", eid=eid))
     return render_template("online_exams/form.html",
                            exam=exam, mode="edit",
                            classes=get_classes_list())
+
 
 @online_exams_bp.route("/<int:eid>/delete", methods=["POST"])
 @login_required
@@ -78,6 +102,7 @@ def remove(eid):
     delete_online_exam(eid)
     flash("Exam delete ho gaya", "success")
     return redirect(url_for("online_exams.index"))
+
 
 @online_exams_bp.route("/<int:eid>/toggle-publish", methods=["POST"])
 @login_required
@@ -94,6 +119,7 @@ def toggle_publish(eid):
     toggle_exam_publish(eid, not exam["is_published"])
     flash("Publish status updated", "success")
     return redirect(url_for("online_exams.manage", eid=eid))
+
 
 @online_exams_bp.route("/<int:eid>/questions/add", methods=["POST"])
 @login_required
@@ -121,6 +147,7 @@ def add_question(eid):
     except Exception as e:
         flash(f"Error: {str(e)[:100]}", "error")
     return redirect(url_for("online_exams.manage", eid=eid))
+
 
 @online_exams_bp.route("/questions/<int:qid>/delete", methods=["POST"])
 @login_required
