@@ -15,6 +15,34 @@
     .chat-bubble { padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; max-width: 80%; font-size: 0.85rem; line-height: 1.4; }
     .chat-user { background: #e0e7ff; color: #1e293b; align-self: flex-end; border-bottom-right-radius: 2px; }
     .chat-ai { background: #f1f5f9; color: #1e293b; align-self: flex-start; border-bottom-left-radius: 2px; }
+
+    /* =========================================
+       MOBILE RESPONSIVE FIXES
+       ========================================= */
+    @media (max-width: 768px) {
+        .toolbar-container { flex-direction: column !important; align-items: stretch !important; gap: 10px !important; }
+        .toolbar-container form { flex-direction: column !important; width: 100%; gap: 10px !important; }
+        .toolbar-container .action-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        
+        table, thead, tbody, th, td, tr { display: block; width: 100%; min-width: 100% !important; }
+        thead { display: none; }
+        
+        tr { margin-bottom: 1rem; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: relative; }
+        td { padding: 6px 0 !important; border: none !important; text-align: left !important; }
+        
+        /* Checkbox top right */
+        td:first-child { position: absolute; top: 12px; right: 12px; width: auto; z-index: 10; }
+        
+        /* Hide less important columns on mobile to keep card clean */
+        td:nth-child(4), th:nth-child(4), 
+        td:nth-child(5), th:nth-child(5),
+        td:nth-child(6), th:nth-child(6) { display: none !important; }
+        
+        td:nth-child(2) { padding-right: 40px !important; border-bottom: 1px solid #f1f5f9 !important; padding-bottom: 10px !important; margin-bottom: 10px; }
+        td:last-child { border-top: 1px solid #f1f5f9 !important; padding-top: 10px !important; margin-top: 10px; }
+        td:last-child > div { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        td:last-child a, td:last-child button { width: 100%; text-align: center; justify-content: center; display: block; }
+    }
 </style>
 
 <!-- 1. AI SMART HEADER -->
@@ -32,7 +60,7 @@
 </div>
 
 <!-- 2. TOOLBAR (Voice, Export, Filters) -->
-<div class="card" style="margin-bottom:1rem; padding:1rem; display:flex; flex-wrap:wrap; gap:1rem; justify-content:space-between; align-items:center;">
+<div class="card toolbar-container" style="margin-bottom:1rem; padding:1rem; display:flex; flex-wrap:wrap; gap:1rem; justify-content:space-between; align-items:center;">
     
     <form method="GET" style="display:flex; gap:0.6rem; flex-wrap:wrap; flex:1;">
         <!-- Search with Voice -->
@@ -56,32 +84,34 @@
         <button type="submit" class="btn" style="background:#1e293b; color:white;">Search</button>
     </form>
 
-    <div style="display:flex; gap:0.5rem;">
-        <a href="{{ url_for('students.export_students_csv') }}" style="padding:0.6rem 1rem; border-radius:6px; background:#64748b; color:white; border:none; cursor:pointer; font-size:0.85rem; font-weight:600; text-decoration:none;">
+    <div class="action-btns" style="display:flex; gap:0.5rem;">
+        <a href="{{ url_for('students.export_students_csv') }}" style="padding:0.6rem 1rem; border-radius:6px; background:#64748b; color:white; border:none; cursor:pointer; font-size:0.85rem; font-weight:600; text-decoration:none; text-align:center;">
             📥 Export CSV
         </a>
-        <a href="{{ url_for('students.add_student') }}" class="btn" style="background:#3b82f6; color:white; font-size:0.85rem;">+ Add Student</a>
+        <a href="{{ url_for('students.add_student') }}" class="btn" style="background:#3b82f6; color:white; font-size:0.85rem; text-align:center;">+ Add Student</a>
     </div>
 </div>
 
-<!-- 3. MAIN TABLE (With AI Insights) -->
+<!-- 3. MAIN TABLE (With All Details) -->
 <div class="card" style="padding:0; overflow:auto; padding-bottom: 60px;">
-<table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:900px;">
+<!-- Width badhayi gayi hai taaki naye columns fit ho sakein -->
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:1100px;">
     <thead>
         <tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0; color:#475569; text-align:left;">
             <th style="padding:1rem; width:40px; text-align:center;">
                 <input type="checkbox" id="selectAll" onclick="toggleAll(this)" style="cursor:pointer;">
             </th>
             <th style="padding:1rem;">Student Profile</th>
-            <th style="padding:1rem;">Class & Contact</th>
-            <th style="padding:1rem;">AI Risk Analysis</th>
+            <th style="padding:1rem;">Class & Section</th>
+            <th style="padding:1rem;">Parent Details</th>
+            <th style="padding:1rem;">Aadhaar No</th>
+            <th style="padding:1rem;">AI Risk</th>
             <th style="padding:1rem;">Status</th>
             <th style="padding:1rem; text-align:right;">Actions</th>
         </tr>
     </thead>
     <tbody>
         {% for s in students %}
-        <!-- Backend se aane wala real is_at_risk flag -->
         {% set is_at_risk = s.is_at_risk if s.is_at_risk is defined else false %}
         
         <tr style="border-bottom:1px solid #e2e8f0; transition:background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
@@ -90,13 +120,17 @@
                 <input type="checkbox" class="student-checkbox" value="{{ s.id }}" onclick="updateBulkBar()" style="cursor:pointer;">
             </td>
 
-            <!-- Profile -->
+            <!-- Student Profile (Photo / Initials) -->
             <td style="padding:1rem;">
                 <div style="display:flex; align-items:center; gap:10px;">
                     <div style="position: relative;">
-                        <div style="width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg, #e0e7ff, #c7d2fe); color:#4338ca; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:1.1rem;">
-                            {{ s.name[0]|upper if s.name else '?' }}
-                        </div>
+                        {% if s.photo_url %}
+                            <img src="{{ s.photo_url }}" alt="{{ s.name }}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:2px solid #e2e8f0;">
+                        {% else %}
+                            <div style="width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg, #e0e7ff, #c7d2fe); color:#4338ca; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:1.1rem;">
+                                {{ s.name[0]|upper if s.name else '?' }}
+                            </div>
+                        {% endif %}
                         {% if is_at_risk %}
                         <span style="position:absolute; bottom:-2px; right:-2px; background:red; border:2px solid white; width:12px; height:12px; border-radius:50%;" title="AI Alert: At Risk"></span>
                         {% endif %}
@@ -108,24 +142,40 @@
                 </div>
             </td>
 
-            <!-- Class & Contact -->
+            <!-- Class & Section -->
             <td style="padding:1rem;">
-                <div style="font-weight:600; color:#334155; margin-bottom:4px;">{{ s.class_name }}{% if s.section %} - {{ s.section }}{% endif %}</div>
-                <div style="font-size:0.8rem; color:#64748b;">📞 {{ s.parent_phone or 'N/A' }}</div>
+                <div style="font-weight:600; color:#334155;">Class {{ s.class_name }}</div>
+                <div style="font-size:0.8rem; color:#64748b;">Sec: {{ s.section or '—' }}</div>
+            </td>
+
+            <!-- Parent Details & WhatsApp -->
+            <td style="padding:1rem;">
+                <div style="font-weight:600; color:#334155; font-size:0.85rem;">{{ s.parent_name }}</div>
+                <div style="font-size:0.8rem; color:#64748b; margin-top:2px;">📞 {{ s.parent_phone or 'N/A' }}</div>
+                {% if s.parent_phone %}
+                <a href="https://wa.me/91{{ s.parent_phone }}" target="_blank" style="display:inline-block; margin-top:4px; font-size:0.7rem; background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; text-decoration:none; font-weight:600;">
+                    💬 WhatsApp
+                </a>
+                {% endif %}
+            </td>
+
+            <!-- Aadhaar No -->
+            <td style="padding:1rem;">
+                <div style="font-family:monospace; color:#475569; font-size:0.85rem;">
+                    {{ s.aadhaar_no }}
+                </div>
             </td>
 
             <!-- AI Risk Analysis -->
             <td style="padding:1rem;">
                 {% if is_at_risk %}
-                    <div class="risk-high" style="padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:600; display:inline-block; margin-bottom:4px;">
-                        ⚠️ High Dropout Risk
+                    <div class="risk-high" style="padding:4px 8px; border-radius:6px; font-size:0.7rem; font-weight:600; display:inline-block;">
+                        ⚠️ High Risk
                     </div>
-                    <div style="font-size:0.7rem; color:#64748b;">Low attendance & pending fees</div>
                 {% else %}
-                    <div class="risk-low" style="padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:600; display:inline-block; margin-bottom:4px;">
-                        ✅ Excellent Standing
+                    <div class="risk-low" style="padding:4px 8px; border-radius:6px; font-size:0.7rem; font-weight:600; display:inline-block;">
+                        ✅ Good
                     </div>
-                    <div style="font-size:0.7rem; color:#64748b;">On track</div>
                 {% endif %}
             </td>
 
@@ -138,19 +188,25 @@
                 {% endif %}
             </td>
 
-            <!-- Actions -->
+            <!-- Actions (ID Card, AI Insight, Edit) -->
             <td style="padding:1rem; text-align:right;">
-                <div style="display:flex; gap:8px; justify-content:flex-end;">
-                    <button onclick="askAIAssistant('Give me a summary of {{ s.name }} in Class {{ s.class_name }}')" style="padding:4px 10px; font-size:0.75rem; background:#f3e8ff; color:#7e22ce; border:1px solid #d8b4fe; border-radius:4px; cursor:pointer;">
-                        ✨ AI Insight
+                <div style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
+                    <!-- ID Card Button (Fallback added in case route is different) -->
+                    <a href="{{ url_for('id_card.generate', student_id=s.id) if 'id_card.generate' in config['ROUTES'] else url_for('id_card.view', student_id=s.id) if 'id_card.view' in config['ROUTES'] else '#' }}" class="btn" style="padding:4px 8px; font-size:0.7rem; background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; text-decoration:none;">
+                        🪪 ID
+                    </a>
+                    
+                    <button onclick="askAIAssistant('Give me a summary of {{ s.name }} in Class {{ s.class_name }}')" style="padding:4px 8px; font-size:0.7rem; background:#f3e8ff; color:#7e22ce; border:1px solid #d8b4fe; border-radius:4px; cursor:pointer;">
+                        ✨ AI
                     </button>
-                    <a href="{{ url_for('students.edit_student', student_id=s.id) }}" class="btn" style="padding:4px 10px; font-size:0.75rem; background:#fffbeb; color:#d97706; border:1px solid #fde68a;">Edit</a>
+                    
+                    <a href="{{ url_for('students.edit_student', student_id=s.id) }}" class="btn" style="padding:4px 8px; font-size:0.7rem; background:#fffbeb; color:#d97706; border:1px solid #fde68a;">Edit</a>
                 </div>
             </td>
         </tr>
         {% else %}
         <tr>
-            <td colspan="6" style="padding:3rem 2rem; text-align:center; color:#64748b;">
+            <td colspan="8" style="padding:3rem 2rem; text-align:center; color:#64748b;">
                 <div style="font-size:2rem; margin-bottom:10px;">🤖</div>
                 <div style="font-weight:600; color:#334155; margin-bottom:5px;">AI found no students</div>
                 <div style="font-size:0.85rem;">Try asking the AI Assistant to find students for you.</div>
@@ -162,11 +218,10 @@
 </div>
 
 <!-- 4. FLOATING BULK ACTION BAR -->
-<div id="bulkActionBar" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1e293b; color:white; padding:10px 20px; border-radius:50px; box-shadow:0 10px 25px rgba(0,0,0,0.2); z-index:1000; align-items:center; gap:15px;">
+<div id="bulkActionBar" style="display:none !important; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1e293b; color:white; padding:10px 20px; border-radius:50px; box-shadow:0 10px 25px rgba(0,0,0,0.2); z-index:1000; align-items:center; gap:15px;">
     <div style="font-weight:600; font-size:0.9rem; border-right:1px solid #475569; padding-right:15px;">
         <span id="selectedCount">0</span> Selected
     </div>
-    <!-- Naye updated buttons jo backend se connect hain -->
     <button onclick="executeBulkAction('whatsapp')" style="background:none; border:none; color:#10b981; cursor:pointer; font-size:0.85rem; font-weight:600;">💬 AI WhatsApp</button>
     <button onclick="executeBulkAction('delete')" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.85rem; font-weight:600;">🗑️ Delete</button>
     <button onclick="clearSelection()" style="background:#334155; border:none; color:white; cursor:pointer; width:24px; height:24px; border-radius:50%; font-size:0.7rem;">✕</button>
@@ -213,7 +268,7 @@
         if (e.key === 'Enter') sendAIMessage();
     }
 
-    // UPDATED: Actual API Call logic
+    // Actual API Call logic for AI Chat
     function sendAIMessage() {
         const input = document.getElementById('aiInput');
         const text = input.value.trim();
@@ -289,7 +344,7 @@
         const count = document.querySelectorAll('.student-checkbox:checked').length;
         const bar = document.getElementById('bulkActionBar');
         if(bar) {
-            bar.style.display = count > 0 ? 'flex' : 'none';
+            bar.style.setProperty('display', count > 0 ? 'flex' : 'none', 'important');
             document.getElementById('selectedCount').innerText = count;
         }
     }
@@ -301,53 +356,50 @@
         updateBulkBar();
     }
 
-   // UPDATED: Actual Bulk Action API Call with better error handling
-function executeBulkAction(actionType) {
-    const selectedIds = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(cb => cb.value);
-    
-    if (selectedIds.length === 0) return;
-    if (actionType === 'delete' && !confirm(`Are you sure you want to delete ${selectedIds.length} students?`)) return;
+    // UPDATED: Actual Bulk Action API Call with better error handling
+    function executeBulkAction(actionType) {
+        const selectedIds = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(cb => cb.value);
+        
+        if (selectedIds.length === 0) return;
+        if (actionType === 'delete' && !confirm(`Are you sure you want to delete ${selectedIds.length} students?`)) return;
 
-    const bar = document.getElementById('bulkActionBar');
-    bar.style.opacity = '0.5';
-    bar.style.pointerEvents = 'none';
+        const bar = document.getElementById('bulkActionBar');
+        bar.style.opacity = '0.5';
+        bar.style.pointerEvents = 'none';
 
-    fetch('/students/bulk-action', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: actionType, ids: selectedIds })
-    })
-    .then(async (res) => {
-        // Check if the response is actually JSON
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Server returned an error");
-            return data;
-        } else {
-            // If it's HTML (meaning Flask crashed), throw a specific error
-            throw new Error("Server crash! Check terminal for Python error.");
-        }
-    })
-    .then(data => {
-        alert(data.message || "Success!");
-        if (data.success) {
-            if (actionType === 'delete') {
-                window.location.reload(); 
+        fetch('/students/bulk-action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: actionType, ids: selectedIds })
+        })
+        .then(async (res) => {
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Server returned an error");
+                return data;
             } else {
-                clearSelection(); 
+                throw new Error("Server crash! Check terminal for Python error.");
             }
-        }
-    })
-    .catch(err => {
-        // Now this will show the REAL error
-        alert("Error: " + err.message);
-        console.error("Full Error Details:", err);
-    })
-    .finally(() => {
-        bar.style.opacity = '1';
-        bar.style.pointerEvents = 'auto';
-    });
-} 
+        })
+        .then(data => {
+            alert(data.message || "Success!");
+            if (data.success) {
+                if (actionType === 'delete') {
+                    window.location.reload(); 
+                } else {
+                    clearSelection(); 
+                }
+            }
+        })
+        .catch(err => {
+            alert("Error: " + err.message);
+            console.error("Full Error Details:", err);
+        })
+        .finally(() => {
+            bar.style.opacity = '1';
+            bar.style.pointerEvents = 'auto';
+        });
+    }
 </script>
 {% endblock %}
