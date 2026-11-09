@@ -2,11 +2,13 @@ from flask import (
     Blueprint, render_template, request, redirect,
     url_for, flash, abort
 )
+from datetime import datetime # <--- NAYA IMPORT ADD KIYA
 from modules.auth import login_required
 from database import (
     get_timetable_grid, save_timetable_cell,
     get_teacher_timetable, get_staff, get_staff_list,
-    get_classes_list, get_students
+    get_classes_list, get_students,
+    get_absent_teachers # <--- NAYA IMPORT ADD KIYA
 )
 
 timetable_bp = Blueprint("timetable", __name__, url_prefix="/timetable")
@@ -19,10 +21,17 @@ PERIODS = list(range(1, 9))   # 1..8
 def index():
     class_name = request.args.get("class", "").strip()
     section = request.args.get("section", "").strip()
+    
+    # 1. Date fetch karne ka logic (Agar URL me date nahi hai, toh aaj ki date le)
+    selected_date = request.args.get("date", datetime.now().strftime("%Y-%m-%d"))
 
     grid = {}
+    absent_teacher_ids = [] # Default me khali list
+    
     if class_name:
         grid = get_timetable_grid(class_name, section)
+        # 2. Us date ke absent teachers fetch karo
+        absent_teacher_ids = get_absent_teachers(selected_date)
 
     # unique class-section pairs from students
     combos = set()
@@ -39,7 +48,9 @@ def index():
         selected_section=section,
         combos=combos,
         days=DAYS,
-        periods=PERIODS
+        periods=PERIODS,
+        selected_date=selected_date,          # <--- HTML ko bheja
+        absent_teacher_ids=absent_teacher_ids # <--- HTML ko bheja
     )
 
 @timetable_bp.route("/edit", methods=["GET", "POST"])
