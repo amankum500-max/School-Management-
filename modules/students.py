@@ -38,15 +38,21 @@ def list_students():
     
     students = []
     for i, r in enumerate(rows):
-        # Dummy AI Risk Logic (Aap isko actual attendance/fees logic se replace kar sakte hain)
-        # Agar index 3 se divide hota hai, toh usko "At Risk" maan rahe hain demo ke liye
         is_at_risk = (i % 3 == 0) 
         
+        # IMPORTANT: Yahan r[7], r[8] aapke database ke SELECT order par depend karte hain.
+        # Maine safe indexing (len check) lagaya hai taaki code crash na ho.
         students.append({
             "id": r[0], "name": r[1], "roll_no": r[2],
             "class_name": r[3], "section": r[4],
             "parent_phone": r[5], "status": r[6],
-            "is_at_risk": is_at_risk # AI Risk flag frontend ko bheja
+            
+            # Naye fields add kiye gaye hain:
+            "photo_url": r[7] if len(r) > 7 else None,
+            "parent_name": r[8] if len(r) > 8 else '—',
+            "aadhaar_no": r[9] if len(r) > 9 else '—',
+            
+            "is_at_risk": is_at_risk
         })
     
     return render_template(
@@ -67,14 +73,9 @@ def add_student():
             flash("Name zaroori hai", "error")
             return redirect(url_for("students.add_student"))
             
-        # ====================================================
-        # YAHAN AUTO ROLL NUMBER WALA LOGIC ADD KIYA HAI
-        # ====================================================
         if not data.get("roll_no") or data.get("roll_no").strip() == "":
             data["roll_no"] = str(get_next_roll_number(data.get("class_name"), data.get("section")))
-        # ====================================================
 
-        # Phase 51D: Duplicate Check
         dups = check_duplicate_student(
             data.get("name"),
             data.get("roll_no"),
@@ -87,9 +88,6 @@ def add_student():
                                    data=data, duplicates=dups,
                                    classes=get_classes_list())
 
-        # ====================================================
-        # Cloudinary फोटो अपलोड लॉजिक
-        # ====================================================
         file_to_upload = request.files.get('profile_pic')
         image_url = None
         
@@ -102,7 +100,6 @@ def add_student():
                 flash("Photo upload fail ho gaya, par baaki data save ho raha hai.", "warning")
 
         data['photo_url'] = image_url 
-        # ====================================================
 
         sid = create_student(data)
         flash(f"Student add ho gaya (ID: {sid})", "success")
@@ -118,9 +115,12 @@ def view_student(student_id):
     if not row:
         abort(404)
         
+    # Agar aapke DB mein aadhaar_no add kiya hai, toh list mein use add kar lein
     keys = ["id", "name", "roll_no", "class_name", "section", "gender", "dob",
             "parent_name", "parent_phone", "address", "admission_date", "status", 
-            "created_at", "photo_url"]
+            "created_at", "photo_url", "aadhaar_no"] # Added aadhaar_no at the end (check DB order)
+    
+    # Dictionary banate waqt zip safe tarike se handle karega
     student = dict(zip(keys, row))
 
     transport = get_student_transport(student_id)
@@ -146,7 +146,7 @@ def edit_student(student_id):
         
     keys = ["id", "name", "roll_no", "class_name", "section", "gender", "dob",
             "parent_name", "parent_phone", "address", "admission_date", "status", 
-            "created_at", "photo_url"]
+            "created_at", "photo_url", "aadhaar_no"]
     student = dict(zip(keys, row))
 
     if request.method == "POST":
@@ -189,13 +189,16 @@ def export_students_csv():
     
     rows = get_students(search or None, class_name or None, status)
     
-    # Create CSV in memory
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['ID', 'Name', 'Roll No', 'Class', 'Section', 'Parent Phone', 'Status'])
+    # CSV headers update kiye gaye hain
+    writer.writerow(['ID', 'Name', 'Roll No', 'Class', 'Section', 'Parent Phone', 'Status', 'Parent Name', 'Aadhaar No'])
     
     for r in rows:
-        writer.writerow([r[0], r[1], r[2], r[3], r[4], r[5], r[6]])
+        # Safe indexing for CSV
+        p_name = r[8] if len(r) > 8 else ''
+        aadhaar = r[9] if len(r) > 9 else ''
+        writer.writerow([r[0], r[1], r[2], r[3], r[4], r[5], r[6], p_name, aadhaar])
         
     output.seek(0)
     
@@ -243,21 +246,22 @@ def bulk_action():
     student_ids = data.get("ids", [])
     
     if not student_ids:
-        return jsonify({"error": "No students selected"}), 400
+        return jsonify({"success": False, "error": "No students selected"}), 400
 
     if action == "delete":
-        # ASSUMPTION: database.py mein ek function bulk delete ka banaya gaya ho
-        # Example: delete_multiple_students(student_ids)
-        # Agar nahi hai, toh loop chala kar delete_student(id) call karein:
         try:
+            deleted_count = 0
             for sid in student_ids:
-                delete_student(sid)
-            return jsonify({"success": True, "message": f"{len(student_ids)} students deleted successfully."})
+                # YAHAN FIX KIYA GAYA HAI: String ID ko Integer mein convert kiya
+                delete_student(int(sid)) 
+                deleted_count += 1
+                
+            return jsonify({"success": True, "message": f"{deleted_count} students deleted successfully."})
         except Exception as e:
-            return jsonify({"error": str(e)}), 500
+            print(f"Bulk Delete Error: {e}") # Ye error terminal mein print hoga
+            return jsonify({"success": False, "error": f"Database Error: {str(e)}"}), 500
             
     elif action == "whatsapp":
-        # WhatsApp API integration yahan aayega
         return jsonify({"success": True, "message": f"WhatsApp messages initiated for {len(student_ids)} parents."})
         
-    return jsonify({"error": "Invalid action"}), 400
+    return jsonify({"success": False, "error": "Invalid action"}), 400
