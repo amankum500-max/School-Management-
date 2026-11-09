@@ -15,49 +15,6 @@
     .chat-bubble { padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; max-width: 80%; font-size: 0.85rem; line-height: 1.4; }
     .chat-user { background: #e0e7ff; color: #1e293b; align-self: flex-end; border-bottom-right-radius: 2px; }
     .chat-ai { background: #f1f5f9; color: #1e293b; align-self: flex-start; border-bottom-left-radius: 2px; }
-
-    /* =========================================
-       MOBILE RESPONSIVE FIXES
-       ========================================= */
-    @media (max-width: 768px) {
-        /* Top Toolbar ko stack karein */
-        .toolbar-container { flex-direction: column !important; align-items: stretch !important; gap: 10px !important; }
-        .toolbar-container form { flex-direction: column !important; width: 100%; gap: 10px !important; }
-        .toolbar-container .action-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        
-        /* Table ko Card View mein badlein */
-        table, thead, tbody, th, td, tr { display: block; width: 100%; min-width: 100% !important; }
-        thead { display: none; } /* Headers hide karein */
-        
-        tr { 
-            margin-bottom: 1rem; 
-            border: 1px solid #e2e8f0; 
-            border-radius: 10px; 
-            padding: 12px; 
-            background: white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            position: relative;
-        }
-        
-        td { 
-            padding: 6px 0 !important; 
-            border: none !important; 
-            text-align: left !important;
-        }
-
-        /* Checkbox ko top-right corner mein fix karein */
-        td:first-child { position: absolute; top: 12px; right: 12px; width: auto; z-index: 10; }
-        
-        /* Student Profile */
-        td:nth-child(2) { padding-right: 40px !important; border-bottom: 1px solid #f1f5f9 !important; padding-bottom: 10px !important; margin-bottom: 10px; }
-        
-        /* Actions ko flex karein */
-        td:last-child { border-top: 1px solid #f1f5f9 !important; padding-top: 10px !important; margin-top: 10px; }
-        td:last-child > div { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        
-        /* Fix buttons breaking */
-        td:last-child a, td:last-child button { width: 100%; text-align: center; justify-content: center; display: block; }
-    }
 </style>
 
 <!-- 1. AI SMART HEADER -->
@@ -75,8 +32,7 @@
 </div>
 
 <!-- 2. TOOLBAR (Voice, Export, Filters) -->
-<!-- Added class="toolbar-container" -->
-<div class="card toolbar-container" style="margin-bottom:1rem; padding:1rem; display:flex; flex-wrap:wrap; gap:1rem; justify-content:space-between; align-items:center;">
+<div class="card" style="margin-bottom:1rem; padding:1rem; display:flex; flex-wrap:wrap; gap:1rem; justify-content:space-between; align-items:center;">
     
     <form method="GET" style="display:flex; gap:0.6rem; flex-wrap:wrap; flex:1;">
         <!-- Search with Voice -->
@@ -100,12 +56,11 @@
         <button type="submit" class="btn" style="background:#1e293b; color:white;">Search</button>
     </form>
 
-    <!-- Added class="action-btns" -->
-    <div class="action-btns" style="display:flex; gap:0.5rem;">
-        <a href="{{ url_for('students.export_students_csv') }}" style="padding:0.6rem 1rem; border-radius:6px; background:#64748b; color:white; border:none; cursor:pointer; font-size:0.85rem; font-weight:600; text-decoration:none; text-align:center;">
+    <div style="display:flex; gap:0.5rem;">
+        <a href="{{ url_for('students.export_students_csv') }}" style="padding:0.6rem 1rem; border-radius:6px; background:#64748b; color:white; border:none; cursor:pointer; font-size:0.85rem; font-weight:600; text-decoration:none;">
             📥 Export CSV
         </a>
-        <a href="{{ url_for('students.add_student') }}" class="btn" style="background:#3b82f6; color:white; font-size:0.85rem; text-align:center;">+ Add Student</a>
+        <a href="{{ url_for('students.add_student') }}" class="btn" style="background:#3b82f6; color:white; font-size:0.85rem;">+ Add Student</a>
     </div>
 </div>
 
@@ -207,11 +162,11 @@
 </div>
 
 <!-- 4. FLOATING BULK ACTION BAR -->
-<!-- Added !important to display: none to prevent it from showing on load -->
-<div id="bulkActionBar" style="display:none !important; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1e293b; color:white; padding:10px 20px; border-radius:50px; box-shadow:0 10px 25px rgba(0,0,0,0.2); z-index:1000; align-items:center; gap:15px;">
+<div id="bulkActionBar" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1e293b; color:white; padding:10px 20px; border-radius:50px; box-shadow:0 10px 25px rgba(0,0,0,0.2); z-index:1000; align-items:center; gap:15px;">
     <div style="font-weight:600; font-size:0.9rem; border-right:1px solid #475569; padding-right:15px;">
         <span id="selectedCount">0</span> Selected
     </div>
+    <!-- Naye updated buttons jo backend se connect hain -->
     <button onclick="executeBulkAction('whatsapp')" style="background:none; border:none; color:#10b981; cursor:pointer; font-size:0.85rem; font-weight:600;">💬 AI WhatsApp</button>
     <button onclick="executeBulkAction('delete')" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.85rem; font-weight:600;">🗑️ Delete</button>
     <button onclick="clearSelection()" style="background:#334155; border:none; color:white; cursor:pointer; width:24px; height:24px; border-radius:50%; font-size:0.7rem;">✕</button>
@@ -258,7 +213,7 @@
         if (e.key === 'Enter') sendAIMessage();
     }
 
-    // Actual API Call logic
+    // UPDATED: Actual API Call logic
     function sendAIMessage() {
         const input = document.getElementById('aiInput');
         const text = input.value.trim();
@@ -334,7 +289,7 @@
         const count = document.querySelectorAll('.student-checkbox:checked').length;
         const bar = document.getElementById('bulkActionBar');
         if(bar) {
-            bar.style.setProperty('display', count > 0 ? 'flex' : 'none', 'important');
+            bar.style.display = count > 0 ? 'flex' : 'none';
             document.getElementById('selectedCount').innerText = count;
         }
     }
@@ -346,7 +301,7 @@
         updateBulkBar();
     }
 
-    // Actual Bulk Action API Call
+    // UPDATED: Actual Bulk Action API Call
     function executeBulkAction(actionType) {
         const selectedIds = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(cb => cb.value);
         
