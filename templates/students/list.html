@@ -57,9 +57,9 @@
     </form>
 
     <div style="display:flex; gap:0.5rem;">
-        <button onclick="openBulkWhatsApp()" style="padding:0.6rem 1rem; border-radius:6px; background:#10b981; color:white; border:none; cursor:pointer; font-size:0.85rem; font-weight:600;">
-            💬 AI Bulk Message
-        </button>
+        <a href="{{ url_for('students.export_students_csv') }}" style="padding:0.6rem 1rem; border-radius:6px; background:#64748b; color:white; border:none; cursor:pointer; font-size:0.85rem; font-weight:600; text-decoration:none;">
+            📥 Export CSV
+        </a>
         <a href="{{ url_for('students.add_student') }}" class="btn" style="background:#3b82f6; color:white; font-size:0.85rem;">+ Add Student</a>
     </div>
 </div>
@@ -74,15 +74,15 @@
             </th>
             <th style="padding:1rem;">Student Profile</th>
             <th style="padding:1rem;">Class & Contact</th>
-            <th style="padding:1rem;">AI Risk Analysis</th> <!-- New AI Column -->
+            <th style="padding:1rem;">AI Risk Analysis</th>
             <th style="padding:1rem;">Status</th>
             <th style="padding:1rem; text-align:right;">Actions</th>
         </tr>
     </thead>
     <tbody>
         {% for s in students %}
-        <!-- Mock AI Risk Logic: Agar fees ya attendance low hai toh High Risk -->
-        {% set is_at_risk = loop.index % 3 == 0 %} 
+        <!-- Backend se aane wala real is_at_risk flag -->
+        {% set is_at_risk = s.is_at_risk if s.is_at_risk is defined else false %}
         
         <tr style="border-bottom:1px solid #e2e8f0; transition:background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
             
@@ -166,11 +166,13 @@
     <div style="font-weight:600; font-size:0.9rem; border-right:1px solid #475569; padding-right:15px;">
         <span id="selectedCount">0</span> Selected
     </div>
-    <button onclick="alert('Generating AI Messages for selected parents...')" style="background:none; border:none; color:#10b981; cursor:pointer; font-size:0.85rem; font-weight:600;">💬 AI WhatsApp</button>
+    <!-- Naye updated buttons jo backend se connect hain -->
+    <button onclick="executeBulkAction('whatsapp')" style="background:none; border:none; color:#10b981; cursor:pointer; font-size:0.85rem; font-weight:600;">💬 AI WhatsApp</button>
+    <button onclick="executeBulkAction('delete')" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.85rem; font-weight:600;">🗑️ Delete</button>
     <button onclick="clearSelection()" style="background:#334155; border:none; color:white; cursor:pointer; width:24px; height:24px; border-radius:50%; font-size:0.7rem;">✕</button>
 </div>
 
-<!-- 5. AI CHAT SIDEBAR (The Magic) -->
+<!-- 5. AI CHAT SIDEBAR -->
 <div id="aiSidebar" class="ai-sidebar">
     <div style="background:#1e293b; color:white; padding:1rem; display:flex; justify-content:space-between; align-items:center;">
         <div style="font-weight:600; display:flex; align-items:center; gap:8px;">
@@ -211,6 +213,7 @@
         if (e.key === 'Enter') sendAIMessage();
     }
 
+    // UPDATED: Actual API Call logic
     function sendAIMessage() {
         const input = document.getElementById('aiInput');
         const text = input.value.trim();
@@ -218,25 +221,35 @@
         
         addChatBubble(text, 'user');
         input.value = '';
+        
+        const loadingId = 'loading-' + Date.now();
+        addChatBubble('<i>AI soch raha hai...</i>', 'ai', loadingId);
 
-        // Simulate AI Thinking
-        setTimeout(() => {
-            let aiReply = "Main aapki query process kar raha hoon...";
-            if(text.toLowerCase().includes('risk') || text.toLowerCase().includes('weak')) {
-                aiReply = "AI Analysis: Maine 3 students ko identify kiya hai jinki attendance 75% se neeche hai aur fees pending hai. Unke profiles par Red alert laga diya gaya hai.";
-            } else if(text.toLowerCase().includes('fees')) {
-                aiReply = "Total pending fees is ₹45,000. Top defaulters are Rakesh Kumar (₹10,000) and Aman (₹8,000).";
-            } else {
-                aiReply = "Yeh ek demo AI response hai. Backend integrate hone par yeh actual database query karega.";
-            }
-            addChatBubble(aiReply, 'ai');
-        }, 1000);
+        fetch('/students/api/ai-query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: text })
+        })
+        .then(res => res.json())
+        .then(data => {
+            const loadingElement = document.getElementById(loadingId);
+            if (loadingElement) loadingElement.remove();
+            
+            const reply = data.ai_reply || data.error || "Sorry, koi response nahi mila.";
+            addChatBubble(reply, 'ai');
+        })
+        .catch(err => {
+            const loadingElement = document.getElementById(loadingId);
+            if (loadingElement) loadingElement.remove();
+            addChatBubble("Network error! Please check your connection.", 'ai');
+        });
     }
 
-    function addChatBubble(text, type) {
+    function addChatBubble(text, type, id = '') {
         const chatArea = document.getElementById('chatArea');
         const bubble = document.createElement('div');
         bubble.className = `chat-${type} chat-bubble`;
+        if (id) bubble.id = id;
         bubble.innerHTML = text;
         chatArea.appendChild(bubble);
         chatArea.scrollTop = chatArea.scrollHeight;
@@ -244,26 +257,24 @@
 
     function askAIAssistant(query) {
         toggleAISidebar();
-        addChatBubble(query, 'user');
-        setTimeout(() => {
-            addChatBubble("Fetching AI insights for this student... (Backend integration required for real data)", 'ai');
-        }, 800);
+        document.getElementById('aiInput').value = query;
+        sendAIMessage();
     }
 
     // --- 2. Voice Search Logic ---
     function startVoiceSearch() {
-        if (!('webkitSpeechRecognition' in window)) {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
             alert("Aapka browser voice search support nahi karta. Chrome use karein.");
             return;
         }
-        const recognition = new webkitSpeechRecognition();
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
         recognition.lang = 'en-IN';
         recognition.start();
         
         recognition.onresult = function(event) {
             const transcript = event.results[0][0].transcript;
             document.querySelector('input[name="q"]').value = transcript;
-            // Auto submit form
             document.querySelector('form').submit();
         };
     }
@@ -276,8 +287,54 @@
 
     function updateBulkBar() {
         const count = document.querySelectorAll('.student-checkbox:checked').length;
-        document.getElementById('bulkActionBar').style.display = count > 0 ? 'flex' : 'none';
-        document.getElementById('selectedCount').innerText = count;
+        const bar = document.getElementById('bulkActionBar');
+        if(bar) {
+            bar.style.display = count > 0 ? 'flex' : 'none';
+            document.getElementById('selectedCount').innerText = count;
+        }
+    }
+
+    function clearSelection() {
+        document.querySelectorAll('.student-checkbox').forEach(cb => cb.checked = false);
+        const selectAll = document.getElementById('selectAll');
+        if (selectAll) selectAll.checked = false;
+        updateBulkBar();
+    }
+
+    // UPDATED: Actual Bulk Action API Call
+    function executeBulkAction(actionType) {
+        const selectedIds = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(cb => cb.value);
+        
+        if (selectedIds.length === 0) return;
+        if (actionType === 'delete' && !confirm(`Are you sure you want to delete ${selectedIds.length} students?`)) return;
+
+        const bar = document.getElementById('bulkActionBar');
+        bar.style.opacity = '0.5';
+        bar.style.pointerEvents = 'none';
+
+        fetch('/students/bulk-action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: actionType, ids: selectedIds })
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message || data.error);
+            if (data.success) {
+                if (actionType === 'delete') {
+                    window.location.reload(); 
+                } else {
+                    clearSelection(); 
+                }
+            }
+        })
+        .catch(err => {
+            alert("Error executing bulk action.");
+        })
+        .finally(() => {
+            bar.style.opacity = '1';
+            bar.style.pointerEvents = 'auto';
+        });
     }
 </script>
 {% endblock %}
