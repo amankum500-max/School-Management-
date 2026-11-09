@@ -53,10 +53,21 @@
                 • {{ e.attempt_count }} attempts
             </div>
         </div>
-        <div style="display:flex; gap:0.4rem;">
+        
+        <!-- YAHAN BUTTONS HAIN -->
+        <div style="display:flex; gap:0.4rem; align-items:center;">
+            
+            <!-- NAYA BUTTON: Start Exam -->
+            <a href="{{ url_for('online_exams.take_exam', eid=e.id) }}"
+               class="btn" style="background:#10b981; font-size:0.8rem;
+               padding:0.4rem 0.85rem; color:white;">
+               Start Exam
+            </a>
+
             <a href="{{ url_for('online_exams.manage', eid=e.id) }}"
                class="btn" style="background:#3b82f6; font-size:0.8rem;
                padding:0.4rem 0.85rem;">Manage</a>
+               
             <a href="{{ url_for('online_exams.edit', eid=e.id) }}"
                style="color:#f59e0b; text-decoration:none; font-size:0.8rem;
                padding:0.4rem;">Edit</a>
