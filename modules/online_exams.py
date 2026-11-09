@@ -1,6 +1,6 @@
 from flask import (
     Blueprint, render_template, request, redirect,
-    url_for, flash, session, abort
+    url_for, flash, session, abort, jsonify  # <-- jsonify add kiya gaya hai
 )
 from modules.auth import login_required, role_required
 from database import (
@@ -10,6 +10,8 @@ from database import (
     get_exam_results, get_classes_list
 )
 
+# Note: Aapne yahan url_prefix="/online-exams" rakha hai. 
+# Make sure aapki HTML files mein bhi link isi ke hisaab se ban rahe hain.
 online_exams_bp = Blueprint("online_exams", __name__, url_prefix="/online-exams")
 
 # ==========================================
@@ -35,13 +37,11 @@ def add():
     if request.method == "POST":
         data = request.form.to_dict()
         
-        # Validation: Title, Class aur Subject zaroori hain
         if not data.get("title") or not data.get("class_name") or not data.get("subject"):
             flash("Title, Class aur Subject zaroori hain", "error")
             return redirect(url_for("online_exams.add"))
         
         try:
-            # Database function ko alag-alag arguments pass kar rahe hain
             eid = create_online_exam(
                 title=data.get("title"),
                 class_name=data.get("class_name"),
@@ -86,7 +86,6 @@ def edit(eid):
     if not exam:
         abort(404)
     if request.method == "POST":
-        # Note: Agar edit mein bhi error aaye, toh yahan bhi alag-alag parameters pass karne padenge
         update_online_exam(eid, request.form.to_dict())
         flash("Exam update ho gaya", "success")
         return redirect(url_for("online_exams.manage", eid=eid))
@@ -161,27 +160,43 @@ def remove_question(qid):
 
 
 # ==========================================
-# 2. NAYA ROUTE (Exam dene ke liye)
+# 2. STUDENT ROUTES (Exam dene ke liye)
 # ==========================================
 
 @online_exams_bp.route("/take_exam/<int:eid>")
 @login_required
 def take_exam(eid):
-    # Abhi test ke liye dummy data bhej rahe hain (Baad mein DB se aayega)
-    dummy_exam = {"id": eid, "title": "Demo Test"}
-    dummy_questions = [
-        {"id": 1, "type": "mcq", "text": "2 + 2 kitna hota hai?", "options": ["2", "3", "4", "5"], "correct": 2},
-        {"id": 2, "type": "tf", "text": "Sun East se ugta hai.", "options": ["True", "False"], "correct": 0}
-    ]
+    # Database se exam aur questions fetch karein
+    exam = get_online_exam(eid)
+    if not exam:
+        abort(404)
+        
+    db_questions = get_exam_questions(eid)
+    
+    # Frontend (JavaScript) ko waise format mein convert karein jaisa wo expect kar raha hai
+    formatted_questions = []
+    for q in db_questions:
+        # Correct option (A, B, C, D) ko index (0, 1, 2, 3) mein convert karna
+        correct_index = 0
+        if q['correct_option'] and len(q['correct_option']) == 1:
+            correct_index = ord(q['correct_option'].upper()) - ord('A')
 
-    return render_template('online_exams/ultimate-exam.html', exam=dummy_exam, questions=dummy_questions)
-    # ============================================================
-# 3. STUDENT EXAM SUBMIT ROUTE (Naya Add Karein)
-# ============================================================
+        formatted_questions.append({
+            "id": q["id"],
+            "type": "mcq", # Filhaal hum sirf MCQ assume kar rahe hain
+            "text": q["question_text"],
+            "options": [q["option_a"], q["option_b"], q.get("option_c", ""), q.get("option_d", "")],
+            "correct": correct_index,
+            "explanation": "Explanation will be added soon." # Agar DB mein explanation column hai toh yahan aayega
+        })
+
+    # Template ko data bhejein
+    return render_template('online_exams/ultimate-exam.html', exam=exam, questions=formatted_questions)
+
+
 @online_exams_bp.route("/submit_exam/<int:eid>", methods=["POST"])
 @login_required
 def submit_exam(eid):
-    # Frontend (ultimate-exam.html) se aaya hua JSON data receive karein
     data = request.get_json()
     
     if not data:
@@ -190,38 +205,9 @@ def submit_exam(eid):
     student_answers = data.get("answers", [])
     score = data.get("score", 0)
     
-    # Yahan aap database mein save karne ka logic likhenge
-    # Example: save_student_result(exam_id=eid, answers=student_answers, score=score)
-    print(f"Exam ID: {eid} | Score: {score} | Answers: {student_answers}")
+    # Yahan aapko database mein result save karne ka function call karna hoga
+    # Example: save_exam_result(exam_id=eid, student_id=session.get('student_id'), answers=student_answers, score=score)
+    
+    print(f"✅ Exam ID: {eid} | Score: {score} | Answers submitted: {len(student_answers)}")
 
-    # Frontend ko success message bhejein
     return jsonify({"status": "success", "message": "Exam submitted successfully!"})
-
-
-# ============================================================
-# 4. REAL DATABASE INTEGRATION (Future ke liye)
-# ============================================================
-# (Jab aapke paas real questions ka database ready ho jaye, toh take_exam route ko aise update karein)
-#
-# @online_exams_bp.route("/take_exam/<int:eid>")
-# @login_required
-# def take_exam(eid):
-#     # 1. Database se exam ki details nikalein
-#     # exam = get_exam_by_id(eid)
-#     
-#     # 2. Database se us exam ke saare questions nikalein
-#     # questions = get_questions_by_exam_id(eid)
-#     
-#     # 3. JSON format mein convert karein
-#     # formatted_questions = [
-#     #     {
-#     #         "id": q["id"], 
-#     #         "type": q["type"], 
-#     #         "text": q["question_text"], 
-#     #         "options": [q["option_a"], q["option_b"], q["option_c"], q["option_d"]], 
-#     #         "correct": q["correct_index"]
-#     #     } for q in questions
-#     # ]
-#     
-#     # 4. Template ko data bhejein
-#     # return render_template('online_exams/ultimate-exam.html', exam=exam, questions=formatted_questions)
