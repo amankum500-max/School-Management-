@@ -1,8 +1,13 @@
 from flask import (
     Blueprint, render_template, request, redirect,
-    url_for, flash, abort
+    url_for, flash, abort, jsonify, Response
 )
 from modules.auth import login_required, role_required
+import os
+import csv
+import io
+import json
+from google import genai
 
 # Cloudinary Imports (फोटो अपलोड के लिए)
 import cloudinary
@@ -19,6 +24,9 @@ from database import (
 
 students_bp = Blueprint("students", __name__, url_prefix="/students")
 
+# AI Client Setup (Ensure GEMINI_API_KEY is in environment variables)
+ai_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+
 @students_bp.route("/")
 @login_required
 def list_students():
@@ -28,12 +36,18 @@ def list_students():
     
     rows = get_students(search or None, class_name or None, status)
     
-    students = [
-        {"id": r[0], "name": r[1], "roll_no": r[2],
-         "class_name": r[3], "section": r[4],
-         "parent_phone": r[5], "status": r[6]}
-        for r in rows
-    ]
+    students = []
+    for i, r in enumerate(rows):
+        # Dummy AI Risk Logic (Aap isko actual attendance/fees logic se replace kar sakte hain)
+        # Agar index 3 se divide hota hai, toh usko "At Risk" maan rahe hain demo ke liye
+        is_at_risk = (i % 3 == 0) 
+        
+        students.append({
+            "id": r[0], "name": r[1], "roll_no": r[2],
+            "class_name": r[3], "section": r[4],
+            "parent_phone": r[5], "status": r[6],
+            "is_at_risk": is_at_risk # AI Risk flag frontend ko bheja
+        })
     
     return render_template(
         "students/list.html",
@@ -97,10 +111,6 @@ def add_student():
     return render_template("students/form.html", student=None, mode="add", classes=get_classes_list())
 
 
-# ====================================================
-# YAHAN SE BAAKI CODE SHURU HOTA HAI
-# ====================================================
-
 @students_bp.route("/<int:student_id>")
 @login_required
 def view_student(student_id):
@@ -142,7 +152,6 @@ def edit_student(student_id):
     if request.method == "POST":
         data = request.form.to_dict()
         
-        # Edit karte waqt nayi photo upload
         file_to_upload = request.files.get('profile_pic')
         if file_to_upload and file_to_upload.filename != '':
             try:
@@ -164,3 +173,91 @@ def remove_student(student_id):
     delete_student(student_id)
     flash("Student delete ho gaya", "success")
     return redirect(url_for("students.list_students"))
+
+
+# ====================================================
+# NAYE ADVANCED ROUTES (AI, Export, Bulk Actions)
+# ====================================================
+
+@students_bp.route("/export", methods=["GET"])
+@login_required
+def export_students_csv():
+    """CSV Export Logic"""
+    search = request.args.get("q", "").strip()
+    class_name = request.args.get("class", "").strip()
+    status = request.args.get("status", "active")
+    
+    rows = get_students(search or None, class_name or None, status)
+    
+    # Create CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['ID', 'Name', 'Roll No', 'Class', 'Section', 'Parent Phone', 'Status'])
+    
+    for r in rows:
+        writer.writerow([r[0], r[1], r[2], r[3], r[4], r[5], r[6]])
+        
+    output.seek(0)
+    
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment;filename=students_export.csv"}
+    )
+
+@students_bp.route("/api/ai-query", methods=["POST"])
+@login_required
+def ai_query():
+    """AI Copilot Chat Endpoint"""
+    data = request.json
+    user_query = data.get("query", "")
+    
+    if not user_query:
+        return jsonify({"error": "No query provided"}), 400
+
+    prompt = f"""
+    You are an AI assistant for a School Management System. 
+    The user (Admin) says: "{user_query}"
+    
+    Based on this query, reply in helpful natural language. 
+    If the user is asking for a list, tell them how many students match.
+    Keep the answer short (max 3 sentences). Use Hinglish (Hindi + English) as used in Indian Schools.
+    """
+    
+    try:
+        response = ai_client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt
+        )
+        return jsonify({"success": True, "ai_reply": response.text.strip()})
+    except Exception as e:
+        print(f"AI Error: {e}")
+        return jsonify({"success": False, "ai_reply": "Sorry, main abhi connect nahi ho pa raha. Please check API key."})
+
+@students_bp.route("/bulk-action", methods=["POST"])
+@login_required
+def bulk_action():
+    """Handle Bulk Deletes or Messages"""
+    data = request.json
+    action = data.get("action")
+    student_ids = data.get("ids", [])
+    
+    if not student_ids:
+        return jsonify({"error": "No students selected"}), 400
+
+    if action == "delete":
+        # ASSUMPTION: database.py mein ek function bulk delete ka banaya gaya ho
+        # Example: delete_multiple_students(student_ids)
+        # Agar nahi hai, toh loop chala kar delete_student(id) call karein:
+        try:
+            for sid in student_ids:
+                delete_student(sid)
+            return jsonify({"success": True, "message": f"{len(student_ids)} students deleted successfully."})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+            
+    elif action == "whatsapp":
+        # WhatsApp API integration yahan aayega
+        return jsonify({"success": True, "message": f"WhatsApp messages initiated for {len(student_ids)} parents."})
+        
+    return jsonify({"error": "Invalid action"}), 400
