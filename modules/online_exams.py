@@ -175,3 +175,53 @@ def take_exam(eid):
     ]
 
     return render_template('online_exams/ultimate-exam.html', exam=dummy_exam, questions=dummy_questions)
+    # ============================================================
+# 3. STUDENT EXAM SUBMIT ROUTE (Naya Add Karein)
+# ============================================================
+@online_exams_bp.route("/submit_exam/<int:eid>", methods=["POST"])
+@login_required
+def submit_exam(eid):
+    # Frontend (ultimate-exam.html) se aaya hua JSON data receive karein
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({"status": "error", "message": "No data received"}), 400
+
+    student_answers = data.get("answers", [])
+    score = data.get("score", 0)
+    
+    # Yahan aap database mein save karne ka logic likhenge
+    # Example: save_student_result(exam_id=eid, answers=student_answers, score=score)
+    print(f"Exam ID: {eid} | Score: {score} | Answers: {student_answers}")
+
+    # Frontend ko success message bhejein
+    return jsonify({"status": "success", "message": "Exam submitted successfully!"})
+
+
+# ============================================================
+# 4. REAL DATABASE INTEGRATION (Future ke liye)
+# ============================================================
+# (Jab aapke paas real questions ka database ready ho jaye, toh take_exam route ko aise update karein)
+#
+# @online_exams_bp.route("/take_exam/<int:eid>")
+# @login_required
+# def take_exam(eid):
+#     # 1. Database se exam ki details nikalein
+#     # exam = get_exam_by_id(eid)
+#     
+#     # 2. Database se us exam ke saare questions nikalein
+#     # questions = get_questions_by_exam_id(eid)
+#     
+#     # 3. JSON format mein convert karein
+#     # formatted_questions = [
+#     #     {
+#     #         "id": q["id"], 
+#     #         "type": q["type"], 
+#     #         "text": q["question_text"], 
+#     #         "options": [q["option_a"], q["option_b"], q["option_c"], q["option_d"]], 
+#     #         "correct": q["correct_index"]
+#     #     } for q in questions
+#     # ]
+#     
+#     # 4. Template ko data bhejein
+#     # return render_template('online_exams/ultimate-exam.html', exam=exam, questions=formatted_questions)
