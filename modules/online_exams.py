@@ -137,3 +137,52 @@ def remove_question(qid):
         flash("Question delete ho gaya", "success")
         return redirect(url_for("online_exams.manage", eid=eid))
     return redirect(url_for("online_exams.index"))
+    # ... Aapka purana code upar rahega ...
+
+# ==========================================
+# NAYA CODE YAHAN SE SHURU HOTA HAI
+# (Dhyan dein: @exams_bp ki jagah @online_exams_bp kiya gaya hai)
+# ==========================================
+
+# 1. Exam List Ka Route (Admin Dashboard)
+@online_exams_bp.route("/")
+@login_required
+def index():
+    # Yahan database se exams fetch karenge. Abhi ke liye khali list hai.
+    exams = [] 
+    classes = [10, 12] 
+    
+    return render_template('online_exams/index.html', exams=exams, classes=classes, selected_class=None)
+
+# 2. Ultimate Exam Dene Ka Route
+@online_exams_bp.route("/take_exam/<int:eid>")
+@login_required
+def take_exam(eid):
+    # Abhi test ke liye dummy data bhej rahe hain (Baad mein DB se aayega)
+    dummy_exam = {"id": eid, "title": "Demo Test"}
+    dummy_questions = [
+        {"id": 1, "type": "mcq", "text": "2 + 2 kitna hota hai?", "options": ["2", "3", "4", "5"], "correct": 2},
+        {"id": 2, "type": "tf", "text": "Sun East se ugta hai.", "options": ["True", "False"], "correct": 0}
+    ]
+
+    return render_template('online_exams/ultimate-exam.html', exam=dummy_exam, questions=dummy_questions)
+
+# 3. New Exam Add Karne ka Route
+@online_exams_bp.route("/add", methods=['GET', 'POST'])
+@login_required
+def add():
+    if request.method == 'POST':
+        pass
+    return "Add Exam Form Yahan Aayega" 
+
+# 4. Manage Exam Route
+@online_exams_bp.route("/manage/<int:eid>")
+@login_required
+def manage(eid):
+    return f"Manage Exam {eid} Yahan Aayega"
+
+# 5. Edit Exam Route
+@online_exams_bp.route("/edit/<int:eid>")
+@login_required
+def edit(eid):
+    return f"Edit Exam {eid} Yahan Aayega"
