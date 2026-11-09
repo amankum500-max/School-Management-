@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Enterprise Exam Portal</title>
+    
+    <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: { colors: { brand: '#4f46e5' } }
+            }
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; user-select: none; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        
+        /* Palette */
+        .palette-btn { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; font-weight: 600; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; font-size: 14px;}
+        .p-not-visited { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+        .p-unattempted { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
+        .p-attempted { background: #dcfce7; color: #16a34a; border-color: #86efac; }
+        .p-marked { background: #f3e8ff; color: #9333ea; border-color: #d8b4fe; }
+        .p-current { box-shadow: 0 0 0 3px #4f46e5; transform: scale(1.1); }
+        
+        .dark .p-not-visited { background: #334155; color: #cbd5e1; border-color: #475569; }
+        .dark .p-unattempted { background: #7f1d1d; color: #fca5a5; border-color: #991b1b; }
+        .dark .p-attempted { background: #14532d; color: #86efac; border-color: #166534; }
+        .dark .p-marked { background: #4c1d95; color: #d8b4fe; border-color: #5b21b6; }
+        
+        /* Webcam */
+        .webcam-container { position: relative; overflow: hidden; border-radius: 8px; border: 2px solid #ef4444; background: #000; }
+        video { width: 100%; height: auto; transform: scaleX(-1); }
+        .rec-dot { width: 8px; height: 8px; background: red; border-radius: 50%; animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+
+        /* Font Size Classes */
+        .text-sm-custom { font-size: 0.875rem; }
+        .text-base-custom { font-size: 1rem; }
+        .text-lg-custom { font-size: 1.125rem; }
+
+        /* Fullscreen Warning */
+        #fs-warning { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; color: white; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex flex-col text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+
+    <!-- FULLSCREEN EXIT WARNING -->
+    <div id="fs-warning">
+        <i class="fa-solid fa-triangle-exclamation text-6xl text-red-500 mb-6 animate-pulse"></i>
+        <h1 class="text-3xl font-bold mb-4">Security Violation: Full-Screen Exited!</h1>
+        <p class="text-gray-300 mb-8 max-w-md">You exited the secure full-screen mode. This action has been logged. Your exam will now be submitted.</p>
+        <button onclick="finalSubmit()" class="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-lg font-bold shadow-lg">View Final Result</button>
+    </div>
+
+    <!-- ================= 1. LOGIN SCREEN ================= -->
+    <div id="login-screen" class="absolute inset-0 z-50 bg-gray-900 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-8 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand to-blue-500"></div>
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900 text-brand dark:text-blue-300 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                    <i class="fa-solid fa-user-shield"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Enterprise Secure Login</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400">System Check & Candidate Authentication</p>
+            </div>
+            
+            <div class="flex gap-4 mb-6 text-xs bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                <div class="flex items-center gap-1 text-green-600 dark:text-green-400"><i class="fa-solid fa-wifi"></i> Network: Stable</div>
+                <div class="flex items-center gap-1 text-green-600 dark:text-green-400"><i class="fa-solid fa-video"></i> Camera: Ready</div>
+                <div class="flex items-center gap-1 text-green-600 dark:text-green-400"><i class="fa-solid fa-shield"></i> Proctor: Active</div>
+            </div>
+
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <input type="text" id="candName" required placeholder="Enter Full Name" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 focus:ring-2 focus:ring-brand bg-transparent dark:bg-gray-700 outline-none transition">
+                </div>
+                <div>
+                    <input type="text" id="candRoll" required placeholder="Enter Roll Number" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 focus:ring-2 focus:ring-brand bg-transparent dark:bg-gray-700 outline-none transition">
+                </div>
+                <button type="submit" class="w-full bg-brand hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg shadow-md transition flex items-center justify-center gap-2 mt-4">
+                    <i class="fa-solid fa-fingerprint"></i> Authenticate & Start Exam
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= 2. MAIN EXAM INTERFACE ================= -->
+    <div id="exam-screen" class="hidden flex-1 flex flex-col h-full">
+        
+        <!-- HEADER -->
+        <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex justify-between items-center shadow-sm z-20">
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-building-columns text-brand text-xl"></i>
+                    <h1 class="font-bold text-gray-800 dark:text-white text-sm md:text-base hidden sm:block">National Level Mock Test 2024</h1>
+                </div>
+                <!-- Accessibility Font Resizer -->
+                <div class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 text-xs font-bold">
+                    <button onclick="changeFontSize('dec')" class="px-2 hover:text-brand">A-</button>
+                    <span class="border-l border-gray-300 dark:border-gray-500 mx-1"></span>
+                    <button onclick="changeFontSize('inc')" class="px-2 hover:text-brand">A+</button>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <!-- Dark Mode Toggle -->
+                <button id="theme-toggle" class="text-gray-500 hover:text-brand dark:text-gray-400 transition"><i class="fa-solid fa-moon"></i></button>
+                
+                <!-- Raise Hand -->
+                <button onclick="raiseHand()" class="text-yellow-600 hover:text-yellow-700 text-sm font-semibold flex items-center gap-1 bg-yellow-50 dark:bg-yellow-900/30 px-3 py-1.5 rounded-lg border border-yellow-200 dark:border-yellow-700/50 transition">
+                    <i class="fa-solid fa-hand"></i> <span class="hidden md:inline">Raise Hand</span>
+                </button>
+
+                <!-- Timer -->
+                <div id="timer-box" class="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 px-4 py-1.5 rounded-lg font-mono font-bold text-lg flex items-center gap-2 transition-colors">
+                    <i class="fa-solid fa-stopwatch"></i> <span id="timer-text">60:00</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- BODY -->
+        <div class="flex-1 flex overflow-hidden">
+            
+            <!-- LEFT: QUESTION & OPTIONS -->
+            <main class="flex-1 flex flex-col relative overflow-y-auto bg-white dark:bg-gray-800 m-2 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
+                
+                <!-- Section Tabs -->
+                <div class="flex border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                    <button class="px-6 py-3 text-sm font-bold border-b-2 border-brand text-brand">Section A: Mathematics</button>
+                    <button class="px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 border-b-2 border-transparent">Section B: Physics</button>
+                </div>
+
+                <div class="p-6 md:p-8 max-w-4xl w-full mx-auto flex-1 text-base-custom" id="question-area">
+                    
+                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100 dark:border-gray-700">
+                        <h2 class="text-xl font-bold text-gray-800 dark:text-white">Question <span id="current-q-num">1</span></h2>
+                        <div class="flex gap-2">
+                            <span id="badge-type" class="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-xs font-semibold border border-blue-200 dark:border-blue-700">Multiple Choice</span>
+                            <span class="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-3 py-1 rounded-full text-xs font-semibold border border-green-200 dark:border-green-700">+4 Marks</span>
+                        </div>
+                    </div>
+
+                    <!-- Question Content -->
+                    <div class="mb-8">
+                        <div class="text-gray-800 dark:text-gray-200 leading-relaxed font-medium mb-4" id="question-text"></div>
+                        <!-- Optional Image Support -->
+                        <div id="question-image-container" class="hidden mb-4">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/Right_triangle_geometry.svg/200px-Right_triangle_geometry.svg.png" alt="Question Diagram" class="h-32 border dark:border-gray-600 p-2 rounded bg-white">
+                        </div>
+                    </div>
+
+                    <!-- Options -->
+                    <div id="options-container" class="space-y-3">
+                        <!-- Options injected -->
+                    </div>
+                </div>
+            </main>
+
+            <!-- RIGHT: SIDEBAR (Palette & Proctoring) -->
+            <aside class="w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col shadow-xl z-10 hidden lg:flex transition-colors">
+                
+                <!-- Proctor Video -->
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-900">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold text-red-500 flex items-center gap-2"><div class="rec-dot"></div> LIVE PROCTORING</span>
+                        <span class="text-[10px] text-gray-400 bg-gray-800 px-2 py-0.5 rounded">AI Face Match: 99%</span>
+                    </div>
+                    <div class="webcam-container h-28 flex items-center justify-center text-xs text-gray-500" id="exam-webcam">
+                        <!-- Video here -->
+                    </div>
+                </div>
+
+                <!-- Palette Legend -->
+                <div class="p-3 grid grid-cols-2 gap-y-2 text-xs text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                    <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-green-500"></div> Answered</div>
+                    <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-red-500"></div> Not Answered</div>
+                    <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-purple-500"></div> Marked</div>
+                    <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded-full bg-gray-300"></div> Not Visited</div>
+                </div>
+
+                <!-- Palette Grid -->
+                <div class="flex-1 overflow-y-auto p-4">
+                    <div id="palette-grid" class="grid grid-cols-5 gap-2">
+                        <!-- Buttons -->
+                    </div>
+                </div>
+
+                <!-- Footer Tools -->
+                <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 space-y-2">
+                    <button onclick="toggleCalculator()" class="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold py-2 rounded-lg shadow-sm transition text-sm flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-calculator"></i> Scientific Calculator
+                    </button>
+                    <button onclick="openSubmitModal()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-lg shadow-md transition">
+                        Submit Final Exam
+                    </button>
+                </div>
+            </aside>
+        </div>
+
+        <!-- FOOTER (Navigation) -->
+        <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-3 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
+            <div class="flex gap-2">
+                <button onclick="markForReview()" id="btn-mark" class="px-4 py-2 border border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 rounded-lg text-sm font-medium transition">
+                    <i class="fa-regular fa-bookmark mr-1"></i> Mark
+                </button>
+                <button onclick="clearResponse()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition">
+                    Clear
+                </button>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="prevQuestion()" id="btn-prev" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition">
+                    <i class="fa-solid fa-arrow-left mr-1"></i> Prev
+                </button>
+                <button onclick="nextQuestion()" class="px-6 py-2 bg-brand hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow-sm transition">
+                    Save & Next <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- ================= 3. FLOATING SCIENTIFIC CALCULATOR ================= -->
+    <div id="calculator" class="fixed top-20 right-80 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl shadow-2xl w-72 z-50 hidden flex-col">
+        <div class="bg-gray-100 dark:bg-gray-700 px-3 py-2 flex justify-between items-center rounded-t-xl border-b dark:border-gray-600">
+            <span class="text-xs font-bold text-gray-600 dark:text-gray-300"><i class="fa-solid fa-calculator mr-1"></i> Calculator</span>
+            <button onclick="toggleCalculator()" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-times"></i></button>
+        </div>
+        <div class="p-3">
+            <input type="text" id="calc-display" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded p-2 text-right text-lg font-mono mb-2 outline-none" readonly value="0">
+            <div class="grid grid-cols-4 gap-1 text-sm font-medium">
+                <button onclick="calcInput('sin(')" class="calc-btn">sin</button>
+                <button onclick="calcInput('cos(')" class="calc-btn">cos</button>
+                <button onclick="calcInput('tan(')" class="calc-btn">tan</button>
+                <button onclick="calcInput('sqrt(')" class="calc-btn">√</button>
+                
+                <button onclick="calcInput('7')" class="calc-btn">7</button>
+                <button onclick="calcInput('8')" class="calc-btn">8</button>
+                <button onclick="calcInput('9')" class="calc-btn">9</button>
+                <button onclick="calcInput('/')" class="calc-btn">÷</button>
+                
+                <button onclick="calcInput('4')" class="calc-btn">4</button>
+                <button onclick="calcInput('5')" class="calc-btn">5</button>
+                <button onclick="calcInput('6')" class="calc-btn">6</button>
+                <button onclick="calcInput('*')" class="calc-btn">×</button>
+                
+                <button onclick="calcInput('1')" class="calc-btn">1</button>
+                <button onclick="calcInput('2')" class="calc-btn">2</button>
+                <button onclick="calcInput('3')" class="calc-btn">3</button>
+                <button onclick="calcInput('-')" class="calc-btn">-</button>
+                
+                <button onclick="calcInput('0')" class="calc-btn">0</button>
+                <button onclick="calcInput('.')" class="calc-btn">.</button>
+                <button onclick="calcClear()" class="calc-btn bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400">C</button>
+                <button onclick="calcInput('+')" class="calc-btn">+</button>
+                
+                <button onclick="calcCalculate()" class="col-span-4 bg-brand text-white py-2 rounded mt-1 hover:bg-indigo-700">=</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 4. SUBMIT MODAL ================= -->
+    <div id="submit-modal" class="fixed inset-0 bg-black/70 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="p-4 bg-gray-900 text-white flex justify-between items-center">
+                <h3 class="font-bold"><i class="fa-solid fa-clipboard-check text-green-500 mr-2"></i>Final Submission</h3>
+            </div>
+            <div class="p-6 text-center">
+                <p class="text-gray-600 dark:text-gray-300 mb-4 text-sm">Are you sure? You cannot return after submission.</p>
+                <div class="flex justify-center gap-6 mb-4">
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-green-600" id="sum-attempted">0</div>
+                        <div class="text-xs text-gray-500">Answered</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-red-600" id="sum-unattempted">0</div>
+                        <div class="text-xs text-gray-500">Skipped</div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 bg-gray-50 dark:bg-gray-900/50 border-t dark:border-gray-700 flex justify-end gap-3">
+                <button onclick="closeSubmitModal()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-700">Cancel</button>
+                <button onclick="finalSubmit()" class="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-bold shadow-md">Submit Now</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 5. ULTIMATE RESULT & REVIEW SCREEN ================= -->
+    <div id="result-screen" class="hidden absolute inset-0 z-50 bg-gray-100 dark:bg-gray-900 flex flex-col overflow-y-auto">
+        
+        <!-- Top Result Banner -->
+        <div class="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 p-6 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center text-green-600 dark:text-green-400 text-3xl">
+                    <i class="fa-solid fa-award"></i>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Exam Completed!</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Candidate: <span id="res-cand-name" class="font-semibold text-gray-800 dark:text-gray-200"></span></p>
+                </div>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="toggleReviewMode()" class="bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 px-5 py-2.5 rounded-lg font-medium transition flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-magnifying-glass"></i> Review Answers (Answer Key)
+                </button>
+                <button onclick="window.location.reload()" class="bg-gray-800 hover:bg-black text-white px-6 py-2.5 rounded-lg font-medium transition text-sm">
+                    Exit Portal
+                </button>
+            </div>
+        </div>
+
+        <!-- Analytics Dashboard -->
+        <div class="max-w-6xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Score Card -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 p-6 flex flex-col items-center justify-center">
+                <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4">Total Score</h3>
+                <div class="relative w-40 h-40 mb-4">
+                    <canvas id="scoreChart"></canvas>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span class="text-3xl font-bold text-gray-800 dark:text-white" id="res-score">0</span>
+                        <span class="text-xs text-gray-500">/ 20</span>
+                    </div>
+                </div>
+                <div class="w-full flex justify-between text-sm border-t dark:border-gray-700 pt-4 mt-2">
+                    <div class="text-center"><div class="font-bold text-green-600 text-lg" id="res-correct">0</div><div class="text-xs text-gray-500">Correct</div></div>
+                    <div class="text-center"><div class="font-bold text-red-600 text-lg" id="res-wrong">0</div><div class="text-xs text-gray-500">Wrong</div></div>
+                    <div class="text-center"><div class="font-bold text-gray-500 text-lg" id="res-skipped">0</div><div class="text-xs text-gray-500">Skipped</div></div>
+                </div>
+            </div>
+
+            <!-- AI Analytics -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 p-6">
+                <h3 class="text-sm font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2"><i class="fa-solid fa-brain text-brand"></i> AI Performance Analysis</h3>
+                <div class="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 p-4 rounded-xl mb-4">
+                    <p class="text-sm text-indigo-800 dark:text-indigo-200 font-medium" id="ai-feedback">Analyzing data...</p>
+                </div>
+                <div class="space-y-3 text-sm">
+                    <div class="flex justify-between items-center"><span class="text-gray-500">Accuracy Rate</span><span class="font-bold text-gray-800 dark:text-white" id="res-accuracy">0%</span></div>
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5"><div class="bg-brand h-2.5 rounded-full" style="width: 0%" id="accuracy-bar"></div></div>
+                    <div class="flex justify-between items-center"><span class="text-gray-500">Time Taken</span><span class="font-bold text-gray-800 dark:text-white">42 mins</span></div>
+                </div>
+            </div>
+
+            <!-- Proctor Logs -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 p-6">
+                <h3 class="text-sm font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2"><i class="fa-solid fa-shield-halved text-red-500"></i> Proctoring Log</h3>
+                <div class="space-y-3 max-h-48 overflow-y-auto pr-2">
+                    <div class="flex gap-3 text-xs">
+                        <div class="text-green-500 mt-0.5"><i class="fa-solid fa-circle-check"></i></div>
+                        <div><p class="font-medium text-gray-800 dark:text-gray-200">Face Verification Passed</p><p class="text-gray-500">10:00 AM</p></div>
+                    </div>
+                    <div class="flex gap-3 text-xs">
+                        <div class="text-green-500 mt-0.5"><i class="fa-solid fa-circle-check"></i></div>
+                        <div><p class="font-medium text-gray-800 dark:text-gray-200">Fullscreen Mode Active</p><p class="text-gray-500">10:01 AM</p></div>
+                    </div>
+                    <!-- Dynamic warnings injected here -->
+                    <div id="proctor-logs-container"></div>
+                    <div class="flex gap-3 text-xs">
+                        <div class="text-green-500 mt-0.5"><i class="fa-solid fa-circle-check"></i></div>
+                        <div><p class="font-medium text-gray-800 dark:text-gray-200">Exam Submitted Successfully</p><p class="text-gray-500">10:45 AM</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Review Section (Hidden by default) -->
+        <div id="review-section" class="hidden max-w-6xl w-full mx-auto px-6 pb-12">
+            <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-4 border-b dark:border-gray-700 pb-2">Detailed Answer Review</h3>
+            <div class="space-y-4" id="review-container">
+                <!-- Review cards injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- MOCK EXAM DATA (With Math and Explanation) ---
+        const examData = [
+            { 
+                id: 1, type: 'mcq', 
+                text: "What is the value of the discriminant for the quadratic equation \\( ax^2 + bx + c = 0 \\)?", 
+                options: ["\\( b^2 - 4ac \\)", "\\( b^2 + 4ac \\)", "\\( 2a \\)", "\\( -b/a \\)"], 
+                correct: 0,
+                explanation: "The discriminant of a quadratic equation \\( ax^2 + bx + c = 0 \\) is given by the formula \\( D = b^2 - 4ac \\). It determines the nature of the roots."
+            },
+            { 
+                id: 2, type: 'mcq', 
+                text: "Evaluate the definite integral: \\( \\int_{0}^{1} x^2 dx \\)", 
+                options: ["\\( 1/3 \\)", "\\( 1/2 \\)", "\\( 1/4 \\)", "\\( 1 \\)"], 
+                correct: 0,
+                explanation: "The integral of \\( x^n \\) is \\( \\frac{x^{n+1}}{n+1} \\). So, \\( \\int x^2 dx = \\frac{x^3}{3} \\). Evaluating from 0 to 1 gives \\( \\frac{1}{3} - 0 = \\frac{1}{3} \\)."
+            },
+            { 
+                id: 3, type: 'tf', 
+                text: "The derivative of \\( \\sin(x) \\) is \\( -\\cos(x) \\).", 
+                options: ["True", "False"], 
+                correct: 1,
+                explanation: "The derivative of \\( \\sin(x) \\) is \\( \\cos(x) \\). The derivative of \\( \\cos(x) \\) is \\( -\\sin(x) \\)."
+            },
+            { 
+                id: 4, type: 'mcq', 
+                text: "What is the value of the limit \\( \\lim_{x \\to 0} \\frac{\\sin x}{x} \\)?", 
+                options: ["0", "1", "\\( \\infty \\)", "Undefined"], 
+                correct: 1,
+                explanation: "This is a standard trigonometric limit. As x approaches 0, the ratio of \\( \\sin x \\) to \\( x \\) approaches 1."
+            },
+            { 
+                id: 5, type: 'mcq', 
+                text: "Find the sum of the roots of the equation \\( x^2 - 5x + 6 = 0 \\).", 
+                options: ["5", "-5", "6", "-6"], 
+                correct: 0,
+                explanation: "For a quadratic equation \\( ax^2 + bx + c = 0 \\), the sum of roots is \\( -b/a \\). Here, a=1, b=-5. So, sum = -(-5)/1 = 5."
+            }
+        ];
+
+        // --- STATE MANAGEMENT ---
+        let currentQuestionIndex = 0;
+        let answers = new Array(examData.length).fill(null);
+        let visited = new Array(examData.length).fill(false);
+        let markedForReview = new Array(examData.length).fill(false);
+        let timeLeft = 60 * 60; // 60 Minutes
+        let timerInterval;
+        let tabSwitchCount = 0;
+        let examActive = false;
+        let webcamStream = null;
+        let fontSizeLevel = 1; // 0: small, 1: normal, 2: large
+
+        // --- INITIALIZATION & CAMERA ---
+        async function setupCamera() {
+            try {
+                webcamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                const container = document.getElementById('exam-webcam');
+                container.innerHTML = `<video autoplay playsinline></video>`;
+                container.querySelector('video').srcObject = webcamStream;
+            } catch (err) {
+                document.getElementById('exam-webcam').innerHTML = `<span class="text-red-500 text-[10px] text-center p-2"><i class="fa-solid fa-video-slash mb-1 text-lg"></i><br>Camera Blocked</span>`;
+            }
+        }
+
+        // Dark Mode
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            themeToggleBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
+        }
+        themeToggleBtn.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.theme = isDark ? 'dark' : 'light';
+            themeToggleBtn.innerHTML = isDark ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+        });
+
+        // Font Size Adjuster
+        function changeFontSize(action) {
+            const area = document.getElementById('question-area');
+            area.classList.remove('text-sm-custom', 'text-base-custom', 'text-lg-custom');
+            
+            if (action === 'inc' && fontSizeLevel < 2) fontSizeLevel++;
+            if (action === 'dec' && fontSizeLevel > 0) fontSizeLevel--;
+
+            if (fontSizeLevel === 0) area.classList.add('text-sm-custom');
+            if (fontSizeLevel === 1) area.classList.add('text-base-custom');
+            if (fontSizeLevel === 2) area.classList.add('text-lg-custom');
+        }
+
+        // --- LOGIN & START ---
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            document.getElementById('res-cand-name').innerText = document.getElementById('candName').value;
+            
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) { elem.requestFullscreen().catch(err => console.log(err)); }
+
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('exam-screen').classList.remove('hidden');
+            
+            setupCamera();
+            startExam();
+        });
+
+        function startExam() {
+            examActive = true;
+            visited[0] = true;
+            renderQuestion();
+            renderPalette();
+            startTimer();
+            setupAntiCheat();
+            
+            renderMathInElement(document.body, {
+                delimiters: [{left: '$$', right: '$$', display: true}, {left: '\\(', right: '\\)', display: false}]
+            });
+        }
+
+        // --- TIMER ---
+        function startTimer() {
+            const timerElement = document.getElementById('timer-text');
+            timerInterval = setInterval(() => {
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    alert("Time is up! Your exam has been submitted.");
+                    finalSubmit();
+                    return;
+                }
+                timeLeft--;
+                const m = Math.floor(timeLeft / 60);
+                const s = timeLeft % 60;
+                timerElement.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                
+                if (timeLeft < 300) {
+                    document.getElementById('timer-box').classList.replace('bg-blue-50', 'bg-red-50');
+                    document.getElementById('timer-box').classList.replace('text-blue-700', 'text-red-600');
+                }
+            }, 1000);
+        }
+
+        // --- RENDER UI ---
+        function renderQuestion() {
+            const q = examData[currentQuestionIndex];
+            document.getElementById('current-q-num').innerText = currentQuestionIndex + 1;
+            document.getElementById('question-text').innerHTML = q.text;
+            
+            // Show image for question 1 as demo
+            document.getElementById('question-image-container').classList.toggle('hidden', currentQuestionIndex !== 0);
+
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            q.options.forEach((opt, index) => {
+                const isChecked = answers[currentQuestionIndex] === index;
+                const borderClass = isChecked ? 'border-brand bg-indigo-50 dark:bg-indigo-900/20' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50';
+                const iconClass = isChecked ? 'fa-circle-check text-brand' : 'fa-circle text-gray-300 dark:text-gray-600';
+
+                optionsContainer.innerHTML += `
+                    <label class="flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all ${borderClass}">
+                        <input type="radio" name="option" value="${index}" onchange="selectOption(${index})" class="hidden" ${isChecked ? 'checked' : ''}>
+                        <i class="fa-regular ${iconClass} text-xl mr-4"></i>
+                        <span class="text-gray-800 dark:text-gray-200 font-medium">${opt}</span>
+                    </label>
+                `;
+            });
+
+            renderMathInElement(optionsContainer, { delimiters: [{left: '\\(', right: '\\)', display: false}] });
+            document.getElementById('btn-prev').style.visibility = currentQuestionIndex === 0 ? 'hidden' : 'visible';
+            
+            const btnMark = document.getElementById('btn-mark');
+            if (markedForReview[currentQuestionIndex]) {
+                btnMark.className = 'px-4 py-2 border border-purple-600 text-white bg-purple-600 rounded-lg text-sm font-medium transition';
+                btnMark.innerHTML = '<i class="fa-solid fa-bookmark mr-1"></i> Marked';
+            } else {
+                btnMark.className = 'px-4 py-2 border border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 rounded-lg text-sm font-medium transition';
+                btnMark.innerHTML = '<i class="fa-regular fa-bookmark mr-1"></i> Mark';
+            }
+        }
+
+        // --- ACTIONS ---
+        function selectOption(index) {
+            answers[currentQuestionIndex] = index;
+            renderQuestion();
+            renderPalette();
+        }
+
+        function nextQuestion() {
+            if (currentQuestionIndex < examData.length - 1) {
+                currentQuestionIndex++;
+                visited[currentQuestionIndex] = true;
+                renderQuestion();
+                renderPalette();
+            } else {
+                openSubmitModal();
+            }
+        }
+
+        function prevQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                renderQuestion();
+                renderPalette();
+            }
+        }
+
+        function clearResponse() {
+            answers[currentQuestionIndex] = null;
+            renderQuestion();
+            renderPalette();
+        }
+
+        function markForReview() {
+            markedForReview[currentQuestionIndex] = !markedForReview[currentQuestionIndex];
+            renderQuestion();
+            renderPalette();
+        }
+
+        function renderPalette() {
+            const grid = document.getElementById('palette-grid');
+            grid.innerHTML = '';
+            examData.forEach((_, index) => {
+                let statusClass = 'p-not-visited';
+                if (visited[index]) statusClass = answers[index] !== null ? 'p-attempted' : 'p-unattempted';
+                if (markedForReview[index]) statusClass = 'p-marked';
+                if (index === currentQuestionIndex) statusClass += ' p-current';
+
+                const btn = document.createElement('button');
+                btn.className = `palette-btn ${statusClass}`;
+                btn.innerText = index + 1;
+                btn.onclick = () => {
+                    currentQuestionIndex = index;
+                    visited[currentQuestionIndex] = true;
+                    renderQuestion();
+                    renderPalette();
+                };
+                grid.appendChild(btn);
+            });
+        }
+
+        // --- CALCULATOR LOGIC ---
+        function toggleCalculator() {
+            document.getElementById('calculator').classList.toggle('hidden');
+            document.getElementById('calculator').classList.toggle('flex');
+        }
+        
+        function calcInput(val) {
+            const display = document.getElementById('calc-display');
+            if (display.value === '0' || display.value === 'Error') display.value = '';
+            display.value += val;
+        }
+        
+        function calcClear() {
+            document.getElementById('calc-display').value = '0';
+        }
+        
+        function calcCalculate() {
+            try {
+                const expr = document.getElementById('calc-display').value
+                    .replace(/sin\(/g, 'Math.sin(')
+                    .replace(/cos\(/g, 'Math.cos(')
+                    .replace(/tan\(/g, 'Math.tan(')
+                    .replace(/sqrt\(/g, 'Math.sqrt(');
+                const result = eval(expr);
+                document.getElementById('calc-display').value = result;
+            } catch {
+                document.getElementById('calc-display').value = 'Error';
+            }
+        }
+
+        // --- RAISE HAND / PROCTOR CHAT ---
+        function raiseHand() {
+            alert("✋ Proctor Notified!\n\nYour request has been sent to the exam administrator. Please stay on this screen. A proctor will assist you shortly.");
+        }
+
+        // --- SUBMIT & RESULT ---
+        function openSubmitModal() {
+            let attempted = 0;
+            answers.forEach(ans => { if (ans !== null) attempted++; });
+            document.getElementById('sum-attempted').innerText = attempted;
+            document.getElementById('sum-unattempted').innerText = examData.length - attempted;
+            document.getElementById('submit-modal').classList.remove('hidden');
+        }
+
+        function closeSubmitModal() {
+            document.getElementById('submit-modal').classList.add('hidden');
+        }
+
+        function finalSubmit() {
+            clearInterval(timerInterval);
+            examActive = false;
+            
+            if (webcamStream) webcamStream.getTracks().forEach(track => track.stop());
+            if (document.fullscreenElement) document.exitFullscreen().catch(err => console.log(err));
+
+            closeSubmitModal();
+            showUltimateResult();
+        }
+
+        // --- ULTIMATE RESULT & REVIEW ---
+        function showUltimateResult() {
+            document.getElementById('exam-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+
+            let correct = 0, wrong = 0, skipped = 0;
+
+            examData.forEach((q, index) => {
+                if (answers[index] === null) skipped++;
+                else if (answers[index] === q.correct) correct++;
+                else wrong++;
+            });
+
+            const totalAttempted = correct + wrong;
+            const accuracy = totalAttempted > 0 ? Math.round((correct / totalAttempted) * 100) : 0;
+            const score = correct * 4; // +4 for correct
+
+            document.getElementById('res-score').innerText = score;
+            document.getElementById('res-correct').innerText = correct;
+            document.getElementById('res-wrong').innerText = wrong;
+            document.getElementById('res-skipped').innerText = skipped;
+            document.getElementById('res-accuracy').innerText = `${accuracy}%`;
+            document.getElementById('accuracy-bar').style.width = `${accuracy}%`;
+
+            // AI Feedback
+            let feedback = "";
+            if (accuracy >= 80) feedback = "Exceptional performance! Your analytical and problem-solving skills are top-tier. Keep up the excellent work.";
+            else if (accuracy >= 50) feedback = "Good foundation. You understand the concepts well, but reviewing the detailed solutions will help you master them.";
+            else feedback = "Needs significant improvement. We highly recommend going through the 'Review Answers' section below to understand your mistakes.";
+
+            document.getElementById('ai-feedback').innerText = feedback;
+
+            // Proctor Logs injection
+            if (tabSwitchCount > 0) {
+                document.getElementById('proctor-logs-container').innerHTML = `
+                    <div class="flex gap-3 text-xs">
+                        <div class="text-red-500 mt-0.5"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div><p class="font-medium text-red-600">Tab Switch Detected</p><p class="text-gray-500">${tabSwitchCount} time(s)</p></div>
+                    </div>
+                `;
+            }
+
+            // Render Chart
+            const ctx = document.getElementById('scoreChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Correct', 'Wrong', 'Skipped'],
+                    datasets: [{
+                        data: [correct, wrong, skipped],
+                        backgroundColor: ['#22c55e', '#ef4444', '#cbd5e1'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: { cutout: '85%', plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
+            });
+
+            // Prepare Detailed Review Section
+            const reviewContainer = document.getElementById('review-container');
+            reviewContainer.innerHTML = '';
+            
+            examData.forEach((q, index) => {
+                const userAnswer = answers[index];
+                const isCorrect = userAnswer === q.correct;
+                
+                let statusBadge = '';
+                let borderClass = '';
+                
+                if (userAnswer === null) {
+                    statusBadge = '<span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">Skipped</span>';
+                    borderClass = 'border-gray-300';
+                } else if (isCorrect) {
+                    statusBadge = '<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold"><i class="fa-solid fa-check mr-1"></i> Correct</span>';
+                    borderClass = 'border-green-400';
+                } else {
+                    statusBadge = '<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold"><i class="fa-solid fa-xmark mr-1"></i> Incorrect</span>';
+                    borderClass = 'border-red-400';
+                }
+
+                let optionsHTML = '';
+                q.options.forEach((opt, optIndex) => {
+                    let optClass = 'text-gray-600 dark:text-gray-400';
+                    if (optIndex === q.correct) optClass = 'text-green-600 font-bold bg-green-50 dark:bg-green-900/20 p-1 rounded';
+                    else if (optIndex === userAnswer && !isCorrect) optClass = 'text-red-600 line-through bg-red-50 dark:bg-red-900/20 p-1 rounded';
+                    
+                    optionsHTML += `<div class="${optClass} py-1">${String.fromCharCode(65 + optIndex)}. ${opt}</div>`;
+                });
+
+                const reviewCard = `
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border-l-4 ${borderClass} shadow-sm border-y border-r dark:border-y-gray-700 dark:border-r-gray-700">
+                        <div class="flex justify-between items-start mb-3">
+                            <h4 class="font-bold text-gray-800 dark:text-white">Question ${index + 1}</h4>
+                            ${statusBadge}
+                        </div>
+                        <div class="text-sm text-gray-800 dark:text-gray-200 mb-4 font-medium">${q.text}</div>
+                        <div class="space-y-1 text-sm mb-4 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg">
+                            ${optionsHTML}
+                        </div>
+                        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 rounded-lg text-sm">
+                            <span class="font-bold text-blue-800 dark:text-blue-300"><i class="fa-solid fa-lightbulb mr-1"></i> Explanation:</span>
+                            <p class="text-blue-700 dark:text-blue-200 mt-1">${q.explanation}</p>
+                        </div>
+                    </div>
+                `;
+                reviewContainer.innerHTML += reviewCard;
+            });
+
+            // Render Math in Review
+            renderMathInElement(reviewContainer, { delimiters: [{left: '\\(', right: '\\)', display: false}] });
+        }
+
+        function toggleReviewMode() {
+            const section = document.getElementById('review-section');
+            section.classList.toggle('hidden');
+            if (!section.classList.contains('hidden')) {
+                section.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // --- EXTREME ANTI-CHEAT PROTOCOLS ---
+        function setupAntiCheat() {
+            // 1. Tab Switch Detection
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden && examActive) {
+                    tabSwitchCount++;
+                    if (tabSwitchCount >= 3) {
+                        alert("3 Tab Switches Detected! Exam terminated by AI Proctor.");
+                        finalSubmit();
+                    } else {
+                        alert(`⚠️ SECURITY WARNING ${tabSwitchCount}/3!\n\nDo not switch tabs. Your webcam and screen activity are being monitored.`);
+                    }
+                }
+            });
+
+            // 2. Fullscreen Exit Detection
+            document.addEventListener('fullscreenchange', () => {
+                if (!document.fullscreenElement && examActive) {
+                    document.getElementById('fs-warning').style.display = 'flex';
+                    examActive = false; // Pause anti-cheat to prevent loop
+                }
+            });
+
+            // 3. Disable Right Click
+            document.addEventListener('contextmenu', e => e.preventDefault());
+
+            // 4. Disable Copy / Paste / Cut
+            ['copy', 'paste', 'cut'].forEach(evt => 
+                document.addEventListener(evt, e => {
+                    e.preventDefault();
+                    alert("Copy/Paste is disabled during the exam!");
+                })
+            );
+
+            // 5. Disable specific keyboard shortcuts
+            document.addEventListener('keydown', e => {
+                if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'p', 's', 'u'].includes(e.key.toLowerCase())) {
+                    e.preventDefault();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
