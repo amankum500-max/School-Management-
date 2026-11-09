@@ -4,9 +4,29 @@
 
 {% block content %}
 
+<!-- TOP HEADER: Live Clock & Date Picker -->
+<div class="card" style="margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding: 0.8rem 1rem;">
+    <div>
+        <h2 style="margin:0; font-size:1.1rem; color:#1e293b;">Class Timetable</h2>
+        <div style="font-size:0.8rem; color:#64748b; margin-top:4px;">
+            📅 <span id="live-date"></span> | 🕒 <strong id="live-time" style="color:#3b82f6;"></strong>
+        </div>
+    </div>
+    
+    <!-- DATE PICKER: Date change karne par page reload hoga -->
+    <form method="GET" id="dateForm" style="margin:0;">
+        <input type="hidden" name="class" value="{{ selected_class }}">
+        <input type="hidden" name="section" value="{{ selected_section }}">
+        <input type="date" name="date" value="{{ selected_date }}" 
+               style="padding:0.4rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;" 
+               onchange="document.getElementById('dateForm').submit();">
+    </form>
+</div>
+
 <!-- Class selector -->
 <div class="card" style="margin-bottom:1rem;">
 <form method="GET" style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:end;">
+    <input type="hidden" name="date" value="{{ selected_date }}"> <!-- Date preserve karne ke liye -->
     <div>
         <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">
             Class-Section
@@ -67,17 +87,41 @@
             </td>
             {% for dnum, dname in days %}
                 {% set cell = grid.get((dnum, p)) %}
+                
+                <!-- CHECK: Kya teacher absent hai? (Backend se aayi list se match karenge) -->
+                {% set is_absent = (cell.staff_id in absent_teacher_ids) if cell and cell.staff_id else False %}
+                
                 <td style="padding:0.4rem; text-align:center; vertical-align:top;
-                    background:{{ '#eff6ff' if cell else 'white' }};">
+                    background:{{ '#fef2f2' if is_absent else ('#eff6ff' if cell else 'white') }};
+                    border-left: {{ '3px solid #ef4444' if is_absent else 'none' }};">
+                    
                     {% if cell and cell.subject %}
-                    <div style="font-weight:600; color:#1e293b; font-size:0.82rem;">
+                    <div style="font-weight:600; font-size:0.82rem; 
+                        color:{{ '#dc2626' if is_absent else '#1e293b' }};
+                        text-decoration:{{ 'line-through' if is_absent else 'none' }};">
                         {{ cell.subject }}
                     </div>
+                    
                     {% if cell.staff_name %}
-                    <div style="font-size:0.7rem; color:#64748b; margin-top:0.15rem;">
-                        {{ cell.staff_name }}
+                    <div style="font-size:0.7rem; margin-top:0.15rem;
+                        color:{{ '#dc2626' if is_absent else '#64748b' }};">
+                        👨‍🏫 {{ cell.staff_name }}
                     </div>
                     {% endif %}
+
+                    <!-- ABSENT WARNING & SUBSTITUTE BUTTON -->
+                    {% if is_absent %}
+                        <div style="margin-top: 6px;">
+                            <span style="background:#fee2e2; color:#991b1b; font-size:0.65rem; padding:2px 6px; border-radius:4px; font-weight:bold; display:block; margin-bottom:4px;">
+                                ⚠️ ABSENT
+                            </span>
+                            <button onclick="openSubModal('{{ cell.subject }}', '{{ cell.staff_name }}', '{{ dname }}', 'P{{ p }}')" 
+                                style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.7rem; cursor:pointer; width:100%;">
+                                Assign Sub
+                            </button>
+                        </div>
+                    {% endif %}
+                    
                     {% else %}
                     <span style="color:#cbd5e1;">—</span>
                     {% endif %}
@@ -89,5 +133,64 @@
 </table>
 </div>
 
+<!-- SUBSTITUTE MODAL (Popup) -->
+<div id="subModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:white; padding:1.5rem; border-radius:10px; width:90%; max-width:400px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3 style="margin:0; font-size:1.1rem; color:#1e293b;">Assign Substitute</h3>
+            <button onclick="closeSubModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;">&times;</button>
+        </div>
+        
+        <div style="background:#fef2f2; padding:0.8rem; border-radius:6px; margin-bottom:1rem; font-size:0.85rem; color:#991b1b;">
+            <strong>Class:</strong> {{ selected_class }}-{{ selected_section }}<br>
+            <strong>Period:</strong> <span id="modal-period"></span><br>
+            <strong>Subject:</strong> <span id="modal-subject"></span><br>
+            <strong>Absent Teacher:</strong> <span id="modal-teacher"></span>
+        </div>
+
+        <label style="font-size:0.8rem; color:#64748b;">Select Available Teacher:</label>
+        <select style="width:100%; padding:0.6rem; border:1px solid #cbd5e1; border-radius:6px; margin-top:0.3rem; margin-bottom:1rem;">
+            <option>Mr. Amit Kumar (Maths - Free)</option>
+            <option>Ms. Priya Sharma (Science - Free)</option>
+            <option>Mr. Rahul (English - Free)</option>
+        </select>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button onclick="closeSubModal()" style="padding:0.5rem 1rem; border:1px solid #cbd5e1; background:white; border-radius:6px; cursor:pointer;">Cancel</button>
+            <button style="padding:0.5rem 1rem; border:none; background:#3b82f6; color:white; border-radius:6px; cursor:pointer;">Confirm</button>
+        </div>
+    </div>
+</div>
+
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 1. Live Date & Time Logic
+    function updateClock() {
+        const now = new Date();
+        
+        // Date Format
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
+        document.getElementById('live-date').innerText = now.toLocaleDateString('en-IN', dateOptions);
+        
+        // Time Format
+        document.getElementById('live-time').innerText = now.toLocaleTimeString('en-IN');
+    }
+    setInterval(updateClock, 1000);
+    updateClock(); // Initial call
+
+    // 2. Modal Logic
+    function openSubModal(subject, teacher, day, period) {
+        document.getElementById('modal-subject').innerText = subject;
+        document.getElementById('modal-teacher').innerText = teacher;
+        document.getElementById('modal-period').innerText = day + ' - ' + period;
+        document.getElementById('subModal').style.display = 'flex';
+    }
+
+    function closeSubModal() {
+        document.getElementById('subModal').style.display = 'none';
+    }
+</script>
 {% endblock %}
