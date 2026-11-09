@@ -4,52 +4,68 @@
 
 {% block content %}
 
-<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem;">
+<!-- TOP HEADER: Live Clock & Back Button -->
+<div class="card" style="margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding: 0.8rem 1rem;">
     <div>
-        <a href="{{ url_for('staff.view', staff_id=teacher.id) }}"
-           style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Staff Profile</a>
+        <h2 style="margin:0; font-size:1.1rem; color:#1e293b;">Weekly Schedule</h2>
+        <div style="font-size:0.8rem; color:#64748b; margin-top:4px;">
+            📅 <span id="live-date"></span> | 🕒 <strong id="live-time" style="color:#3b82f6;"></strong>
+        </div>
     </div>
-    <button onclick="window.print()" class="btn"
-        style="font-size:0.85rem;">🖨️ Print</button>
+    
+    <div style="display:flex; gap:10px;">
+        <a href="{{ url_for('staff.view', staff_id=teacher.id) }}"
+           class="btn" style="background:#f1f5f9; color:#475569; text-decoration:none;">
+            ← Staff Profile
+        </a>
+        <button onclick="window.print()" class="btn" style="background:#1e293b; color:white;">
+            🖨️ Print
+        </button>
+    </div>
 </div>
 
-<div class="card" style="margin-bottom:1rem;">
-    <div style="font-size:0.85rem; color:#64748b;">
-        <strong style="color:#1e293b; text-transform:capitalize;">{{ teacher.role }}</strong>
+<!-- TEACHER INFO -->
+<div class="card" style="margin-bottom:1rem; border-left: 4px solid #3b82f6;">
+    <div style="font-size:0.9rem; color:#64748b;">
+        <strong style="color:#1e293b; text-transform:capitalize; font-size:1rem;">{{ teacher.name }}</strong> 
+        ({{ teacher.role }})
         {% if teacher.qualification %} • {{ teacher.qualification }}{% endif %}
     </div>
-    <div style="margin-top:0.35rem; font-size:0.82rem; color:#475569;">
-        Total slots: <strong>{{ grid|length }}</strong> per week
+    <div style="margin-top:0.35rem; font-size:0.85rem; color:#475569; display:flex; gap:15px;">
+        <span>Total slots: <strong style="color:#3b82f6;">{{ grid|length }}</strong> per week</span>
     </div>
 </div>
 
+<!-- TIMETABLE GRID -->
 <div class="card" style="padding:0; overflow:auto;">
-<table style="width:100%; border-collapse:collapse; font-size:0.82rem; min-width:700px;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:700px;">
     <thead>
         <tr style="background:#1e293b; color:white;">
-            <th style="padding:0.6rem; text-align:left; width:80px;">Period</th>
+            <th style="padding:0.7rem; text-align:left; width:90px;">Period</th>
             {% for dnum, dname in days %}
-            <th style="padding:0.6rem; text-align:center;">{{ dname }}</th>
+            <th style="padding:0.7rem; text-align:center;">{{ dname }}</th>
             {% endfor %}
         </tr>
     </thead>
     <tbody>
         {% for p in periods %}
         <tr style="border-top:1px solid #e2e8f0;">
-            <td style="padding:0.5rem; background:#f8fafc; font-weight:700; color:#475569;">
+            <td style="padding:0.6rem; background:#f8fafc; font-weight:700; color:#475569; text-align:center;">
                 P{{ p }}
             </td>
             {% for dnum, dname in days %}
                 {% set cell = grid.get((dnum, p)) %}
                 <td style="padding:0.5rem; text-align:center; vertical-align:top;
-                    background:{{ '#f0f9ff' if cell else 'white' }};">
+                    background:{{ '#eff6ff' if cell else 'white' }};">
                     {% if cell %}
-                    <div style="font-weight:600; color:#1e293b;">{{ cell.subject }}</div>
-                    <div style="font-size:0.7rem; color:#64748b; margin-top:0.15rem;">
+                    <div style="font-weight:600; color:#1e293b; font-size:0.9rem;">
+                        {{ cell.subject }}
+                    </div>
+                    <div style="font-size:0.75rem; color:#64748b; margin-top:0.2rem; background:#e2e8f0; display:inline-block; padding:2px 6px; border-radius:4px;">
                         {{ cell.class_name }}{% if cell.section %}-{{ cell.section }}{% endif %}
                     </div>
                     {% else %}
-                    <span style="color:#e2e8f0;">—</span>
+                    <span style="color:#cbd5e1;">—</span>
                     {% endif %}
                 </td>
             {% endfor %}
@@ -59,9 +75,32 @@
 </table>
 </div>
 
-<div class="card" style="margin-top:1rem; background:#fef3c7; border-left:3px solid #f59e0b;
-    font-size:0.85rem; color:#92400e;">
-    ⚠️ <strong>Conflict check:</strong> Ek teacher ko same day+period pe do classes mein assign na karo.
-    Save karte waqt conflict detect nahi hota — manually verify karo (ya next phase mein add hoga).
+<!-- CONFLICT WARNING -->
+<div class="card" style="margin-top:1rem; background:#fffbeb; border-left:4px solid #f59e0b;
+    font-size:0.85rem; color:#92400e; display:flex; gap:10px; align-items:start;">
+    <div style="font-size:1.2rem;">⚠️</div>
+    <div>
+        <strong>Conflict check:</strong> Ek teacher ko same day+period pe do classes mein assign na karo.
+        Save karte waqt conflict detect nahi hota — manually verify karo (ya next phase mein add hoga).
+    </div>
 </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Live Date & Time Logic
+    function updateClock() {
+        const now = new Date();
+        
+        // Date Format
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
+        document.getElementById('live-date').innerText = now.toLocaleDateString('en-IN', dateOptions);
+        
+        // Time Format
+        document.getElementById('live-time').innerText = now.toLocaleTimeString('en-IN');
+    }
+    setInterval(updateClock, 1000);
+    updateClock(); // Initial call
+</script>
 {% endblock %}
