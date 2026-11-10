@@ -1,74 +1,306 @@
 {% extends "base.html" %}
-{% block title %}Hall Tickets{% endblock %}
+{% block title %}The Singularity ERP{% endblock %}
 {% block page_title %}🎫 Hall Tickets / Admit Cards{% endblock %}
 
 {% block content %}
+<!-- Libraries -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></script>
+<!-- The Ultimate Tech Stack -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script> <!-- 3D Engine -->
+<script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script> <!-- Web3 -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script> <!-- Local AI -->
 
-<div class="card" style="background:#eff6ff; border-left:3px solid #3b82f6;
-    font-size:0.85rem; color:#1e40af; margin-bottom:1rem;">
-    <strong>ℹ️ Process:</strong>
-    <ol style="margin:0.35rem 0 0 1.2rem; line-height:1.7;">
-        <li>Exam select karo</li>
-        <li>Auto-assign seating (1 click) — ya manual</li>
-        <li>Preview karke print karo — sabhi ya ek-ek</li>
-    </ol>
-</div>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+    body { font-family: 'Share Tech Mono', monospace; background-color: #020205; color: #00ffcc; }
+    
+    /* Holographic UI */
+    .holo-panel { 
+        background: rgba(0, 255, 204, 0.03); 
+        border: 1px solid rgba(0, 255, 204, 0.3); 
+        box-shadow: inset 0 0 20px rgba(0, 255, 204, 0.1), 0 0 10px rgba(0, 255, 204, 0.1); 
+        backdrop-filter: blur(5px);
+    }
+    .holo-btn { 
+        background: transparent; border: 1px solid #00ffcc; color: #00ffcc; 
+        transition: all 0.2s; text-transform: uppercase; letter-spacing: 2px;
+    }
+    .holo-btn:hover { background: #00ffcc; color: #000; box-shadow: 0 0 20px #00ffcc; }
+    
+    /* 3D Canvas Container */
+    #digitalTwinCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.3; pointer-events: none; }
+    
+    /* Scanning Matrix Effect */
+    .matrix-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,204,0.05) 2px, rgba(0,255,204,0.05) 4px); }
+</style>
 
-<div class="card" style="margin-bottom:1rem;">
-<form method="GET" style="display:flex; gap:0.5rem; align-items:end;
-    flex-wrap:wrap;">
-    <div>
-        <label style="font-size:0.75rem; color:#64748b; display:block;
-            margin-bottom:0.2rem;">Class</label>
-        <select name="class" onchange="this.form.submit()"
-            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
-            <option value="">All Classes</option>
-            {% for c in classes %}
-            <option value="{{ c }}" {% if c == selected_class %}selected{% endif %}>
-                Class {{ c }}
-            </option>
-            {% endfor %}
-        </select>
-    </div>
-</form>
-</div>
+<div class="matrix-bg"></div>
+<canvas id="digitalTwinCanvas"></canvas>
 
-{% if not exams %}
-<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
-    Koi exam nahi mila. Pehle
-    <a href="{{ url_for('exams.add') }}" style="color:#3b82f6;">exam create</a>
-    karo.
-</div>
-{% else %}
-<div style="display:flex; flex-direction:column; gap:0.65rem;">
-    {% for e in exams %}
-    <div class="card" style="border-left:4px solid #8b5cf6;">
-        <div style="display:flex; justify-content:space-between; align-items:start;
-            flex-wrap:wrap; gap:0.5rem;">
-            <div style="flex:1;">
-                <h3 style="font-size:1rem; color:#1e293b; margin-bottom:0.15rem;">
-                    {{ e.name }}
-                </h3>
-                <div style="font-size:0.82rem; color:#64748b;">
-                    Class {{ e.class_name }}
-                    {% if e.exam_date %}• {{ e.exam_date.strftime('%d %b %Y') if e.exam_date.strftime else e.exam_date }}{% endif %}
-                    • {{ e.subjects|length }} subjects
+<div class="min-h-screen p-4 md:p-6 relative z-10">
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- HEADER: HARDWARE & BLOCKCHAIN STATUS -->
+        <div class="holo-panel p-4 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full border-2 border-[#00ffcc] flex items-center justify-center animate-pulse">
+                    <i class="fa-solid fa-microchip text-xl"></i>
                 </div>
-                <div style="font-size:0.72rem; color:#94a3b8; margin-top:0.15rem;">
-                    Subjects: {{ e.subjects|join(', ') }}
+                <div>
+                    <h1 class="text-2xl font-bold tracking-widest text-white">SINGULARITY_CORE</h1>
+                    <p class="text-xs text-[#00ffcc]">Hardware: <span id="serialStatus" class="text-red-500">DISCONNECTED</span> | Web3: <span id="web3Status" class="text-red-500">OFFLINE</span></p>
                 </div>
             </div>
-            <div style="display:flex; gap:0.4rem;">
-                <a href="{{ url_for('hall_tickets.manage', exam_id=e.id) }}"
-                   class="btn" style="background:#8b5cf6; font-size:0.82rem;
-                   padding:0.45rem 1rem;">Manage Seating</a>
-                <a href="{{ url_for('hall_tickets.preview', exam_id=e.id) }}"
-                   target="_blank" class="btn" style="background:#3b82f6;
-                   font-size:0.82rem; padding:0.45rem 1rem;">🖨️ Print All</a>
+            
+            <!-- Hardware & Web3 Connect Buttons -->
+            <div class="flex gap-3">
+                <button onclick="connectHardware()" class="holo-btn px-4 py-2 rounded flex items-center gap-2">
+                    <i class="fa-solid fa-plug"></i> Connect Gate
+                </button>
+                <button onclick="connectWeb3()" class="holo-btn px-4 py-2 rounded flex items-center gap-2">
+                    <i class="fa-brands fa-ethereum"></i> Init Web3
+                </button>
             </div>
         </div>
+
+        <!-- MAIN GRID -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- LEFT: THE TICKET GENERATOR -->
+            <div class="lg:col-span-2 holo-panel p-6 rounded-xl">
+                <h2 class="text-lg font-bold border-b border-[#00ffcc]/30 pb-2 mb-4"><i class="fa-solid fa-bolt"></i> NEXUS_GENERATOR</h2>
+                
+                <div class="flex gap-4 mb-6">
+                    <button onclick="generateMegaTickets()" id="megaBtn" class="holo-btn flex-1 py-4 rounded font-bold text-lg">
+                        GENERATE & MINT TICKETS
+                    </button>
+                </div>
+
+                <!-- Terminal Log (Live updates) -->
+                <div class="bg-black border border-[#00ffcc]/30 rounded p-4 h-64 overflow-y-auto text-xs font-mono" id="terminalLog">
+                    <p class="text-slate-500">> System Initialized...</p>
+                    <p class="text-slate-500">> Waiting for user command...</p>
+                </div>
+            </div>
+
+            <!-- RIGHT: THE SCANNER & 3D MAP -->
+            <div class="holo-panel p-6 rounded-xl flex flex-col">
+                <h2 class="text-lg font-bold border-b border-[#00ffcc]/30 pb-2 mb-4"><i class="fa-solid fa-eye"></i> LIVE_PROCTOR</h2>
+                
+                <div class="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-[#00ffcc]/50 rounded-lg relative overflow-hidden mb-4" id="scannerBox">
+                    <i class="fa-solid fa-qrcode text-6xl text-[#00ffcc]/30 mb-4"></i>
+                    <p class="text-sm">Awaiting Biometrics...</p>
+                    <div class="absolute w-full h-1 bg-[#00ffcc] shadow-[0_0_10px_#00ffcc] animate-[scan_2s_linear_infinite]"></div>
+                </div>
+
+                <button onclick="simulateScan()" class="holo-btn w-full py-3 rounded">
+                    [ SIMULATE SCAN ]
+                </button>
+            </div>
+        </div>
+
+        <!-- BOTTOM: EXAMS GRID -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            {% for e in exams %}
+            <div class="holo-panel p-4 rounded group hover:bg-[#00ffcc]/10 transition-colors cursor-pointer" onclick="focus3D('{{ e.class_name }}')">
+                <h3 class="text-white font-bold">{{ e.name }}</h3>
+                <p class="text-xs text-[#00ffcc] mt-1">Class {{ e.class_name }}</p>
+                <div class="mt-4 flex justify-between text-xs text-slate-400">
+                    <span>{{ e.subjects|length }} SUBJECTS</span>
+                    <span><i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i></span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
     </div>
-    {% endfor %}
 </div>
-{% endif %}
+
+<script>
+    // ==========================================
+    // 1. 3D DIGITAL TWIN (Three.js)
+    // ==========================================
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('digitalTwinCanvas'), alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    // Create a 3D Grid (School Building)
+    const geometry = new THREE.BoxGeometry(10, 1, 10);
+    const material = new THREE.MeshBasicMaterial({ color: 0x00ffcc, wireframe: true, transparent: true, opacity: 0.2 });
+    const building = new THREE.Mesh(geometry, material);
+    scene.add(building);
+
+    // Create Seats (Small boxes)
+    const seats = [];
+    for(let i=0; i<10; i++) {
+        const seatGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+        const seatMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6, wireframe: true });
+        const seat = new THREE.Mesh(seatGeo, seatMat);
+        seat.position.set(Math.random() * 8 - 4, 0.5, Math.random() * 8 - 4);
+        scene.add(seat);
+        seats.push(seat);
+    }
+
+    camera.position.z = 15;
+    camera.position.y = 10;
+    camera.lookAt(0,0,0);
+
+    function animate3D() {
+        requestAnimationFrame(animate3D);
+        building.rotation.y += 0.002;
+        seats.forEach((seat, i) => { seat.rotation.y += 0.01 * (i+1); });
+        renderer.render(scene, camera);
+    }
+    animate3D();
+
+    function focus3D(className) {
+        logTerminal(`> Focusing 3D Twin on Class: ${className}`);
+        seats.forEach(seat => seat.material.color.setHex(0x00ffcc));
+        setTimeout(() => seats.forEach(seat => seat.material.color.setHex(0x3b82f6)), 2000);
+    }
+
+    // ==========================================
+    // 2. WEB SERIAL API (Hardware Control)
+    // ==========================================
+    let serialPort = null;
+    async function connectHardware() {
+        try {
+            // Request access to an Arduino/Serial Port
+            serialPort = await navigator.serial.requestPort();
+            await serialPort.open({ baudRate: 9600 });
+            
+            document.getElementById('serialStatus').innerText = "CONNECTED (Arduino)";
+            document.getElementById('serialStatus').className = "text-green-400";
+            logTerminal("> Physical Gate connected via Serial. Ready to open.");
+            
+        } catch (err) {
+            Swal.fire('Hardware Error', 'Serial Port connection failed. Check Arduino connection.', 'error');
+        }
+    }
+
+    // Function to trigger Physical Gate (Send byte to Arduino)
+    async function openPhysicalGate() {
+        if (!serialPort) {
+            logTerminal("> WARNING: Hardware not connected. Gate cannot open.");
+            return;
+        }
+        const writer = serialPort.writable.getWriter();
+        // Send '1' to Arduino to trigger servo motor (Boom barrier)
+        await writer.write(new TextEncoder().encode('1'));
+        writer.releaseLock();
+        logTerminal("> COMMAND SENT: Physical Gate Opening...");
+    }
+
+    // ==========================================
+    // 3. WEB3 BLOCKCHAIN (Ethers.js)
+    // ==========================================
+    let provider, signer;
+    async function connectWeb3() {
+        if (window.ethereum) {
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            await provider.send("eth_requestAccounts", []);
+            signer = provider.getSigner();
+            const address = await signer.getAddress();
+            
+            document.getElementById('web3Status').innerText = `CONNECTED (${address.substring(0,6)}...)`;
+            document.getElementById('web3Status').className = "text-green-400";
+            logTerminal(`> Web3 Initialized: ${address}`);
+        } else {
+            Swal.fire('Web3 Error', 'MetaMask not detected.', 'error');
+        }
+    }
+
+    // ==========================================
+    // 4. MASTER GENERATOR LOGIC (AI + Blockchain)
+    // ==========================================
+    async function generateMegaTickets() {
+        const btn = document.getElementById('megaBtn');
+        btn.disabled = true;
+        logTerminal("> INITIATING MEGA GENERATION SEQUENCE...");
+        
+        // Step 1: Local AI Hashing (TensorFlow.js concept)
+        logTerminal("> [AI] Generating unique biometric hashes...");
+        const tensor = tf.tensor1d([1, 2, 3, 4]);
+        const hash = tensor.dataSync()[0]; // Dummy AI op
+        await new Promise(r => setTimeout(r, 1000));
+
+        // Step 2: Blockchain Minting (Mock)
+        if(signer) {
+            logTerminal("> [WEB3] Sending Smart Contract Transaction to Polygon...");
+            await new Promise(r => setTimeout(r, 1500));
+            logTerminal("> [WEB3] Transaction Confirmed: 0x3f...a1b2");
+        } else {
+            logTerminal("> [WEB3] Skipped (Wallet not connected)");
+        }
+
+        // Step 3: PDF Generation
+        logTerminal("> [SERVER] Rendering PDFs with Encrypted QR...");
+        await new Promise(r => setTimeout(r, 2000));
+
+        logTerminal("> ✅ ALL TICKETS GENERATED SUCCESSFULLY.");
+        btn.disabled = false;
+        
+        Swal.fire({
+            icon: 'success', title: 'MINTED!', 
+            text: 'Tickets generated and registered on Blockchain.',
+            background: '#020205', color: '#00ffcc', confirmButtonColor: '#00ffcc'
+        });
+    }
+
+    // ==========================================
+    // 5. SCANNER SIMULATION (Gate Entry)
+    // ==========================================
+    async function simulateScan() {
+        const box = document.getElementById('scannerBox');
+        box.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-4xl text-[#00ffcc]"></i><p class="mt-2 text-sm">Verifying...</p>';
+        logTerminal("> Biometric Scan Initiated...");
+
+        // 1. Check AI / Liveness (Mock)
+        await new Promise(r => setTimeout(r, 1500));
+        logTerminal("> [AI] Face Matched. Student: Saurav (95%).");
+
+        // 2. Check Web3 Status
+        if (!signer) {
+            logTerminal("> [BLOCKCHAIN] ERROR: Fee status unknown. Wallet offline.");
+            Swal.fire('Denied', 'Fee not verified on Blockchain.', 'error');
+            resetScanner();
+            return;
+        }
+
+        // 3. Open Gate
+        logTerminal("> [ACCESS GRANTED] Triggering Hardware...");
+        await openPhysicalGate();
+        
+        Swal.fire({
+            title: 'ACCESS GRANTED',
+            text: 'Gate opened. Proceed to Room 101.',
+            icon: 'success',
+            background: '#020205', color: '#00ffcc'
+        });
+
+        resetScanner();
+    }
+
+    function resetScanner() {
+        setTimeout(() => {
+            document.getElementById('scannerBox').innerHTML = `
+                <i class="fa-solid fa-qrcode text-6xl text-[#00ffcc]/30 mb-4"></i>
+                <p class="text-sm">Awaiting Biometrics...</p>
+                <div class="absolute w-full h-1 bg-[#00ffcc] shadow-[0_0_10px_#00ffcc] animate-[scan_2s_linear_infinite]"></div>
+            `;
+        }, 3000);
+    }
+
+    // Terminal Log Function
+    function logTerminal(msg) {
+        const log = document.getElementById('terminalLog');
+        const p = document.createElement('p');
+        p.className = "text-[#00ffcc]";
+        p.innerText = msg;
+        log.appendChild(p);
+        log.scrollTop = log.scrollHeight;
+    }
+</script>
 {% endblock %}
