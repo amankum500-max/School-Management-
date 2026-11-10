@@ -1,10 +1,69 @@
-<div class="row">
-   <div class="col-md-4">
-       <div class="card">
-           <h5>Total Hall Tickets</h5>
-           <h2>1,250</h2>
-       </div>
-   </div>
-   <!-- Chart container -->
-   <canvas id="hallTicketChart"></canvas>
+<!-- Analytics Cards (Tailwind CSS matching your index.html) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    
+    <!-- Card 1: Total Exams -->
+    <div class="bg-[#111] border border-[#00ffcc]/50 p-4 rounded shadow-lg shadow-[#00ffcc]/10">
+        <h5 class="text-gray-400 text-sm">Total Exams</h5>
+        <h2 class="text-2xl font-bold text-[#00ffcc]">
+            {{ stats.total_exams if stats else '0' }}
+        </h2>
+    </div>
+
+    <!-- Card 2: Tickets Generated -->
+    <div class="bg-[#111] border border-[#00ffcc]/50 p-4 rounded shadow-lg shadow-[#00ffcc]/10">
+        <h5 class="text-gray-400 text-sm">Tickets Generated</h5>
+        <h2 class="text-2xl font-bold text-[#00ffcc]">
+            {{ stats.total_tickets if stats else '0' }}
+        </h2>
+    </div>
+
+    <!-- Card 3: Tickets Printed -->
+    <div class="bg-[#111] border border-[#00ffcc]/50 p-4 rounded shadow-lg shadow-[#00ffcc]/10">
+        <h5 class="text-gray-400 text-sm">Tickets Printed</h5>
+        <h2 class="text-2xl font-bold text-[#00ffcc]">
+            {{ stats.printed_tickets if stats else '0' }}
+        </h2>
+    </div>
 </div>
+
+<!-- Chart Area -->
+<div class="bg-[#111] border border-[#00ffcc]/50 p-6 rounded shadow-lg shadow-[#00ffcc]/10 mt-4">
+    <h4 class="text-white mb-4">Ticket Stats Overview</h4>
+    <canvas id="hallTicketChart" height="80"></canvas>
+</div>
+
+<!-- Chart.js Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const ctx = document.getElementById('hallTicketChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Generated', 'Printed', 'Pending'],
+                datasets: [{
+                    label: 'Hall Tickets',
+                    // Yahan backend se aaya data use ho raha hai
+                    data: [
+                        {{ stats.total_tickets if stats else 0 }}, 
+                        {{ stats.printed_tickets if stats else 0 }}, 
+                        0 
+                    ],
+                    backgroundColor: ['#00ffcc', '#00ccaa', '#ff0055'],
+                    borderColor: ['#00ffcc', '#00ccaa', '#ff0055'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { labels: { color: '#ffffff' } }
+                },
+                scales: {
+                    y: { ticks: { color: '#aaaaaa' }, grid: { color: '#333333' } },
+                    x: { ticks: { color: '#aaaaaa' }, grid: { color: '#333333' } }
+                }
+            }
+        });
+    });
+</script>
