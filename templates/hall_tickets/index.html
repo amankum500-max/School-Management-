@@ -16,5 +16,7 @@
     <!-- Buttons to open new pages -->
     <a href="{{ url_for('hall_tickets.scanner') }}" class="holo-btn">Open AI Scanner</a>
     <a href="{{ url_for('hall_tickets.bulk_generate') }}" class="holo-btn">Bulk Generate PDF</a>
+<!-- Modals -->
+{% include 'hall_tickets/components/_modals.html' %}
 </div>
 {% endblock %}
