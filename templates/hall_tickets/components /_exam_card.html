@@ -1,11 +1,47 @@
-<div class="exam-card-container" style="border: 1px solid black; padding: 20px;">
-    <h3>ABC Public School</h3>
-    <hr>
-    <p><strong>Student Name:</strong> {{ student.name }}</p>
-    <p><strong>Roll No:</strong> {{ student.roll_no }}</p>
-    <!-- Table for exam schedule -->
-    <table class="table">
-        <tr><th>Subject</th><th>Date</th><th>Time</th></tr>
-        <tr><td>Maths</td><td>10-Oct-2023</td><td>9:00 AM</td></tr>
-    </table>
+<!-- templates/hall_tickets/print.html -->
+<div class="exam-card-container bg-white text-black p-8 border-2 border-gray-800 max-w-2xl mx-auto mt-10">
+    <div class="text-center mb-4">
+        <!-- Dynamic School Name -->
+        <h2 class="text-3xl font-bold uppercase">{{ school.school_name if school else 'ABC Public School' }}</h2>
+        <p class="text-gray-600">Hall Ticket - {{ exam.name }}</p>
+    </div>
+    
+    <hr class="border-gray-400 mb-4">
+
+    <!-- Student Details (Yeh loop chalega kyunki ek exam mein multiple students honge) -->
+    {% for student in students %}
+    <div class="mb-6 border-b border-gray-300 pb-6 page-break-after">
+        <div class="flex justify-between mb-4">
+            <p><strong>Student Name:</strong> {{ student.name }}</p>
+            <p><strong>Roll No:</strong> {{ student.roll_no }}</p>
+            <p><strong>Class:</strong> {{ exam.class_name }}</p>
+        </div>
+        
+        <!-- Table for exam schedule -->
+        <table class="w-full border-collapse border border-gray-400 mt-2">
+            <thead>
+                <tr class="bg-gray-200">
+                    <th class="border border-gray-400 p-2 text-left">Subject</th>
+                    <th class="border border-gray-400 p-2 text-left">Date</th>
+                    <th class="border border-gray-400 p-2 text-left">Room / Seat</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Subjects loop (exam.subjects se data aayega) -->
+                {% for subject in exam.subjects %}
+                <tr>
+                    <td class="border border-gray-400 p-2">{{ subject }}</td>
+                    <td class="border border-gray-400 p-2">{{ exam.exam_date }}</td>
+                    <!-- Yahan student ki seat detail aayegi (agar manage page se set ki ho) -->
+                    <td class="border border-gray-400 p-2">-</td> 
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endfor %}
+
+    <div class="text-center mt-8 text-sm text-gray-500">
+        Principal Signature: ___________________
+    </div>
 </div>
