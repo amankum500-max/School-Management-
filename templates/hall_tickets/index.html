@@ -9,14 +9,22 @@
     <!-- Exams Grid (Cards) -->
     <div class="grid grid-cols-3 gap-4 mt-6">
         {% for e in exams %}
-            {% include 'hall_tickets/components/_exam_card.html' %}
+            <!-- FIX 1: exam=e add kiya gaya hai taaki card component mein error na aaye -->
+            {% with exam=e %}
+                {% include 'hall_tickets/components/_exam_card.html' %}
+            {% endwith %}
         {% endfor %}
     </div>
     
     <!-- Buttons to open new pages -->
-    <a href="{{ url_for('hall_tickets.scanner') }}" class="holo-btn">Open AI Scanner</a>
-    <a href="{{ url_for('hall_tickets.bulk_generate') }}" class="holo-btn">Bulk Generate PDF</a>
-<!-- Modals -->
-{% include 'hall_tickets/components/_modals.html' %}
+    <div class="mt-8 mb-4 flex gap-4">
+        <!-- FIX 2: url_for hata kar # lagaya hai, kyunki backend mein in routes ke functions nahi hain abhi -->
+        <a href="#" class="holo-btn">Open AI Scanner</a>
+        <a href="#" class="holo-btn">Bulk Generate PDF</a>
+    </div>
+
+    <!-- Modals -->
+    {% include 'hall_tickets/components/_modals.html' %}
+    
 </div>
 {% endblock %}
