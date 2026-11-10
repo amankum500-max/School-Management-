@@ -17,7 +17,7 @@ report_cards_bp = Blueprint("report_cards", __name__,
 
 CONDUCT_OPTIONS = ["Excellent", "Good", "Satisfactory", "Needs Improvement"]
 
-# Gemini AI Client (Ensure GEMINI_API_KEY is in .env)
+# Gemini AI Client
 ai_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 
@@ -62,9 +62,19 @@ def index():
     summary = []
     if class_name:
         try:
-            summary = get_class_report_card_summary(class_name, ay)
+            # Database se data fetch karein
+            db_summary = get_class_report_card_summary(class_name, ay)
+            
+            # 🚨 FIX: Agar database se None aaye, toh usko empty list [] banayein
+            if db_summary is not None:
+                summary = db_summary
+            else:
+                summary = []
+                
         except Exception as e:
-            flash(f"Report card summary load nahi hui: {e}", "error")
+            # 🚨 FIX: Agar database error aaye toh app crash na ho
+            print(f"Database Error in Report Card Index: {e}")
+            flash("Database se data fetch karne mein error aaya. Pehle marks enter karein.", "error")
             summary = []
 
     return render_template(
@@ -93,11 +103,10 @@ def view(student_id):
         flash("Report card data nahi mila. Exam marks check karo.", "error")
         return redirect(url_for("report_cards.index", ay=ay))
 
-    # 🚨 CHART FIX: Ensure all_subjects and subject_averages exist for view.html
+    # CHART FIX: Ensure all_subjects and subject_averages exist for view.html
     if 'subject_averages' not in report:
         report['subject_averages'] = {}
     if 'all_subjects' not in report:
-        # Agar database se list nahi aa rahi, toh averages ki keys se bana lo
         report['all_subjects'] = list(report['subject_averages'].keys())
 
     return render_template(
@@ -173,6 +182,8 @@ def bulk_print():
 
     try:
         summary = get_class_report_card_summary(class_name, ay)
+        if summary is None:
+            summary = []
     except Exception as e:
         flash(f"Class summary load error: {e}", "error")
         return redirect(url_for("report_cards.index", ay=ay))
@@ -237,5 +248,5 @@ def generate_ai_remark():
         )
         return jsonify({"remark": response.text.strip()})
     except Exception as e:
-        print(f"Gemini AI Error: {e}") # For debugging in terminal
+        print(f"Gemini AI Error: {e}")
         return jsonify({"error": "Failed to generate AI remark"}), 500
