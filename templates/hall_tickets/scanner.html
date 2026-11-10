@@ -1,1 +1,20 @@
+{% extends "base.html" %}
+{% block title %}AI Gate Scanner{% endblock %}
 
+{% block content %}
+<div class="bg-black h-screen flex flex-col items-center justify-center relative">
+    <h2 class="text-[#00ffcc] text-2xl absolute top-10">LIVE BIOMETRIC SCANNER</h2>
+    
+    <!-- Camera View -->
+    <div class="relative w-full max-w-2xl border-4 border-[#00ffcc] rounded-xl overflow-hidden">
+        <video id="webcam" autoplay playsinline class="w-full"></video>
+        <canvas id="output_canvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+    </div>
+    
+    <a href="{{ url_for('hall_tickets.index') }}" class="mt-8 text-white bg-red-600 px-6 py-2 rounded">Close Scanner</a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <!-- MediaPipe ka JavaScript yahan aayega -->
+{% endblock %}
