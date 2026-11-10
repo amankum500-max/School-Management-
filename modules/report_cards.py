@@ -1,7 +1,9 @@
 from flask import (
     Blueprint, render_template, request, redirect,
-    url_for, flash, session, abort
+    url_for, flash, session, abort, jsonify
 )
+import os
+from google import genai
 from modules.auth import login_required, role_required
 from database import (
     get_student_year_report, save_report_card_remarks,
@@ -15,12 +17,14 @@ report_cards_bp = Blueprint("report_cards", __name__,
 
 CONDUCT_OPTIONS = ["Excellent", "Good", "Satisfactory", "Needs Improvement"]
 
+# Gemini AI Client (Ensure GEMINI_API_KEY is in .env)
+ai_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+
 
 # ---------------------------------------------------------------------------
 # Helpers (validation)
 # ---------------------------------------------------------------------------
 def _safe_academic_year(raw_ay):
-    """Validate academic year against allowed options, else fallback."""
     ay = (raw_ay or "").strip()
     allowed = get_academic_year_options() or []
     if ay and ay in allowed:
@@ -29,7 +33,6 @@ def _safe_academic_year(raw_ay):
 
 
 def _safe_class(raw_class):
-    """Validate class name against allowed classes, else return ''."""
     class_name = (raw_class or "").strip()
     if not class_name:
         return ""
@@ -40,7 +43,6 @@ def _safe_class(raw_class):
 
 
 def _safe_conduct(raw_conduct):
-    """Validate conduct against allowed options, else default 'Good'."""
     conduct = (raw_conduct or "").strip()
     if conduct in CONDUCT_OPTIONS:
         return conduct
@@ -91,6 +93,13 @@ def view(student_id):
         flash("Report card data nahi mila. Exam marks check karo.", "error")
         return redirect(url_for("report_cards.index", ay=ay))
 
+    # 🚨 CHART FIX: Ensure all_subjects and subject_averages exist for view.html
+    if 'subject_averages' not in report:
+        report['subject_averages'] = {}
+    if 'all_subjects' not in report:
+        # Agar database se list nahi aa rahi, toh averages ki keys se bana lo
+        report['all_subjects'] = list(report['subject_averages'].keys())
+
     return render_template(
         "report_cards/view.html",
         r=report,
@@ -112,7 +121,6 @@ def print_view(student_id):
         flash(f"Print view load error: {e}", "error")
         return redirect(url_for("report_cards.index", ay=ay))
 
-    # Consistent behaviour with `view` — flash + redirect instead of 404
     if not report:
         flash("Report card data nahi mila. Exam marks check karo.", "error")
         return redirect(url_for("report_cards.index", ay=ay))
@@ -129,7 +137,6 @@ def save_remarks(student_id):
     principal_remark = (request.form.get("principal_remark") or "").strip()
     conduct = _safe_conduct(request.form.get("conduct"))
 
-    # Optional guard — student exist karta hai?
     try:
         student = get_student(student_id)
     except Exception as e:
@@ -147,21 +154,16 @@ def save_remarks(student_id):
         )
     except Exception as e:
         flash(f"Remarks save nahi ho paye: {e}", "error")
-        return redirect(url_for(
-            "report_cards.view", student_id=student_id, ay=ay
-        ))
+        return redirect(url_for("report_cards.view", student_id=student_id, ay=ay))
 
     flash("Remarks save ho gaye", "success")
-    return redirect(url_for(
-        "report_cards.view", student_id=student_id, ay=ay
-    ))
+    return redirect(url_for("report_cards.view", student_id=student_id, ay=ay))
 
 
 @report_cards_bp.route("/bulk-print")
 @login_required
 @role_required("super_admin", "admin")
 def bulk_print():
-    """Class ke saare students ke report cards ek page pe."""
     class_name = _safe_class(request.args.get("class"))
     ay = _safe_academic_year(request.args.get("ay"))
 
@@ -176,15 +178,11 @@ def bulk_print():
         return redirect(url_for("report_cards.index", ay=ay))
 
     reports = []
-    # NOTE: agar bahut students hain to yahan N+1 ho sakta hai.
-    # Recommended: database.py mein `get_students_year_reports_bulk`
-    # banao aur ek hi call mein saara data laao.
     try:
-        from database import get_students_year_reports_bulk  # type: ignore
+        from database import get_students_year_reports_bulk
         student_ids = [s["student_id"] for s in summary]
         reports = get_students_year_reports_bulk(student_ids, ay) or []
     except ImportError:
-        # Fallback: per-student loop (agar bulk helper abhi nahi hai)
         for s in summary:
             try:
                 r = get_student_year_report(s["student_id"], ay)
@@ -202,3 +200,42 @@ def bulk_print():
         ay=ay,
         class_name=class_name,
     )
+
+# ---------------------------------------------------------------------------
+# 🤖 AI GENERATION API ROUTE
+# ---------------------------------------------------------------------------
+@report_cards_bp.route("/api/generate-ai", methods=["POST"])
+@login_required
+def generate_ai_remark():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid request"}), 400
+        
+    student_name = data.get("name", "Student")
+    marks_data = data.get("marks", {})
+
+    if not marks_data:
+        return jsonify({"error": "No marks data provided for AI"}), 400
+
+    prompt = f"""
+    You are an experienced school teacher. Write a short, professional, and encouraging 
+    year-end report card remark (3-4 sentences) for a student named {student_name}.
+    
+    Here are their subject averages: {marks_data}
+    
+    Instructions:
+    1. Highlight their best subject.
+    2. Gently suggest improvement in their weakest subject.
+    3. Keep the tone positive and motivating.
+    4. Do not use any HTML tags or markdown formatting, just plain text.
+    """
+
+    try:
+        response = ai_client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
+        return jsonify({"remark": response.text.strip()})
+    except Exception as e:
+        print(f"Gemini AI Error: {e}") # For debugging in terminal
+        return jsonify({"error": "Failed to generate AI remark"}), 500
