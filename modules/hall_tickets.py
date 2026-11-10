@@ -30,10 +30,20 @@ def index():
             "max_marks": e[5]
         })
 
+    # 🔥 YEH NAYA HISA ADD KIYA GAYA HAI (_analytics.html ke liye)
+    # Abhi ke liye basic count calculate kiya hai. 
+    # Aage aap database se total printed/generated tickets bhi fetch kar sakte hain.
+    stats = {
+        "total_exams": len(exams),
+        "total_tickets": 0,  # Placeholder
+        "printed_tickets": 0 # Placeholder
+    }
+
     return render_template("hall_tickets/index.html",
                            exams=exams,
                            classes=get_classes_list(),
-                           selected_class=class_name)
+                           selected_class=class_name,
+                           stats=stats) # <-- Stats yahan pass kiye gaye hain
 
 
 @hall_tickets_bp.route("/<int:exam_id>")
