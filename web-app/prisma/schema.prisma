@@ -1,0 +1,42 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+
+model Student {
+  id            String   @id @default(uuid())
+  name          String
+  rollNo        String   @unique
+  class         String
+  photoUrl      String
+  faceEmbedding String?  // AI 128-D Vector (JSON string)
+  feeStatus     String   @default("PENDING")
+  
+  // Advanced Fields
+  attendance    Float    @default(0)
+  blockchainHash String? // Polygon Tx Hash
+  totpSecret    String?  // Dynamic QR Secret
+  
+  hallTicket    HallTicket?
+  examCenter    ExamCenter?
+}
+
+model HallTicket {
+  id         String   @id @default(uuid())
+  ticketNo   String   @unique
+  student    Student  @relation(fields: [studentId], references: [id])
+  studentId  String   @unique
+  ipfsUrl    String?  // Decentralized PDF URL
+  status     String   @default("GENERATED")
+  createdAt  DateTime @default(now())
+}
+
+model ExamCenter {
+  id        String  @id @default(uuid())
+  student   Student @relation(fields: [studentId], references: [id])
+  studentId String  @unique
+  city      String
+  centerName String
+  roomNo    String
+  seatNo    String
+  lat       Float
+  lng       Float
+}
