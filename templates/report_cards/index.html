@@ -4,13 +4,8 @@
 
 {% block content %}
 
-<!-- Libraries for Advanced Features (Charts & PDF) -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Libraries for Advanced Features (PDF) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
-<!-- ========================================== -->
-<!-- 1. AAPKA PURANA CODE (SUMMARY TABLE) -->
-<!-- ========================================== -->
 
 <div class="card" style="background:#eff6ff; border-left:3px solid #3b82f6; font-size:0.85rem; color:#1e40af; margin-bottom:1rem;">
     <strong>ℹ️ Ye page kya karta hai:</strong>
@@ -49,6 +44,7 @@
 </form>
 </div>
 
+<!-- ================= TABLE SECTION ================= -->
 {% if selected_class and summary %}
 <div class="card" style="padding:0; overflow:auto;">
 <table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:600px;">
@@ -75,7 +71,7 @@
             <td style="padding:0.55rem; text-align:center;">{{ s.exam_count }}</td>
             <td style="padding:0.55rem; text-align:right; font-weight:600;">{{ "%.0f"|format(s.total_obtained) }}</td>
             <td style="padding:0.55rem; text-align:right; white-space:nowrap;">
-                <!-- Yahan 'View' link ko Advanced Modal se connect kiya gaya hai -->
+                <!-- Advanced AI Card Button -->
                 <button onclick="openAdvancedReport('{{ s.name }}', '{{ s.roll }}', '{{ s.section }}', '{{ s.student_id }}')" style="background:none; border:none; color:#3b82f6; cursor:pointer; font-weight:600; font-size:0.85rem; margin-right:0.4rem;">
                     🤖 View AI Card
                 </button>
@@ -89,20 +85,18 @@
 </table>
 </div>
 {% elif selected_class %}
+<!-- Agar class select hai par data nahi hai -->
 <div class="card" style="text-align:center; padding:2rem; color:#64748b;">
     Is class/Year mein koi marks data nahi hai. Pehle exams aur marks enter karo.
 </div>
 {% endif %}
 
-
-<!-- ========================================== -->
-<!-- 2. ADVANCED REPORT CARD MODAL (HIDDEN) -->
-<!-- ========================================== -->
+<!-- ================= ADVANCED REPORT CARD MODAL ================= -->
 <div id="rc-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; justify-content:center; align-items:flex-start; padding:20px; overflow-y:auto;">
     
     <div style="background:#f8fafc; width:100%; max-width:1000px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.3); margin-top:20px;">
         
-        <!-- Modal Header (Controls) -->
+        <!-- Modal Header -->
         <div style="background:#fff; padding:15px 20px; border-top-left-radius:12px; border-top-right-radius:12px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:10;">
             <h3 style="margin:0; font-size:1.1rem; color:#1e293b;">Advanced Report Card Preview</h3>
             <div style="display:flex; gap:10px;">
@@ -112,11 +106,11 @@
             </div>
         </div>
 
-        <!-- The Actual Printable Card (Scoped CSS) -->
+        <!-- Printable Area -->
         <div style="padding:20px;" id="rc-print-area">
             <div style="background:#fff; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.05); overflow:hidden; font-family:'Segoe UI', sans-serif; color:#1e293b;">
                 
-                <!-- Card Header -->
+                <!-- Header -->
                 <div style="background:linear-gradient(135deg, #1e3a8a, #3b82f6); color:#fff; padding:20px; display:flex; justify-content:space-between; align-items:center;">
                     <div style="display:flex; align-items:center; gap:15px;">
                         <div style="width:50px; height:50px; background:rgba(255,255,255,0.2); border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:24px;">🏫</div>
@@ -130,7 +124,7 @@
                     </div>
                 </div>
 
-                <!-- Student Info -->
+                <!-- Info -->
                 <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:15px; padding:20px; background:#f8fafc; border-bottom:1px solid #e2e8f0;">
                     <div><span style="font-size:10px; color:#64748b; font-weight:bold; text-transform:uppercase;">Name</span><br><b id="rc-name" style="font-size:14px;"></b></div>
                     <div><span style="font-size:10px; color:#64748b; font-weight:bold; text-transform:uppercase;">Class</span><br><b id="rc-class" style="font-size:14px;">{{ selected_class }}</b></div>
@@ -138,7 +132,7 @@
                     <div><span style="font-size:10px; color:#64748b; font-weight:bold; text-transform:uppercase;">Attendance</span><br><b style="font-size:14px; color:#10b981;">92% (Dummy)</b></div>
                 </div>
 
-                <!-- Marks Table (Dummy Data for UI) -->
+                <!-- Dummy Table (Aap isko JS se replace kar sakte hain) -->
                 <div style="padding:20px;">
                     <h3 style="font-size:14px; color:#1e3a8a; border-bottom:2px solid #3b82f6; padding-bottom:5px; margin-bottom:15px; text-transform:uppercase;">Academic Performance</h3>
                     <table style="width:100%; border-collapse:collapse; font-size:13px;">
@@ -155,31 +149,21 @@
                             <tr><td style="padding:10px; border:1px solid #e2e8f0;">English</td><td style="padding:10px; border:1px solid #e2e8f0; text-align:center;">88 / 100</td><td style="padding:10px; border:1px solid #e2e8f0; text-align:center; color:#10b981; font-weight:bold;">A2</td></tr>
                         </tbody>
                     </table>
-                    <p style="font-size:11px; color:#ef4444; margin-top:10px;">* Note: Backend developer ko yahan real marks fetch karne ka logic likhna hoga.</p>
                 </div>
 
-                <!-- AI Insights Section -->
+                <!-- AI Box -->
                 <div style="padding:20px; background:#faf5ff; border-top:1px solid #e2e8f0;">
                     <h3 style="font-size:14px; color:#8b5cf6; border-bottom:2px solid #8b5cf6; padding-bottom:5px; margin-bottom:15px; text-transform:uppercase;">🤖 AI Performance Insights</h3>
                     <div id="rc-ai-content" style="background:#fff; border-left:4px solid #8b5cf6; padding:15px; font-size:13px; color:#4c1d95; border-radius:6px;">
                         Click "Generate AI Remark" above to analyze performance.
                     </div>
                 </div>
-
-                <!-- Signatures -->
-                <div style="padding:40px 20px; display:flex; justify-content:space-between;">
-                    <div style="text-align:center;"><div style="width:120px; border-top:1px solid #333; margin-bottom:5px;"></div><span style="font-size:12px; font-weight:bold;">Class Teacher</span></div>
-                    <div style="text-align:center;"><div style="width:120px; border-top:1px solid #333; margin-bottom:5px;"></div><span style="font-size:12px; font-weight:bold;">Principal</span></div>
-                </div>
-
             </div>
         </div>
     </div>
 </div>
 
-<!-- ========================================== -->
-<!-- 3. ADVANCED JAVASCRIPT LOGIC -->
-<!-- ========================================== -->
+<!-- ================= JAVASCRIPT ================= -->
 <script>
 const RC = {
     currentStudent: {},
@@ -199,9 +183,6 @@ const RC = {
     generateAI: function() {
         let aiBox = document.getElementById('rc-ai-content');
         aiBox.innerHTML = '<p>⏳ AI is analyzing the data...</p>';
-
-        // Yahan aap apne backend API (ChatGPT/Gemini) ko call karenge
-        // Example: fetch('/api/ai-remark?student_id=' + this.currentStudent.id)
         
         setTimeout(() => {
             let name = this.currentStudent.name.split(' ')[0];
@@ -217,20 +198,16 @@ const RC = {
 
 function openAdvancedReport(name, roll, section, studentId) {
     RC.currentStudent = { name: name, roll: roll, section: section, id: studentId };
-    
-    // Populate Modal Data
     document.getElementById('rc-name').innerText = name;
     document.getElementById('rc-roll').innerText = roll || '—';
     document.getElementById('rc-ai-content').innerHTML = 'Click "Generate AI Remark" above to analyze performance.';
-    
-    // Show Modal
     document.getElementById('rc-modal-overlay').style.display = 'flex';
-    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    document.body.style.overflow = 'hidden';
 }
 
 function closeAdvancedReport() {
     document.getElementById('rc-modal-overlay').style.display = 'none';
-    document.body.style.overflow = 'auto'; // Restore scrolling
+    document.body.style.overflow = 'auto';
 }
 </script>
 
