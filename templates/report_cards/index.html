@@ -69,14 +69,17 @@
             <td style="padding:0.55rem; color:#64748b;">{{ s.roll or '—' }}</td>
             <td style="padding:0.55rem; text-align:center;">{{ s.section or '—' }}</td>
             <td style="padding:0.55rem; text-align:center;">{{ s.exam_count or 0 }}</td>
-            <!-- YAHAN FIX KIYA HAI (or 0 lagaya hai) -->
             <td style="padding:0.55rem; text-align:right; font-weight:600;">{{ "%.0f"|format(s.total_obtained or 0) }}</td>
             <td style="padding:0.55rem; text-align:right; white-space:nowrap;">
                 <!-- Advanced AI Card Button -->
-                <button onclick="openAdvancedReport('{{ s.name }}', '{{ s.roll or '' }}', '{{ s.section or '' }}', '{{ s.student_id }}')" style="background:none; border:none; color:#3b82f6; cursor:pointer; font-weight:600; font-size:0.85rem; margin-right:0.4rem;">
+                <button onclick='openAdvancedReport({{ s.name | tojson }}, {{ s.roll | default("", true) | tojson }}, {{ s.section | default("", true) | tojson }}, {{ s.student_id | tojson }})' style="background:none; border:none; color:#3b82f6; cursor:pointer; font-weight:600; font-size:0.85rem; margin-right:0.4rem;">
                     🤖 View AI Card
                 </button>
-                <a href="{{ url_for('report_cards.print_view', student_id=student.id, academic_year=...) }}" target="_blank">...</a>   
+                
+                <!-- YAHAN FIX KIYA GAYA HAI (student.id aur ... ko theek kiya hai) -->
+                <a href="{{ url_for('report_cards.print_view', student_id=s.student_id, academic_year=academic_year) }}" target="_blank" style="color:#10b981; text-decoration:none; font-weight:600; font-size:0.85rem;">
+                    🖨️ Print
+                </a>
             </td>
         </tr>
         {% endfor %}
