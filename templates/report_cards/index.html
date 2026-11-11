@@ -76,9 +76,7 @@
                 <button onclick="openAdvancedReport('{{ s.name }}', '{{ s.roll or '' }}', '{{ s.section or '' }}', '{{ s.student_id }}')" style="background:none; border:none; color:#3b82f6; cursor:pointer; font-weight:600; font-size:0.85rem; margin-right:0.4rem;">
                     🤖 View AI Card
                 </button>
-                <a href="{{ url_for('report_cards.print_view', student_id=s.student_id, ay=academic_year) }}" target="_blank" style="color:#8b5cf6; text-decoration:none; font-size:0.85rem;">
-                    🖨️ Print
-                </a>
+                <a href="{{ url_for('report_cards.print_view', student_id=student.id, academic_year=...) }}" target="_blank">...</a>   
             </td>
         </tr>
         {% endfor %}
