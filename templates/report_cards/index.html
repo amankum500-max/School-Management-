@@ -71,12 +71,12 @@
             <td style="padding:0.55rem; text-align:center;">{{ s.exam_count or 0 }}</td>
             <td style="padding:0.55rem; text-align:right; font-weight:600;">{{ "%.0f"|format(s.total_obtained or 0) }}</td>
             <td style="padding:0.55rem; text-align:right; white-space:nowrap;">
-                <!-- Advanced AI Card Button -->
-                <button onclick='openAdvancedReport({{ s.name | tojson }}, {{ s.roll | default("", true) | tojson }}, {{ s.section | default("", true) | tojson }}, {{ s.student_id | tojson }})' style="background:none; border:none; color:#3b82f6; cursor:pointer; font-weight:600; font-size:0.85rem; margin-right:0.4rem;">
+                <!-- Advanced AI Card Button (FIXED with default filters) -->
+                <button onclick='openAdvancedReport({{ s.name | default("Unknown") | tojson }}, {{ s.roll | default("", true) | tojson }}, {{ s.section | default("", true) | tojson }}, {{ s.student_id | default("", true) | tojson }})' style="background:none; border:none; color:#3b82f6; cursor:pointer; font-weight:600; font-size:0.85rem; margin-right:0.4rem;">
                     🤖 View AI Card
                 </button>
                 
-                <!-- YAHAN FIX KIYA GAYA HAI (student.id aur ... ko theek kiya hai) -->
+                <!-- Print Link -->
                 <a href="{{ url_for('report_cards.print_view', student_id=s.student_id, academic_year=academic_year) }}" target="_blank" style="color:#10b981; text-decoration:none; font-weight:600; font-size:0.85rem;">
                     🖨️ Print
                 </a>
