@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8"><title>Bulk Report Cards</title>
+<style>
+  @page { margin: 10mm; } body { font-family: Arial; font-size: 11px; }
+  .no-print { text-align: center; margin-bottom: 10px; }
+  @media print { .no-print { display: none; } }
+  .card { border: 1px solid #333; padding: 10px; margin-bottom: 10px; page-break-after: always; }
+  h3 { text-align: center; color: #1a3a8f; margin: 4px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0; }
+  th, td { border: 1px solid #999; padding: 3px; text-align: center; font-size: 10px; }
+  th { background: #eef2ff; }
+  .summary { display: flex; justify-content: space-around; background: #f5f5ff; padding: 6px; margin: 6px 0; }
+</style></head><body>
+<div class="no-print">
+  <button onclick="window.print()" style="padding:10px 20px; background:#1a3a8f; color:#fff; border:none;">
+    🖨️ Print All ({{ reports|length }})
+  </button>
+</div>
+{% for r in reports %}
+<div class="card">
+  <h3>{{ settings.school_name }} — {{ r.academic_year }} Report Card</h3>
+  <p><strong>Name:</strong> {{ r.student.name }} | <strong>Roll:</strong> {{ r.student.roll }} | 
+     <strong>Class:</strong> {{ r.student.class_name }}-{{ r.student.section or '' }}</p>
+  <table>
+    <tr><th>Exam</th>{% for s in r.all_subjects %}<th>{{ s }}</th>{% endfor %}<th>Total</th><th>%</th></tr>
+    {% for e in r.exams %}
+    <tr><td>{{ e.name }}</td>{% for s in r.all_subjects %}<td>{{ e.marks.get(s, '—') }}</td>{% endfor %}
+        <td>{{ e.obtained }}/{{ e.max }}</td><td>{{ e.percent }}%</td></tr>
+    {% endfor %}
+  </table>
+  <div class="summary">
+    <div><strong>{{ r.overall_percent }}%</strong> Grade {{ r.overall_grade }}</div>
+    <div><strong>{{ r.attendance.percent }}%</strong> Attendance</div>
+    {% if r.class_rank %}<div>Rank {{ r.class_rank }}</div>{% endif %}
+  </div>
+</div>
+{% endfor %}
+</body></html>
