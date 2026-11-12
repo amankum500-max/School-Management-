@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Report Card — {{ report.student.name }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between mb-3">
+    <a href="{{ url_for('report_card.index') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Back
+    </a>
+    <div>
+      <form method="GET" class="d-inline">
+        <select name="year" class="form-select d-inline-block" style="width:auto" onchange="this.form.submit()">
+          {% for y in years %}
+            <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      <a href="{{ url_for('report_card.print_view', student_id=report.student.id, year=selected_year) }}" 
+         target="_blank" class="btn btn-sm btn-dark"><i class="bi bi-printer"></i> Print</a>
+    </div>
+  </div>
+
+  <!-- Student Info -->
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-8">
+          <h4>{{ report.student.name }}</h4>
+          <p class="mb-1"><strong>Roll:</strong> {{ report.student.roll }} &middot; 
+             <strong>Class:</strong> {{ report.student.class_name }}-{{ report.student.section or '' }}</p>
+          <p class="mb-0"><strong>AY:</strong> {{ report.academic_year }} &middot;
+             <strong>Parent:</strong> {{ report.student.parent_name or '—' }}</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+          <h5 class="text-primary mb-0">{{ report.overall_percent }}%</h5>
+          <span class="badge bg-success fs-6">Grade {{ report.overall_grade }}</span>
+          {% if report.class_rank %}
+          <p class="mt-2 mb-0"><strong>Rank:</strong> {{ report.class_rank }} / {{ report.class_total }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Subject-wise Averages -->
+  <div class="card shadow-sm mb-3">
+    <div class="card-header bg-white"><strong>Subject Performance</strong></div>
+    <div class="card-body">
+      <div class="row">
+        {% for sub, avg in report.subject_averages.items() %}
+        <div class="col-md-3 mb-2">
+          <div class="p-2 border rounded">
+            <small class="text-muted">{{ sub }}</small><br>
+            <strong class="fs-5">{{ avg if avg is not none else '—' }}%</strong>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Exam Results -->
+  <div class="card shadow-sm mb-3">
+    <div class="card-header bg-white"><strong>Exam-wise Results</strong></div>
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Exam</th>
+            {% for sub in report.all_subjects %}<th>{{ sub }}</th>{% endfor %}
+            <th>Total</th><th>%</th><th>Grade</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in report.exams %}
+          <tr>
+            <td><strong>{{ e.name }}</strong><br><small class="text-muted">{{ e.date }}</small></td>
+            {% for sub in report.all_subjects %}
+              <td>{{ e.marks.get(sub, '—') }}</td>
+            {% endfor %}
+            <td><strong>{{ e.obtained }}/{{ e.max }}</strong></td>
+            <td>{{ e.percent }}%</td>
+            <td><span class="badge bg-info text-dark">{{ e.grade }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Attendance & Fees -->
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-white"><strong>Attendance</strong></div>
+        <div class="card-body">
+          <p><strong>{{ report.attendance.percent }}%</strong> — 
+             {{ report.attendance.present }} Present / {{ report.attendance.total }} Total</p>
+          <small class="text-muted">
+            Absent: {{ report.attendance.absent }} &middot;
+            Late: {{ report.attendance.late }} &middot;
+            Leave: {{ report.attendance.leave }}
+          </small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-white"><strong>Fee Status</strong></div>
+        <div class="card-body">
+          <p class="mb-1"><strong>Billed:</strong> ₹{{ report.fee_status.billed }}</p>
+          <p class="mb-1"><strong>Paid:</strong> ₹{{ report.fee_status.paid }}</p>
+          <p class="mb-0">
+            <strong>Pending:</strong> ₹{{ report.fee_status.pending }}
+            {% if report.fee_status.cleared %}
+              <span class="badge bg-success ms-2">Cleared</span>
+            {% else %}
+              <span class="badge bg-danger ms-2">Pending</span>
+            {% endif %}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Remarks Form -->
+  <div class="card shadow-sm mt-3">
+    <div class="card-header bg-white"><strong>Remarks</strong></div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('report_card.save_remarks', student_id=report.student.id) }}">
+        <input type="hidden" name="academic_year" value="{{ report.academic_year }}">
+        <div class="mb-2">
+          <label class="form-label small">Teacher Remark</label>
+          <textarea name="teacher_remark" class="form-control" rows="2">{{ report.remarks.teacher_remark }}</textarea>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Principal Remark</label>
+          <textarea name="principal_remark" class="form-control" rows="2">{{ report.remarks.principal_remark }}</textarea>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Conduct</label>
+          <select name="conduct" class="form-select">
+            {% for c in ['Excellent','Good','Satisfactory','Needs Improvement'] %}
+            <option value="{{ c }}" {% if report.remarks.conduct == c %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Remarks</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
