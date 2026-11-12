@@ -60,12 +60,10 @@ if os.environ.get("TRUST_PROXY") == "1":
 _IS_PROD = os.environ.get("FLASK_ENV") == "production"
 
 # --- Session + Upload hardening ---
-# NOTE: Config.py में अगर यही keys हैं तो वहाँ बदलें, यहाँ duplicate रखने की ज़रूरत नहीं।
-# नीचे वो defaults हैं जो Config में missing होने पर लागू होंगे:
 app.config.setdefault("SESSION_COOKIE_HTTPONLY", True)
 app.config.setdefault("SESSION_COOKIE_SAMESITE", "Lax")
 app.config.setdefault("SESSION_COOKIE_SECURE", _IS_PROD)
-app.config.setdefault("MAX_CONTENT_LENGTH", 64 * 1024 * 1024)   # 64 MB — backup restore के लिए सुरक्षित
+app.config.setdefault("MAX_CONTENT_LENGTH", 64 * 1024 * 1024)   # 64 MB
 app.config.setdefault("PERMANENT_SESSION_LIFETIME", timedelta(hours=12))
 app.config.setdefault("JSON_SORT_KEYS", False)
 
@@ -137,7 +135,10 @@ from modules.advances import advances_bp
 from modules.chat import chat_bp
 from modules.online_exams import online_exams_bp
 from modules.automation import automation_bp
-from modules.hall_tickets import hall_tickets_bp
+
+# 👇 यहाँ सुधार किया गया है (hall_tickets_bp से hall_ticket_bp)
+from modules.hall_tickets import hall_ticket_bp 
+
 from modules.photos import photos_bp
 from modules.report_cards import report_cards_bp
 from modules.password_reset import password_reset_bp
@@ -155,8 +156,12 @@ for _bp in (
     system_bp, annual_report_bp, help_bp, public_bp, admissions_bp,
     public_content_bp, payments_bp, admin_payments_bp, staff_att_bp,
     leave_bp, discounts_bp, visitors_bp, advances_bp, chat_bp,
-    online_exams_bp, automation_bp, hall_tickets_bp, photos_bp,
-    report_cards_bp, password_reset_bp,
+    online_exams_bp, automation_bp, 
+    
+    # 👇 यहाँ भी सुधार किया गया है (hall_tickets_bp से hall_ticket_bp)
+    hall_ticket_bp, 
+    
+    photos_bp, report_cards_bp, password_reset_bp,
 ):
     app.register_blueprint(_bp)
 del _bp
@@ -170,9 +175,7 @@ _API_PREFIXES = (
     "/quick-search", "/notifications/count",
 )
 
-
 def _wants_json():
-    """True अगर client JSON expect कर रहा है"""
     if request.path.startswith(_API_PREFIXES):
         return True
     accept = request.accept_mimetypes
@@ -181,17 +184,13 @@ def _wants_json():
         return False
     return best == "application/json" and accept[best] > accept["text/html"]
 
-
 def _client_ip():
-    """X-Forwarded-For सिर्फ ProxyFix के साथ trust करें।"""
     if os.environ.get("TRUST_PROXY") == "1":
         return (request.headers.get("X-Forwarded-For") or request.remote_addr or "?")\
             .split(",")[0].strip()
     return request.remote_addr or "?"
 
-
 def _sanitize_html(html: str) -> str:
-    """AI HTML output से XSS हटाएँ।"""
     if not html:
         return ""
     if _BLEACH_AVAILABLE:
@@ -205,26 +204,18 @@ def _sanitize_html(html: str) -> str:
         return _bleach.clean(
             html, tags=allowed_tags, attributes=allowed_attrs, strip=True,
         )
-    # Fallback — bleach न हो तो aggressive strip
-    html = re.sub(r"<script\b[^<]*(?:(?!</script>)<[^<]*)*</script>",
-                  "", html, flags=re.IGNORECASE)
-    html = re.sub(r"<iframe\b[^<]*(?:(?!</iframe>)<[^<]*)*</iframe>",
-                  "", html, flags=re.IGNORECASE)
-    html = re.sub(r"\son\w+\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s>]+)",
-                  "", html, flags=re.IGNORECASE)
+    html = re.sub(r"<script\b[^<]*(?:(?!</script>)<[^<]*)*</script>", "", html, flags=re.IGNORECASE)
+    html = re.sub(r"<iframe\b[^<]*(?:(?!</iframe>)<[^<]*)*</iframe>", "", html, flags=re.IGNORECASE)
+    html = re.sub(r"\son\w+\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s>]+)", "", html, flags=re.IGNORECASE)
     html = re.sub(r"javascript\s*:", "", html, flags=re.IGNORECASE)
     return html
 
-
 def _require_ai():
-    """AI client न हो तो clean JSON error return करें।"""
     if ai_client is None:
         return jsonify({"error": "AI service not configured"}), 503
     return None
 
-
 def _cached(key, fn):
-    """Per-request cache — context processors में repeated DB hits बचाएँ।"""
     if not hasattr(g, key):
         setattr(g, key, fn())
     return getattr(g, key)
@@ -271,25 +262,31 @@ def health_check():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    from database import (
-        count_students, total_collected, today_attendance_percent,
-        count_unread_notices, get_fees_monthly_trend, get_attendance_trend,
-        get_students_by_class, count_new_enquiries, count_active_staff,
-        count_homework_this_week, get_computed_alerts, get_custom_alerts,
-        get_upcoming_events, count_upcoming_events, get_today_snapshot,
-        get_month_fee_progress, get_birthdays_today, get_recent_activity,
-        get_top_performers, get_class_attendance_today,
-        get_staff_attendance_today_summary_dashboard as get_staff_attendance_today_summary,
-        count_transport_students,
-        get_visitors_summary_dashboard as get_visitors_summary,
-        get_pending_leave_count, get_total_advance_outstanding,
-    )
+    # 🛑 डेटाबेस फंक्शन्स को try-except में रखा गया है ताकि कोई भी फंक्शन मिसिंग होने पर पेज क्रैश न हो
+    try:
+        from database import (
+            count_students, total_collected, today_attendance_percent,
+            count_unread_notices, get_fees_monthly_trend, get_attendance_trend,
+            get_students_by_class, count_new_enquiries, count_active_staff,
+            count_homework_this_week, get_computed_alerts, get_custom_alerts,
+            get_upcoming_events, count_upcoming_events, get_today_snapshot,
+            get_month_fee_progress, get_birthdays_today, get_recent_activity,
+            get_top_performers, get_class_attendance_today,
+            get_staff_attendance_today_summary_dashboard as get_staff_attendance_today_summary,
+            count_transport_students,
+            get_visitors_summary_dashboard as get_visitors_summary,
+            get_pending_leave_count, get_total_advance_outstanding,
+        )
+    except ImportError as e:
+        return f"Database function missing error: {e}. Please check database.py", 500
+
     today_str = datetime.now().strftime("%Y-%m-%d")
 
     def safe(fn, default=None, *args, **kwargs):
         try:
             return fn(*args, **kwargs)
-        except Exception:
+        except Exception as e:
+            app.logger.error(f"Dashboard DB Error in {fn.__name__}: {e}")
             return default
 
     return render_template(
@@ -312,15 +309,13 @@ def dashboard():
         fee_progress=safe(get_month_fee_progress, {}),
         birthdays=safe(get_birthdays_today, []),
         recent_activity=safe(get_recent_activity, [], 8),
-        top_performers=safe(get_top_performers,
-                            {"exam": None, "students": []}, 5),
+        top_performers=safe(get_top_performers, {"exam": None, "students": []}, 5),
         class_att_bars=safe(get_class_attendance_today, []),
         staff_att_today=safe(get_staff_attendance_today_summary, {}),
         transport_students=safe(count_transport_students, 0),
         visitors_today=safe(get_visitors_summary, {}),
         pending_leave=safe(get_pending_leave_count, 0),
-        advance_outstanding=safe(get_total_advance_outstanding,
-                                  {"outstanding": 0, "active_count": 0}),
+        advance_outstanding=safe(get_total_advance_outstanding, {"outstanding": 0, "active_count": 0}),
     )
 
 
@@ -606,7 +601,7 @@ _last_cleanup = _time()
 
 # endpoint → (path_prefix, max_per_minute)
 _SENSITIVE_PATHS = {
-    "/login": 10,              # stricter for brute-force
+    "/login": 10,              
     "/parent/login": 10,
     "/teacher/login": 10,
     "/reset/": 10,
@@ -617,7 +612,6 @@ _SENSITIVE_PATHS = {
 
 
 def _cleanup_rate_store():
-    """हर 5 मिनट में पुरानी entries clean करें — memory leak रोकें।"""
     global _last_cleanup
     with _rate_lock:
         now = _time()
