@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Report Card — {{ report.student.name }}</title>
+  <style>
+    @page { margin: 15mm; }
+    body { font-family: Arial, sans-serif; font-size: 12px; color: #222; }
+    .no-print { text-align: center; margin-bottom: 10px; }
+    @media print { .no-print { display: none; } }
+    .card { border: 2px solid #1a3a8f; padding: 15px; }
+    .header { text-align: center; border-bottom: 2px double #333; padding-bottom: 8px; margin-bottom: 10px; }
+    .header h2 { margin: 0; color: #1a3a8f; }
+    .header p { margin: 2px 0; font-size: 11px; }
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 10px; font-size: 12px; }
+    .meta-grid div { padding: 3px 0; }
+    .meta-grid strong { display: inline-block; width: 110px; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+    th, td { border: 1px solid #999; padding: 5px; text-align: center; font-size: 11px; }
+    th { background: #eef2ff; }
+    .section-title { background: #1a3a8f; color: #fff; padding: 4px 8px; font-size: 12px; margin-top: 12px; }
+    .summary { display: flex; justify-content: space-between; margin-top: 10px; padding: 8px;
+               background: #f5f5ff; border: 1px solid #ccc; }
+    .summary div { text-align: center; }
+    .summary strong { display: block; font-size: 16px; color: #1a3a8f; }
+    .remarks { margin-top: 10px; }
+    .remarks p { margin: 4px 0; }
+    .footer { display: flex; justify-content: space-between; margin-top: 30px; }
+    .footer div { text-align: center; border-top: 1px solid #333; padding-top: 4px; width: 150px; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <div class="no-print">
+    <button onclick="window.print()" style="padding:10px 20px; background:#1a3a8f; color:#fff; border:none;">
+      🖨️ Print
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="header">
+      <h2>{{ settings.school_name or 'School Name' }}</h2>
+      <p>{{ settings.address or '' }} | {{ settings.phone or '' }}</p>
+      <p><strong>ANNUAL REPORT CARD — {{ report.academic_year }}</strong></p>
+    </div>
+
+    <div class="meta-grid">
+      <div><strong>Name:</strong> {{ report.student.name }}</div>
+      <div><strong>Roll No:</strong> {{ report.student.roll or '—' }}</div>
+      <div><strong>Class:</strong> {{ report.student.class_name }}-{{ report.student.section or '' }}</div>
+      <div><strong>Parent:</strong> {{ report.student.parent_name or '—' }}</div>
+    </div>
+
+    <div class="section-title">EXAM RESULTS</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Exam</th>
+          {% for sub in report.all_subjects %}<th>{{ sub }}</th>{% endfor %}
+          <th>Total</th><th>%</th><th>Grade</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in report.exams %}
+        <tr>
+          <td>{{ e.name }}</td>
+          {% for sub in report.all_subjects %}
+            <td>{{ e.marks.get(sub, '—') }}</td>
+          {% endfor %}
+          <td>{{ e.obtained }}/{{ e.max }}</td>
+          <td>{{ e.percent }}%</td>
+          <td><strong>{{ e.grade }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="section-title">SUBJECT AVERAGES</div>
+    <table>
+      <tr>
+        {% for sub, avg in report.subject_averages.items() %}
+        <th>{{ sub }}</th>
+        {% endfor %}
+      </tr>
+      <tr>
+        {% for sub, avg in report.subject_averages.items() %}
+        <td>{{ avg if avg is not none else '—' }}%</td>
+        {% endfor %}
+      </tr>
+    </table>
+
+    <div class="summary">
+      <div><strong>{{ report.total_obtained }}/{{ report.total_max }}</strong><small>Total Marks</small></div>
+      <div><strong>{{ report.overall_percent }}%</strong><small>Percentage</small></div>
+      <div><strong>{{ report.overall_grade }}</strong><small>Grade</small></div>
+      {% if report.class_rank %}
+      <div><strong>{{ report.class_rank }}/{{ report.class_total }}</strong><small>Rank</small></div>
+      {% endif %}
+      <div><strong>{{ report.attendance.percent }}%</strong><small>Attendance</small></div>
+    </div>
+
+    <div class="section-title">REMARKS</div>
+    <div class="remarks">
+      <p><strong>Teacher:</strong> {{ report.remarks.teacher_remark or '—' }}</p>
+      <p><strong>Principal:</strong> {{ report.remarks.principal_remark or '—' }}</p>
+      <p><strong>Conduct:</strong> {{ report.remarks.conduct or 'Good' }}</p>
+      <p><strong>Fee Status:</strong> 
+        ₹{{ report.fee_status.paid }} paid of ₹{{ report.fee_status.billed }} — 
+        {% if report.fee_status.cleared %}<strong style="color:green;">Cleared</strong>
+        {% else %}<strong style="color:red;">Pending ₹{{ report.fee_status.pending }}</strong>{% endif %}
+      </p>
+    </div>
+
+    <div class="footer">
+      <div>Class Teacher</div>
+      <div>Principal</div>
+      <div>Parent Signature</div>
+    </div>
+  </div>
+</body>
+</html>
