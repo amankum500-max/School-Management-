@@ -1,147 +1,158 @@
-from datetime import date
-from flask import (
-    Blueprint, render_template, request, redirect,
-    url_for, flash, abort
-)
-from modules.auth import login_required, role_required
-from database import (
-    get_exam, get_exams, get_classes_list,
-    get_exam_students_for_tickets, set_exam_seating,
-    auto_assign_seating, get_exam_seating_summary,
-    clear_exam_seating
-)
+"""
+Hall Ticket Module — Complete Routes
+Place in project root. Register in app.py: from routes_hall_ticket import hall_ticket_bp
+"""
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, abort
+from functools import wraps
+import database as db
+from datetime import datetime
 
-hall_tickets_bp = Blueprint("hall_tickets", __name__,
-                            url_prefix="/hall-tickets")
+hall_ticket_bp = Blueprint('hall_ticket', __name__, url_prefix='/hall-ticket')
+
+def login_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not session.get('admin_id'):
+            flash("Please login first", "warning")
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return wrapper
 
 
-@hall_tickets_bp.route("/")
+# ─────────────────────────────────────────────────────────
+# 1. LIST EXAMS (select exam to generate hall tickets)
+# ─────────────────────────────────────────────────────────
+@hall_ticket_bp.route('/')
 @login_required
-@role_required("super_admin", "admin")
 def index():
-    class_name = request.args.get("class", "").strip()
-    exams_raw = get_exams(class_name or None)
-
-    exams = []
-    for e in exams_raw:
-        exams.append({
+    class_name = request.args.get('class_name', '')
+    exams = db.get_exams(class_name=class_name or None)
+    classes = db.get_classes_list()
+    # Build exam list with seating status
+    exam_list = []
+    for e in exams:
+        exam_dict = {
             "id": e[0], "name": e[1], "class_name": e[2],
-            "exam_date": e[3], "subjects": e[4] or [],
-            "max_marks": e[5]
-        })
-
-    # 🔥 YEH NAYA HISA ADD KIYA GAYA HAI (_analytics.html ke liye)
-    # Abhi ke liye basic count calculate kiya hai. 
-    # Aage aap database se total printed/generated tickets bhi fetch kar sakte hain.
-    stats = {
-        "total_exams": len(exams),
-        "total_tickets": 0,  # Placeholder
-        "printed_tickets": 0 # Placeholder
-    }
-
-    return render_template("hall_tickets/index.html",
-                           exams=exams,
-                           classes=get_classes_list(),
-                           selected_class=class_name,
-                           stats=stats) # <-- Stats yahan pass kiye gaye hain
+            "exam_date": e[3], "subjects": e[4] or [], "max_marks": e[5],
+            "seated_count": 0, "total_students": 0,
+        }
+        try:
+            summary = db.get_exam_seating_summary(e[0])
+            exam_dict["seated_count"] = sum(r["student_count"] for r in summary)
+            students = db.get_exam_students_for_tickets(e[0])
+            exam_dict["total_students"] = len(students)
+        except Exception:
+            pass
+        exam_list.append(exam_dict)
+    return render_template('hall_ticket/index.html',
+                           exams=exam_list, classes=classes,
+                           selected_class=class_name)
 
 
-@hall_tickets_bp.route("/<int:exam_id>")
+# ─────────────────────────────────────────────────────────
+# 2. SEATING MANAGEMENT (auto-assign / manual)
+# ─────────────────────────────────────────────────────────
+@hall_ticket_bp.route('/seating/<int:exam_id>', methods=['GET', 'POST'])
 @login_required
-@role_required("super_admin", "admin")
-def manage(exam_id):
-    exam_raw = get_exam(exam_id)
-    if not exam_raw:
+def seating(exam_id):
+    exam = db.get_exam(exam_id)
+    if not exam:
+        flash("Exam not found", "danger")
+        return redirect(url_for('hall_ticket.index'))
+
+    if request.method == 'POST':
+        action = request.form.get('action', '')
+        if action == 'auto':
+            capacity = int(request.form.get('room_capacity', 30) or 30)
+            ok = db.auto_assign_seating(exam_id, room_capacity=capacity)
+            flash("Seating auto-assigned successfully!" if ok else "Auto-assign failed", 
+                  "success" if ok else "danger")
+        elif action == 'clear':
+            db.clear_exam_seating(exam_id)
+            flash("All seating cleared", "info")
+        elif action == 'manual':
+            sid = request.form.get('student_id')
+            room = request.form.get('room_no', '').strip()
+            seat = request.form.get('seat_no', '').strip()
+            if sid and room and seat:
+                db.set_exam_seating(exam_id, int(sid), room, seat)
+                flash("Seat assigned", "success")
+            else:
+                flash("Room and seat are required", "warning")
+        return redirect(url_for('hall_ticket.seating', exam_id=exam_id))
+
+    students = db.get_exam_students_for_tickets(exam_id)
+    summary = db.get_exam_seating_summary(exam_id)
+    return render_template('hall_ticket/seating.html',
+                           exam={"id": exam[0], "name": exam[1],
+                                 "class_name": exam[2], "exam_date": exam[3]},
+                           students=students, summary=summary)
+
+
+# ─────────────────────────────────────────────────────────
+# 3. VIEW SINGLE HALL TICKET
+# ─────────────────────────────────────────────────────────
+@hall_ticket_bp.route('/view/<int:exam_id>/<int:student_id>')
+@login_required
+def view_ticket(exam_id, student_id):
+    exam = db.get_exam(exam_id)
+    student_row = db.get_student(student_id)
+    if not exam or not student_row:
         abort(404)
 
-    exam = {
-        "id": exam_raw[0], "name": exam_raw[1],
-        "class_name": exam_raw[2], "exam_date": exam_raw[3],
-        "subjects": exam_raw[4] or [], "max_marks": exam_raw[5]
-    }
+    exam_dict = {"id": exam[0], "name": exam[1], "class_name": exam[2],
+                 "exam_date": exam[3], "subjects": exam[4] or [],
+                 "max_marks": exam[5]}
+    student = {"id": student_row[0], "name": student_row[1],
+               "roll_no": student_row[2], "class_name": student_row[3],
+               "section": student_row[4], "parent_name": student_row[7],
+               "parent_phone": student_row[8], "photo_url": student_row[13]}
 
-    students = get_exam_students_for_tickets(exam_id)
-    seating_summary = get_exam_seating_summary(exam_id)
-    total_set = sum(r["count"] for r in seating_summary)
+    # Seating
+    seating_info = {"room_no": "—", "seat_no": "—"}
+    for s in db.get_exam_students_for_tickets(exam_id):
+        if s["id"] == student_id:
+            seating_info = {"room_no": s.get("room_no") or "—",
+                            "seat_no": s.get("seat_no") or "—"}
+            break
 
-    return render_template("hall_tickets/manage.html",
-                           exam=exam, students=students,
-                           seating_summary=seating_summary,
-                           total_set=total_set)
+    settings = db.get_settings()
+    return render_template('hall_ticket/ticket_single.html',
+                           exam=exam_dict, student=student,
+                           seating=seating_info, settings=settings)
 
 
-@hall_tickets_bp.route("/<int:exam_id>/auto-seat", methods=["POST"])
+# ─────────────────────────────────────────────────────────
+# 4. BULK PRINT (all students of an exam)
+# ─────────────────────────────────────────────────────────
+@hall_ticket_bp.route('/bulk/<int:exam_id>')
 @login_required
-@role_required("super_admin", "admin")
-def auto_seat(exam_id):
-    exam = get_exam(exam_id)
+def bulk_print(exam_id):
+    exam = db.get_exam(exam_id)
     if not exam:
         abort(404)
+    exam_dict = {"id": exam[0], "name": exam[1], "class_name": exam[2],
+                 "exam_date": exam[3], "subjects": exam[4] or [],
+                 "max_marks": exam[5]}
+    students = db.get_exam_students_for_tickets(exam_id)
+    settings = db.get_settings()
+    return render_template('hall_ticket/ticket_bulk.html',
+                           exam=exam_dict, students=students, settings=settings)
 
-    room_start = request.form.get("room_start", "101").strip()
-    per_room = int(request.form.get("per_room") or 30)
 
-    n = auto_assign_seating(exam_id, room_no=room_start,
-                            students_per_room=per_room)
-    flash(f"{n} students ko auto-seat assign ho gaye", "success")
-    return redirect(url_for("hall_tickets.manage", exam_id=exam_id))
-
-
-@hall_tickets_bp.route("/<int:exam_id>/clear", methods=["POST"])
+# ─────────────────────────────────────────────────────────
+# 5. STATS / SUMMARY API
+# ─────────────────────────────────────────────────────────
+@hall_ticket_bp.route('/stats/<int:exam_id>')
 @login_required
-@role_required("super_admin", "admin")
-def clear_seating(exam_id):
-    n = clear_exam_seating(exam_id)
-    flash(f"{n} seating records delete ho gaye", "success")
-    return redirect(url_for("hall_tickets.manage", exam_id=exam_id))
-
-
-@hall_tickets_bp.route("/<int:exam_id>/set", methods=["POST"])
-@login_required
-@role_required("super_admin", "admin")
-def set_seat(exam_id):
-    student_id = request.form.get("student_id", type=int)
-    room = request.form.get("room_no", "").strip()
-    seat = request.form.get("seat_no", "").strip()
-
-    if not student_id:
-        flash("Invalid student", "error")
-        return redirect(url_for("hall_tickets.manage", exam_id=exam_id))
-
-    set_exam_seating(exam_id, student_id, room, seat)
-    return redirect(url_for("hall_tickets.manage", exam_id=exam_id))
-
-
-# ---------- Preview / Print ----------
-@hall_tickets_bp.route("/<int:exam_id>/preview")
-@login_required
-@role_required("super_admin", "admin")
-def preview(exam_id):
-    exam_raw = get_exam(exam_id)
-    if not exam_raw:
-        abort(404)
-
-    exam = {
-        "id": exam_raw[0], "name": exam_raw[1],
-        "class_name": exam_raw[2], "exam_date": exam_raw[3],
-        "subjects": exam_raw[4] or [], "max_marks": exam_raw[5]
+def stats(exam_id):
+    summary = db.get_exam_seating_summary(exam_id)
+    students = db.get_exam_students_for_tickets(exam_id)
+    seated = sum(r["student_count"] for r in summary)
+    return {
+        "total_rooms": len(summary),
+        "seated": seated,
+        "unseated": max(len(students) - seated, 0),
+        "total_students": len(students),
+        "rooms": summary
     }
-
-    students = get_exam_students_for_tickets(exam_id)
-
-    # Optional: filter by student
-    student_id = request.args.get("student_id", type=int)
-    if student_id:
-        students = [s for s in students if s["id"] == student_id]
-
-    return render_template("hall_tickets/print.html",
-                           exam=exam, students=students,
-                           school=None)  # school from context_processor
-
-
-@hall_tickets_bp.route("/student/<int:student_id>/<int:exam_id>")
-@login_required
-@role_required("super_admin", "admin")
-def single_ticket(student_id, exam_id):
-    return redirect(url_for("hall_tickets.preview", exam_id=exam_id,
-                            student_id=student_id))
