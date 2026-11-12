@@ -6,7 +6,8 @@ from functools import wraps
 import database as db
 from datetime import datetime, date
 
-report_card_bp = Blueprint('report_card', __name__, url_prefix='/report-card')
+# 👇 यहाँ वेरिएबल का नाम report_cards_bp कर दिया गया है ताकि app.py से मैच हो जाए
+report_cards_bp = Blueprint('report_cards', __name__, url_prefix='/report-cards')
 
 def login_required(f):
     @wraps(f)
@@ -21,7 +22,7 @@ def login_required(f):
 # ─────────────────────────────────────────────────────────
 # 1. INDEX — Select student & academic year
 # ─────────────────────────────────────────────────────────
-@report_card_bp.route('/')
+@report_cards_bp.route('/')
 @login_required
 def index():
     class_name = request.args.get('class_name', '')
@@ -37,14 +38,14 @@ def index():
 # ─────────────────────────────────────────────────────────
 # 2. VIEW YEAR REPORT (single student)
 # ─────────────────────────────────────────────────────────
-@report_card_bp.route('/view/<int:student_id>')
+@report_cards_bp.route('/view/<int:student_id>')
 @login_required
 def view(student_id):
     academic_year = request.args.get('year') or db.get_current_academic_year()
     report = db.get_student_year_report(student_id, academic_year)
     if not report:
         flash("Report data not found for this student/year", "danger")
-        return redirect(url_for('report_card.index'))
+        return redirect(url_for('report_cards.index'))
 
     settings = db.get_settings()
     years = db.get_academic_year_options()
@@ -56,7 +57,7 @@ def view(student_id):
 # ─────────────────────────────────────────────────────────
 # 3. PRINT VIEW (clean print layout)
 # ─────────────────────────────────────────────────────────
-@report_card_bp.route('/print/<int:student_id>')
+@report_cards_bp.route('/print/<int:student_id>')
 @login_required
 def print_view(student_id):
     academic_year = request.args.get('year') or db.get_current_academic_year()
@@ -71,7 +72,7 @@ def print_view(student_id):
 # ─────────────────────────────────────────────────────────
 # 4. SAVE REMARKS
 # ─────────────────────────────────────────────────────────
-@report_card_bp.route('/remarks/<int:student_id>', methods=['POST'])
+@report_cards_bp.route('/remarks/<int:student_id>', methods=['POST'])
 @login_required
 def save_remarks(student_id):
     academic_year = request.form.get('academic_year') or db.get_current_academic_year()
@@ -90,14 +91,14 @@ def save_remarks(student_id):
         flash("Remarks saved successfully", "success")
     else:
         flash("Failed to save remarks", "danger")
-    return redirect(url_for('report_card.view',
+    return redirect(url_for('report_cards.view',
                             student_id=student_id, year=academic_year))
 
 
 # ─────────────────────────────────────────────────────────
 # 5. CLASS SUMMARY (all students of a class)
 # ─────────────────────────────────────────────────────────
-@report_card_bp.route('/class-summary')
+@report_cards_bp.route('/class-summary')
 @login_required
 def class_summary():
     class_name = request.args.get('class_name', '')
@@ -123,7 +124,7 @@ def class_summary():
 # ─────────────────────────────────────────────────────────
 # 6. BULK PRINT CLASS (for parent-teacher meeting)
 # ─────────────────────────────────────────────────────────
-@report_card_bp.route('/bulk/<class_name>')
+@report_cards_bp.route('/bulk/<class_name>')
 @login_required
 def bulk_print(class_name):
     academic_year = request.args.get('year') or db.get_current_academic_year()
