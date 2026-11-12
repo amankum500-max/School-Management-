@@ -41,6 +41,7 @@
             top: 0; bottom: 0; left: 0;
             overflow-y: auto;
             transition: transform 0.25s;
+            z-index: 100;
         }
         .sidebar .brand {
             padding: 0 1.25rem 1rem;
@@ -147,38 +148,96 @@
             cursor: pointer;
         }
         .btn:hover { background: #2563eb; }
+        
         /* === ADVANCED UI ADDITIONS === */
-/* Dark Mode Variables */
-body.dark-mode {
-    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%) !important;
-    color: #e2e8f0 !important;
-}
-body.dark-mode .topbar {
-    background: rgba(15, 23, 42, 0.8) !important;
-    backdrop-filter: blur(10px) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-    color: white;
-}
-body.dark-mode .topbar h1 { color: white; }
-body.dark-mode .card {
-    background: rgba(255, 255, 255, 0.05) !important;
-    backdrop-filter: blur(12px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    color: #e2e8f0 !important;
-}
-body.dark-mode table { color: #e2e8f0; }
+        /* Dark Mode Variables */
+        body.dark-mode {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%) !important;
+            color: #e2e8f0 !important;
+        }
+        body.dark-mode .topbar {
+            background: rgba(15, 23, 42, 0.8) !important;
+            backdrop-filter: blur(10px) !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: white;
+        }
+        body.dark-mode .topbar h1 { color: white; }
+        body.dark-mode .card {
+            background: rgba(255, 255, 255, 0.05) !important;
+            backdrop-filter: blur(12px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: #e2e8f0 !important;
+        }
+        body.dark-mode table { color: #e2e8f0; }
 
-/* Neon Buttons */
-.btn { 
-    background: linear-gradient(90deg, #3b82f6, #8b5cf6) !important; 
-    border: none; 
-    box-shadow: 0 0 10px rgba(59, 130, 246, 0.4); 
-    transition: 0.3s;
-}
-.btn:hover { 
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); 
-    transform: translateY(-1px);
-}
+        /* Neon Buttons */
+        .btn { 
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6) !important; 
+            border: none; 
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4); 
+            transition: 0.3s;
+        }
+        .btn:hover { 
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); 
+            transform: translateY(-1px);
+        }
+        
+        /* AI Chatbox Custom Styles (Without Bootstrap) */
+        .ai-chat-window {
+            display: none; 
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            width: 320px; 
+            height: 420px; 
+            flex-direction: column; 
+            border-radius: 16px; 
+            overflow: hidden; 
+            background: rgba(15, 23, 42, 0.95); 
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        .ai-chat-window.open {
+            display: flex;
+        }
+        .ai-chat-header {
+            background: #3b82f6;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 16px 16px 0 0;
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+        .ai-chat-close {
+            background: none; border: none; color: white; font-size: 1.2rem; cursor: pointer;
+        }
+        .ai-chat-body {
+            flex: 1; overflow-y: auto; padding: 0.75rem; font-size: 0.85rem; color: #e2e8f0;
+        }
+        .ai-msg-user {
+            text-align: right; margin-bottom: 0.5rem;
+        }
+        .ai-msg-user span {
+            background: #334155; color: white; padding: 0.5rem 0.75rem; border-radius: 8px 8px 0 8px; display: inline-block; max-width: 85%; text-align: left; word-wrap: break-word;
+        }
+        .ai-msg-bot {
+            text-align: left; margin-bottom: 0.5rem;
+        }
+        .ai-msg-bot span {
+            background: #3b82f6; color: white; padding: 0.5rem 0.75rem; border-radius: 8px 8px 8px 0; display: inline-block; max-width: 85%; text-align: left; word-wrap: break-word;
+        }
+        .ai-chat-footer {
+            padding: 0.5rem; background: rgba(0,0,0,0.2); display: flex; gap: 0.5rem;
+        }
+        .ai-chat-footer input {
+            flex: 1; border: none; border-radius: 4px; padding: 0.4rem 0.75rem; font-size: 0.85rem; outline: none;
+        }
+        .ai-chat-footer button {
+            padding: 0.4rem 0.75rem; font-size: 0.85rem;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -207,7 +266,10 @@ body.dark-mode table { color: #e2e8f0; }
         <a href="{{ url_for('qr_attendance.scan') }}">📷 QR Attendance</a>
         <a href="{{ url_for('exams.index') }}">Exams & Marks</a>
         <a href="{{ url_for('online_exams.index') }}">📝 Online Exams</a>
-        <a href="{{ url_for('report_cards.index') }}">📋 Year-End Report Card</a>
+        
+        <!-- ✅ FIXED: report_cards.index से report_card.index किया गया -->
+        <a href="{{ url_for('report_card.index') }}">📋 Year-End Report Card</a>
+        
         <a href="{{ url_for('hall_tickets.index') }}">🎫 Hall Tickets</a>
 
         <div class="section-label">Management</div>
@@ -291,9 +353,9 @@ body.dark-mode table { color: #e2e8f0; }
                         {{ session.admin_role }}
                     </span>
                     <!-- Theme Toggle Button -->
-<button id="themeToggle" onclick="toggleTheme()" style="background:none; border:1px solid #cbd5e1; padding:0.2rem 0.6rem; border-radius:6px; cursor:pointer; font-size:0.85rem; color:inherit;">
-    🌙 Dark
-</button>
+                    <button id="themeToggle" onclick="toggleTheme()" style="background:none; border:1px solid #cbd5e1; padding:0.2rem 0.6rem; border-radius:6px; cursor:pointer; font-size:0.85rem; color:inherit;">
+                        🌙 Dark
+                    </button>
                     <a href="{{ url_for('auth.profile') }}" style="color:#475569; text-decoration:none; font-size:0.88rem; font-weight:500;">
                         {{ session.admin_name }}
                     </a>
@@ -334,6 +396,31 @@ body.dark-mode table { color: #e2e8f0; }
             <span><kbd style="background:#e2e8f0; padding:0.1rem 0.35rem; border-radius:3px;">ESC</kbd> close</span>
         </div>
     </div>
+</div>
+
+<!-- AI Floating Chatbot -->
+<div style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;">
+    <!-- Chat Window (Hidden by default) -->
+    <div id="aiChatWindow" class="ai-chat-window">
+        <div class="ai-chat-header">
+            <span>🤖 AI Assistant</span>
+            <button class="ai-chat-close" onclick="toggleAiChat()">✕</button>
+        </div>
+        <div class="ai-chat-body" id="aiChatBody">
+            <div class="ai-msg-bot">
+                <span>Hello! Main aapka AI assistant hoon. Kuch bhi puchhiye.</span>
+            </div>
+        </div>
+        <div class="ai-chat-footer">
+            <input type="text" id="aiChatInput" placeholder="Type here..." onkeypress="if(event.key==='Enter') sendAiMessage()">
+            <button class="btn" onclick="sendAiMessage()">Send</button>
+        </div>
+    </div>
+
+    <!-- Floating Button -->
+    <button class="btn" onclick="toggleAiChat()" id="aiChatBtn" style="width: 60px; height: 60px; border-radius: 50%; font-size: 1.5rem; display: flex; align-items: center; justify-content: center;">
+        💬
+    </button>
 </div>
 
 <!-- Scripts -->
@@ -488,7 +575,7 @@ document.getElementById('cmdPalette').addEventListener('click', (e) => {
     if (e.target.id === 'cmdPalette') closeCommandPalette();
 });
 </script>
-    <script>
+<script>
     // Theme Toggle Logic
     function toggleTheme() {
         const body = document.body;
@@ -512,42 +599,20 @@ document.getElementById('cmdPalette').addEventListener('click', (e) => {
             document.getElementById('themeToggle').innerHTML = '☀️ Light';
         }
     });
-    </script>
-    <!-- AI Floating Chatbot -->
-<div style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;">
-    <!-- Chat Window (Hidden by default) -->
-    <div id="aiChatWindow" class="card shadow-lg" style="display: none; width: 320px; height: 420px; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255,255,255,0.1);">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center p-2" style="border-radius: 16px 16px 0 0;">
-            <span class="fw-bold" style="font-size:0.95rem;">🤖 AI Assistant</span>
-            <button class="btn btn-sm btn-close btn-close-white" onclick="toggleAiChat()"></button>
-        </div>
-        <div class="card-body overflow-auto p-2" id="aiChatBody" style="font-size: 0.85rem; flex: 1;">
-            <div class="mb-2 text-muted">Hello! Main aapka AI assistant hoon. Kuch bhi puchhiye.</div>
-        </div>
-        <div class="card-footer p-2 bg-transparent border-top border-secondary">
-            <div class="input-group">
-                <input type="text" id="aiChatInput" class="form-control form-control-sm" placeholder="Type here..." onkeypress="if(event.key==='Enter') sendAiMessage()">
-                <button class="btn btn-primary btn-sm" onclick="sendAiMessage()">Send</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Floating Button -->
-    <button class="btn btn-primary rounded-circle shadow-lg p-3 fs-4" onclick="toggleAiChat()" id="aiChatBtn" style="width: 60px; height: 60px;">
-        💬
-    </button>
-</div>
-
+</script>
 <script>
+    // AI Chatbot Logic Fixed
     function toggleAiChat() {
         const win = document.getElementById('aiChatWindow');
         const btn = document.getElementById('aiChatBtn');
-        if (win.style.display === 'none') {
-            win.style.display = 'flex';
+        
+        win.classList.toggle('open');
+        
+        if (win.classList.contains('open')) {
             btn.style.display = 'none';
+            setTimeout(() => document.getElementById('aiChatInput').focus(), 100);
         } else {
-            win.style.display = 'none';
-            btn.style.display = 'block';
+            btn.style.display = 'flex';
         }
     }
 
@@ -559,13 +624,13 @@ document.getElementById('cmdPalette').addEventListener('click', (e) => {
         const chatBody = document.getElementById('aiChatBody');
         
         // User message
-        chatBody.innerHTML += `<div class="text-end mb-2"><span class="badge bg-secondary p-2 text-wrap text-start" style="max-width: 85%;">${message}</span></div>`;
+        chatBody.innerHTML += `<div class="ai-msg-user"><span>${message}</span></div>`;
         input.value = '';
         chatBody.scrollTop = chatBody.scrollHeight;
 
-        // Loading
+        // Loading indicator
         const loadId = 'ai-load-' + Date.now();
-        chatBody.innerHTML += `<div id="${loadId}" class="text-start mb-2 text-info" style="font-size:0.75rem;">Typing...</div>`;
+        chatBody.innerHTML += `<div id="${loadId}" class="ai-msg-bot"><span style="background: transparent; color: #60a5fa;">Typing...</span></div>`;
         chatBody.scrollTop = chatBody.scrollHeight;
 
         try {
@@ -577,9 +642,9 @@ document.getElementById('cmdPalette').addEventListener('click', (e) => {
             const data = await res.json();
             
             document.getElementById(loadId).remove();
-            chatBody.innerHTML += `<div class="text-start mb-2"><span class="badge bg-primary p-2 text-wrap text-start" style="max-width: 85%; font-weight:normal;">${data.reply || data.error}</span></div>`;
+            chatBody.innerHTML += `<div class="ai-msg-bot"><span>${data.reply || data.error}</span></div>`;
         } catch (error) {
-            document.getElementById(loadId).innerHTML = '<span class="text-danger">Error connecting to AI.</span>';
+            document.getElementById(loadId).innerHTML = `<span style="background: transparent; color: #ef4444;">Error connecting to AI.</span>`;
         }
         chatBody.scrollTop = chatBody.scrollHeight;
     }
