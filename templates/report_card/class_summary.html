@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Class Report Summary{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between mb-3">
+    <h3>Class Report Summary</h3>
+    <a href="{{ url_for('report_card.index') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Back
+    </a>
+  </div>
+
+  <form class="row g-2 mb-3" method="GET">
+    <div class="col-md-3">
+      <select name="class_name" class="form-select" onchange="this.form.submit()">
+        <option value="">Select Class</option>
+        {% for c in classes %}
+          <option value="{{ c }}" {% if c == selected_class %}selected{% endif %}>Class {{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <select name="year" class="form-select" onchange="this.form.submit()">
+        {% for y in years %}
+          <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+
+  {% if selected_class and summary %}
+  <div class="card shadow-sm">
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead class="table-light">
+          <tr><th>Rank</th><th>Roll</th><th>Name</th>
+              <th>Total Obtained</th><th>Max</th><th>%</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          {% for r in summary %}
+          <tr>
+            <td><span class="badge bg-primary">{{ r.rank }}</span></td>
+            <td>{{ r.roll_no or '—' }}</td>
+            <td>{{ r.name }}</td>
+            <td>{{ r.total_obtained }}</td>
+            <td>{{ r.total_max }}</td>
+            <td><strong>{{ r.percentage }}%</strong></td>
+            <td>
+              <a href="{{ url_for('report_card.view', student_id=r.id, year=selected_year) }}" 
+                 class="btn btn-sm btn-outline-primary">View</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% elif selected_class %}
+  <div class="alert alert-info">No data found for this class/year</div>
+  {% endif %}
+</div>
+{% endblock %}
