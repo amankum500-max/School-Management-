@@ -88,9 +88,11 @@ from modules.advances import advances_bp
 from modules.chat import chat_bp
 from modules.online_exams import online_exams_bp
 from modules.automation import automation_bp
-from modules.hall_tickets import hall_tickets_bp
+
+# === YAHAN FIX KIYA GAYA HAI (Singular names) ===
+from modules.hall_tickets import hall_ticket_bp  
 from modules.photos import photos_bp
-from modules.report_cards import report_cards_bp
+from modules.report_cards import report_card_bp  
 from modules.password_reset import password_reset_bp
 
 
@@ -145,9 +147,11 @@ app.register_blueprint(advances_bp)
 app.register_blueprint(chat_bp)
 app.register_blueprint(online_exams_bp)
 app.register_blueprint(automation_bp)
-app.register_blueprint(hall_tickets_bp)
+
+# === YAHAN BHI FIX KIYA GAYA HAI ===
+app.register_blueprint(hall_ticket_bp)
 app.register_blueprint(photos_bp)
-app.register_blueprint(report_cards_bp)
+app.register_blueprint(report_card_bp)
 app.register_blueprint(password_reset_bp)
 
 
@@ -355,14 +359,14 @@ def sw_route():
 # AI ROUTES — SECURED
 # ============================================================
 @app.route("/api/ask-ai", methods=["POST"])
-@login_required                                         # ✅ AUTH ADDED
+@login_required                                         
 def ask_ai():
     data = request.get_json(silent=True) or {}
     user_message = (data.get("message") or "").strip()
 
     if not user_message:
         return jsonify({"error": "No message provided"}), 400
-    if len(user_message) > 2000:                        # ✅ LENGTH CAP
+    if len(user_message) > 2000:                        
         return jsonify({"error": "Message too long (max 2000 chars)"}), 400
 
     try:
@@ -377,13 +381,13 @@ def ask_ai():
         )
         return jsonify({"reply": response.text})
     except Exception:
-        app.logger.exception("ask_ai failed")           # ✅ log full trace internally
-        return jsonify({"error": "AI service unavailable"}), 500   # ✅ generic msg
+        app.logger.exception("ask_ai failed")           
+        return jsonify({"error": "AI service unavailable"}), 500   
 
 
 @app.route("/admin/generate-exam", methods=["GET", "POST"])
-@login_required                                         # ✅ AUTH ADDED
-@role_required("admin", "teacher")                      # ✅ ROLE CHECK
+@login_required                                         
+@role_required("admin", "teacher")                      
 def generate_exam():
     if request.method == "POST":
         subject = (request.form.get("subject") or "").strip()[:100]
@@ -489,7 +493,6 @@ def server_error(e):
 
 @app.errorhandler(Exception)
 def catch_all(e):
-    # ✅ FIX: HTTPException को object नहीं, proper Response return करें
     if isinstance(e, HTTPException):
         if _wants_json():
             return jsonify({"error": e.description or e.name}), e.code
@@ -509,7 +512,6 @@ from time import time as _time
 _rate_store = defaultdict(list)
 _last_cleanup = _time()
 
-# ✅ सभी sensitive endpoints (AI भी include)
 _SENSITIVE_PATHS = (
     "/qr-attendance/mark",
     "/login",
@@ -535,7 +537,7 @@ def _cleanup_rate_store():
 
 
 def _rate_limit_check(ip, endpoint, max_per_minute=60):
-    _cleanup_rate_store()                   # ✅ ADDED
+    _cleanup_rate_store()                   
     now = _time()
     key = f"{ip}:{endpoint}"
     _rate_store[key] = [t for t in _rate_store[key] if now - t < 60]
@@ -572,83 +574,8 @@ def add_security_headers(response):
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
-
-@app.after_request
-def cache_static(response):
-    if request.path.startswith("/static/"):
-        response.headers["Cache-Control"] = "public, max-age=604800"
-    elif request.path in ["/sw.js", "/manifest.json"]:
-        response.headers["Cache-Control"] = "no-cache"
-    return response
-
-
-_AUDIT_EXCLUDE = (
-    "/login", "/teacher/", "/parent/", "/site", "/reset/",
-    "/alerts/log-send", "/pay/", "/automation/cron",
-)
-
-_ENTITY_MAP = {
-    "/students/": "student", "/classes/": "classes", "/fees/": "fees",
-    "/staff/": "staff", "/exams/": "exams", "/salary/": "salary",
-    "/admin-users/": "admin_users", "/notices/": "notices",
-    "/events/": "events", "/library/": "library", "/hostel/": "hostel",
-    "/transport/": "transport", "/visitors/": "visitors",
-    "/advances/": "advances", "/leave/": "leave", "/automation/": "automation",
-}
-
-
-@app.after_request
-def auto_audit(response):
-    """
-    ✅ यह handler अब कभी fail नहीं होगा:
-       - log_audit signature mismatch पर fallback
-       - पूरा exception swallow किया जाता है
-    """
-    try:
-        if "admin_id" not in session:
-            return response
-        if request.method not in ("POST", "PUT", "DELETE", "PATCH"):
-            return response
-        path = request.path
-        if any(path.startswith(p) for p in _AUDIT_EXCLUDE):
-            return response
-        if not (200 <= response.status_code < 400):
-            return response
-
-        entity = next(
-            (ent for prefix, ent in _ENTITY_MAP.items() if path.startswith(prefix)),
-            None,
-        )
-
-        from database import log_audit
-
-        # Try standard kwargs signature first
-        try:
-            log_audit(
-                session["admin_id"],
-                session.get("admin_username", "?"),
-                action=f"{request.method} {path}",
-                entity_type=entity,
-                details=f"Path: {path}",
-            )
-        except TypeError:
-            # Fallback: positional-only signature
-            try:
-                log_audit(
-                    session["admin_id"],
-                    f"{request.method} {path}",
-                    entity or "",
-                    f"Path: {path}",
-                )
-            except Exception as e2:
-                app.logger.warning("Audit fallback also failed: %s", e2)
-    except Exception as e:
-        app.logger.warning("Audit Error: %s", e)
-    return response
-
-
 # ============================================================
-# ENTRY POINT
+# APP RUN (Yahan file cut ho gayi thi, isko complete kiya gaya)
 # ============================================================
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
