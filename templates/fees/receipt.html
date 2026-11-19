@@ -2,80 +2,461 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Receipt {{ p.receipt_no }}</title>
-    <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family: system-ui, sans-serif; padding:1rem; background:#f5f6fa; }
-        .receipt {
-            background:white; max-width:600px; margin:0 auto;
-            padding:1.5rem; border-radius:10px; border:2px solid #1e293b;
-        }
-        .head { text-align:center; border-bottom:2px dashed #cbd5e1; padding-bottom:0.75rem; margin-bottom:1rem; }
-        .head h1 { font-size:1.3rem; }
-        .head p { font-size:0.8rem; color:#64748b; }
-        .row { display:flex; justify-content:space-between; padding:0.35rem 0; font-size:0.9rem; }
-        .row span:first-child { color:#64748b; }
-        .amount-box { background:#f1f5f9; padding:0.75rem; border-radius:6px;
-                       text-align:center; margin:1rem 0; }
-        .amount-box .amt { font-size:1.6rem; font-weight:700; color:#1e293b; }
-        .footer { text-align:center; font-size:0.7rem; color:#94a3b8; margin-top:1rem;
-                   border-top:1px dashed #cbd5e1; padding-top:0.5rem; }
-        .actions { text-align:center; margin-top:1rem; }
-        .btn { padding:0.6rem 1.2rem; border:none; border-radius:6px; cursor:pointer;
-                font-size:0.9rem; margin:0 0.25rem; text-decoration:none; display:inline-block; }
-        .btn-primary { background:#3b82f6; color:white; }
-        .btn-secondary { background:#64748b; color:white; }
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Future-Proof Fee Receipt</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.7.2/vanilla-tilt.min.js"></script>
 
+    <style>
+        :root {
+            /* Light Theme Variables */
+            --bg-page: #e2e8f0;
+            --bg-glass: rgba(255, 255, 255, 0.85);
+            --border-glass: rgba(255, 255, 255, 0.6);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --brand-gradient: linear-gradient(135deg, #4f46e5, #9333ea);
+            --card-bg: #ffffff;
+            --table-row-bg: #ffffff;
+            --table-border: rgba(0,0,0,0.05);
+            --shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            --float-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+            --success: #10b981; --danger: #f43f5e; --warning: #f59e0b;
+        }
+
+        body.dark-mode {
+            /* Dark Theme Variables */
+            --bg-page: #0b1120;
+            --bg-glass: rgba(15, 23, 42, 0.85);
+            --border-glass: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --card-bg: #1e293b;
+            --table-row-bg: #1e293b;
+            --table-border: rgba(255,255,255,0.1);
+            --float-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; transition: background-color 0.3s, color 0.3s, border-color 0.3s; }
+
+        body {
+            font-family: 'Inter', sans-serif; background-color: var(--bg-page); color: var(--text-main);
+            min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 40px 20px; overflow-x: hidden;
+        }
+
+        /* Floating Controls (Top Left) */
+        .controls {
+            position: fixed; top: 20px; left: 20px; display: flex; gap: 10px; z-index: 1000;
+        }
+        .control-btn {
+            background: var(--card-bg); border: 1px solid var(--border-glass); color: var(--text-main);
+            width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; box-shadow: var(--float-shadow); font-size: 18px; transition: 0.2s;
+        }
+        .control-btn:hover { transform: scale(1.1); color: #4f46e5; }
+
+        /* Support Bot */
+        .support-bot {
+            position: fixed; bottom: 30px; right: 30px; background: var(--brand-gradient); color: white;
+            width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 28px; cursor: pointer; box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4); z-index: 1000;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); } 70% { box-shadow: 0 0 0 20px rgba(79, 70, 229, 0); } 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); } }
+
+        /* Main Receipt Container */
+        .receipt-wrapper { perspective: 1000px; z-index: 10; width: 100%; max-width: 800px; }
+        
+        .receipt-container {
+            background: var(--bg-glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-glass); border-radius: 24px;
+            box-shadow: var(--shadow); position: relative; overflow: hidden;
+            transform-style: preserve-3d;
+        }
+
+        .receipt-container::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 6px; background: var(--brand-gradient);
+        }
+
+        /* Header */
+        .header { padding: 40px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--table-border); }
+        .school-brand { display: flex; gap: 16px; align-items: center; }
+        .logo { width: 60px; height: 60px; background: var(--brand-gradient); border-radius: 16px; display: flex; justify-content: center; align-items: center; color: white; font-size: 24px; box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.4); }
+        .school-brand h1 { font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 800; background: var(--brand-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .school-brand p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+        
+        .receipt-info { text-align: right; }
+        .receipt-info h2 { font-family: 'Outfit', sans-serif; font-size: 24px; color: var(--text-muted); opacity: 0.3; letter-spacing: 2px; text-transform: uppercase; }
+        .barcode svg { max-width: 180px; height: 40px; margin: 5px 0; }
+        .barcode path { fill: var(--text-main); }
+        .meta-text { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+        .meta-text strong { color: var(--text-main); }
+
+        /* Student Details Grid */
+        .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 30px 40px; border-bottom: 1px dashed var(--table-border); }
+        .detail-box { background: var(--card-bg); padding: 16px; border-radius: 12px; box-shadow: var(--float-shadow); border: 1px solid var(--table-border); }
+        .detail-box h4 { font-size: 11px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1px; margin-bottom: 6px; }
+        .detail-box p { font-size: 15px; font-weight: 600; color: var(--text-main); }
+        .detail-box span { font-size: 13px; color: var(--text-muted); }
+
+        /* AI & Badges */
+        .ai-badge-row { display: flex; gap: 10px; padding: 0 40px; margin-top: 20px; }
+        .badge-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .ai-pill { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.2); }
+        .eco-pill { background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.2); }
+        .blockchain-pill { background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2); }
+
+        /* Fee Section */
+        .fee-section { padding: 30px 40px; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+        th { text-align: left; font-size: 12px; text-transform: uppercase; color: var(--text-muted); padding: 0 15px; }
+        th:last-child { text-align: right; }
+        td { background: var(--table-row-bg); padding: 16px 15px; font-size: 14px; border: 1px solid var(--table-border); box-shadow: var(--float-shadow); }
+        td:first-child { border-radius: 10px 0 0 10px; }
+        td:last-child { border-radius: 0 10px 10px 0; text-align: right; font-weight: 700; color: var(--brand-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .fee-desc span { display: block; font-size: 11px; color: var(--text-muted); font-weight: 400; }
+
+        /* Timeline / Installments */
+        .timeline-section { padding: 0 40px 20px; }
+        .timeline { display: flex; justify-content: space-between; position: relative; margin-top: 15px; }
+        .timeline::before { content: ''; position: absolute; top: 10px; left: 0; right: 0; height: 2px; background: var(--table-border); z-index: 1; }
+        .tl-item { position: relative; z-index: 2; text-align: center; }
+        .tl-dot { width: 20px; height: 20px; border-radius: 50%; background: var(--card-bg); border: 3px solid var(--text-muted); margin: 0 auto 5px; }
+        .tl-item.completed .tl-dot { border-color: var(--success); background: var(--success); }
+        .tl-item.current .tl-dot { border-color: var(--brand-gradient); }
+        .tl-text { font-size: 10px; font-weight: 600; color: var(--text-muted); }
+
+        /* Summary */
+        .summary { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 20px; padding: 0 40px; }
+        .total-box { background: var(--text-main); padding: 20px 25px; border-radius: 16px; color: var(--bg-page); text-align: right; min-width: 280px; }
+        .total-box p { font-size: 12px; opacity: 0.7; margin-bottom: 4px; }
+        .total-box h3 { font-family: 'Outfit', sans-serif; font-size: 32px; font-weight: 800; }
+        
+        .balance-alert { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; background: rgba(244, 63, 94, 0.1); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(244, 63, 94, 0.2); }
+        .balance-alert span { font-size: 13px; color: var(--danger); font-weight: 600; }
+        .btn-pay { background: var(--danger); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+
+        /* Footer */
+        .footer { padding: 30px 40px; border-top: 1px dashed var(--table-border); display: flex; justify-content: space-between; align-items: center; margin-top: 30px; background: rgba(0,0,0,0.02); }
+        .qr-box { background: white; padding: 10px; border-radius: 12px; text-align: center; }
+        #qrcode { width: 80px; height: 80px; }
+        .qr-box span { font-size: 10px; color: #64748b; margin-top: 5px; display: block; }
+
+        .thank-you { text-align: center; flex: 1; padding: 0 30px; }
+        .thank-you h3 { font-family: 'Outfit', sans-serif; font-size: 18px; background: var(--brand-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px; }
+        .thank-you p { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+        
+        .ai-message { background: rgba(139, 92, 246, 0.05); border-left: 3px solid #8b5cf6; padding: 10px; margin-top: 10px; border-radius: 4px; text-align: left; font-size: 11px; }
+
+        .signature { text-align: center; }
+        .signature .sign { font-family: 'Brush Script MT', cursive; font-size: 36px; color: var(--text-main); margin-bottom: 5px; }
+        .signature p { font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--table-border); padding-top: 8px; }
+
+        /* Action Buttons */
+        .actions { margin-top: 30px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; z-index: 10; }
+        .btn { padding: 12px 24px; border-radius: 12px; font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; border: none; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
+        .btn-pdf { background: var(--text-main); color: var(--bg-page); }
+        .btn-wa { background: #25D366; color: white; }
+        .btn-print { background: var(--card-bg); color: var(--text-main); border: 1px solid var(--table-border); }
+
+        /* Print Styles */
         @media print {
-            body { background:white; padding:0; }
-            .receipt { border:1px solid #000; box-shadow:none; }
-            .actions { display:none; }
+            body { background: white; color: #000; padding: 0; }
+            .receipt-container { box-shadow: none; border: none; background: white; backdrop-filter: none; }
+            .controls, .support-bot, .actions, .ai-badge-row, .timeline-section { display: none !important; }
+            .detail-box, td, .total-box { box-shadow: none; border: 1px solid #ccc; background: white; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
     </style>
 </head>
 <body>
-    <div class="receipt">
-        <div class="head">
-            <h1>{{ school.school_name }}</h1>
-{% if school.address or school.phone %}
-<p style="font-size:0.75rem; color:#64748b;">
-    {{ school.address }}{% if school.phone %} • {{ school.phone }}{% endif %}
-</p>
-{% endif %}
-            <p>Fee Payment Receipt</p>
-        </div>
 
-        <div class="row"><span>Receipt No</span><strong>{{ p.receipt_no }}</strong></div>
-        <div class="row"><span>Date</span><strong>{{ p.paid_at.strftime('%d %b %Y, %I:%M %p') if p.paid_at else '—' }}</strong></div>
+    <!-- Top Controls -->
+    <div class="controls">
+        <div class="control-btn" onclick="toggleTheme()" title="Toggle Theme"><i class="fa-solid fa-moon" id="themeIcon"></i></div>
+        <div class="control-btn" onclick="toggleLanguage()" title="Change Language"><i class="fa-solid fa-language"></i></div>
+        <div class="control-btn" onclick="speakReceipt()" title="Read Aloud"><i class="fa-solid fa-volume-high"></i></div>
+    </div>
 
-        <div style="border-top:1px dashed #cbd5e1; margin:0.75rem 0; padding-top:0.75rem;">
-            <div class="row"><span>Student</span><strong>{{ p.student_name }}</strong></div>
-            <div class="row"><span>Roll No</span><strong>{{ p.roll_no or '—' }}</strong></div>
-            <div class="row"><span>Class</span><strong>{{ p.class_name or '—' }}{% if p.section %} - {{ p.section }}{% endif %}</strong></div>
-            <div class="row"><span>Parent</span><strong>{{ p.parent_name or '—' }}</strong></div>
-            <div class="row"><span>Phone</span><strong>{{ p.parent_phone or '—' }}</strong></div>
-        </div>
+    <!-- Support Bot -->
+    <div class="support-bot" onclick="Swal.fire('Live Support', 'Connecting you to the accounts department...', 'info')">
+        <i class="fa-solid fa-headset"></i>
+    </div>
 
-        <div style="border-top:1px dashed #cbd5e1; margin:0.75rem 0; padding-top:0.75rem;">
-            <div class="row"><span>Fee Type</span><strong>{{ p.fee_type }}</strong></div>
-            <div class="row"><span>Month</span><strong>{{ p.month }}</strong></div>
-            <div class="row"><span>Mode</span><strong>{{ p.mode|upper }}</strong></div>
-            {% if p.note %}<div class="row"><span>Note</span><strong>{{ p.note }}</strong></div>{% endif %}
-        </div>
+    <!-- Main Receipt -->
+    <div class="receipt-wrapper" id="receiptWrapper">
+        <div class="receipt-container" data-tilt data-tilt-max="5" data-tilt-speed="400" data-tilt-glare data-tilt-max-glare="0.2">
+            
+            <!-- Header -->
+            <div class="header">
+                <div class="school-brand">
+                    <div class="logo"><i class="fa-solid fa-cube"></i></div>
+                    <div>
+                        <h1 id="schoolName">MY SCHOOL</h1>
+                        <p id="schoolAddr">Sector 15, Noida, UP - 201301</p>
+                    </div>
+                </div>
+                <div class="receipt-info">
+                    <h2>RECEIPT</h2>
+                    <div class="barcode"><svg id="barcode"></svg></div>
+                    <div class="meta-text">
+                        <span id="lblReceiptNo">No:</span> <strong>RCPT-20261119-9736</strong><br>
+                        <span id="lblDate">Date:</span> <strong>19 Nov 2026</strong>
+                    </div>
+                </div>
+            </div>
 
-        <div class="amount-box">
-            <div style="font-size:0.8rem; color:#64748b;">Amount Paid</div>
-            <div class="amt">₹{{ "%.2f"|format(p.amount) }}</div>
-        </div>
+            <!-- Badges -->
+            <div class="ai-badge-row">
+                <div class="badge-pill ai-pill"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Verified</div>
+                <div class="badge-pill blockchain-pill"><i class="fa-brands fa-ethereum"></i> Blockchain Secured</div>
+                <div class="badge-pill eco-pill"><i class="fa-solid fa-leaf"></i> Eco-Friendly</div>
+            </div>
 
-        <div class="footer">
-            Thank you! Ye computer-generated receipt hai.
+            <!-- Details -->
+            <div class="details-grid">
+                <div class="detail-box">
+                    <h4 id="lblStudentInfo"><i class="fa-regular fa-user"></i> Student Info</h4>
+                    <p>Aman Kumar</p>
+                    <span>Roll No: 2 | Class: 8 - B</span>
+                </div>
+                <div class="detail-box">
+                    <h4 id="lblParentInfo"><i class="fa-regular fa-address-card"></i> Parent Info</h4>
+                    <p>Shrawan Prasad</p>
+                    <span>Ph: +91 8986527886</span>
+                </div>
+                <div class="detail-box">
+                    <h4 id="lblPayMode"><i class="fa-solid fa-credit-card"></i> Payment Mode</h4>
+                    <p>UPI / Online</p>
+                    <span>Txn: UPI9876543210</span>
+                </div>
+                <div class="detail-box">
+                    <h4 id="lblFeePeriod"><i class="fa-regular fa-calendar"></i> Fee Period</h4>
+                    <p>November 2026</p>
+                    <span>Installment: 1 of 3</span>
+                </div>
+            </div>
+
+            <!-- Fee Table -->
+            <div class="fee-section">
+                <table>
+                    <thead>
+                        <tr><th id="lblDesc">Description</th><th id="lblAmount">Amount (₹)</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="fee-desc"><span id="lblTuition">Tuition Fee</span> <span>Monthly academic fee</span></td>
+                            <td>400.00</td>
+                        </tr>
+                        <tr>
+                            <td class="fee-desc"><span id="lblExam">Exam Fee</span> <span>Half-yearly charges</span></td>
+                            <td>100.00</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Timeline -->
+            <div class="timeline-section">
+                <div class="timeline">
+                    <div class="tl-item completed">
+                        <div class="tl-dot"></div>
+                        <div class="tl-text">Aug 2026<br>Paid</div>
+                    </div>
+                    <div class="tl-item completed">
+                        <div class="tl-dot"></div>
+                        <div class="tl-text">Oct 2026<br>Paid</div>
+                    </div>
+                    <div class="tl-item current">
+                        <div class="tl-dot"></div>
+                        <div class="tl-text">Nov 2026<br>Current</div>
+                    </div>
+                    <div class="tl-item">
+                        <div class="tl-dot"></div>
+                        <div class="tl-text">Dec 2026<br>Upcoming</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary -->
+            <div class="summary">
+                <div>
+                    <div class="total-box">
+                        <p id="lblAmountPaid">Amount Paid</p>
+                        <h3>₹ 500.00</h3>
+                    </div>
+                    <div class="balance-alert">
+                        <span id="lblBalance">Balance: ₹ 42,500</span>
+                        <button class="btn-pay" onclick="payBalance()"><span id="lblPayNow">Pay Now</span> <i class="fa-solid fa-arrow-right"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer">
+                <div class="qr-box">
+                    <div id="qrcode"></div>
+                    <span>Scan to Verify</span>
+                </div>
+                <div class="thank-you">
+                    <h3 id="lblThanks">Thank You for Your Payment!</h3>
+                    <p id="lblThanksMsg">We appreciate your timely fee submission.</p>
+                    <div class="ai-message">
+                        <i class="fa-solid fa-robot"></i> <b>AI Note:</b> Aman has 98% attendance this month. Keep up the great work!
+                    </div>
+                </div>
+                <div class="signature">
+                    <div class="sign">R. Sharma</div>
+                    <p id="lblAuthSign">Authorized Signatory</p>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- Action Buttons -->
     <div class="actions">
-        <button class="btn btn-primary" onclick="window.print()">🖨️ Print</button>
-        <a href="{{ url_for('fees.index') }}" class="btn btn-secondary">Back to Fees</a>
+        <button class="btn btn-pdf" onclick="downloadPDF()"><i class="fa-solid fa-file-pdf"></i> Download PDF</button>
+        <button class="btn btn-wa" onclick="shareWhatsApp()"><i class="fa-brands fa-whatsapp"></i> Share</button>
+        <button class="btn btn-print" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
     </div>
+
+    <script>
+        // 1. Initialize Libraries
+        VanillaTilt.init(document.querySelectorAll("[data-tilt]"));
+        
+        new QRCode(document.getElementById("qrcode"), {
+            text: "https://myschool.com/verify/RCPT-20261119-9736", width: 80, height: 80,
+            colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H
+        });
+        
+        JsBarcode("#barcode", "RCPT-20261119-9736", { format: "CODE128", width: 1.5, height: 40, displayValue: false });
+
+        // 2. Confetti
+        window.onload = function() {
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#4f46e5', '#9333ea', '#10b981'] });
+        };
+
+        // 3. Theme Toggle (Dark/Light)
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const icon = document.getElementById('themeIcon');
+            icon.classList.toggle('fa-moon');
+            icon.classList.toggle('fa-sun');
+        }
+
+        // 4. Language Toggle (English/Hindi)
+        let isHindi = false;
+        function toggleLanguage() {
+            isHindi = !isHindi;
+            const lang = {
+                en: { no: "No:", date: "Date:", student: "Student Info", parent: "Parent Info", mode: "Payment Mode", period: "Fee Period", desc: "Description", amt: "Amount (₹)", tuition: "Tuition Fee", exam: "Exam Fee", paid: "Amount Paid", balance: "Balance", pay: "Pay Now", thanks: "Thank You for Your Payment!", thanksMsg: "We appreciate your timely fee submission.", sign: "Authorized Signatory" },
+                hi: { no: "रसीद नंबर:", date: "दिनांक:", student: "छात्र विवरण", parent: "अभिभावक विवरण", mode: "भुगतान विधि", period: "शुल्क अवधि", desc: "विवरण", amt: "राशि (₹)", tuition: "ट्यूशन फीस", exam: "परीक्षा शुल्क", paid: "भुगतान की गई राशि", balance: "बकाया", pay: "अभी भुगतान करें", thanks: "आपके भुगतान के लिए धन्यवाद!", thanksMsg: "हम समय पर शुल्क जमा करने के लिए आभारी हैं।", sign: "अधिकृत हस्ताक्षरकर्ता" }
+            };
+            const t = isHindi ? lang.hi : lang.en;
+            
+            document.getElementById('lblReceiptNo').innerText = t.no;
+            document.getElementById('lblDate').innerText = t.date;
+            document.getElementById('lblStudentInfo').innerHTML = `<i class="fa-regular fa-user"></i> ${t.student}`;
+            document.getElementById('lblParentInfo').innerHTML = `<i class="fa-regular fa-address-card"></i> ${t.parent}`;
+            document.getElementById('lblPayMode').innerHTML = `<i class="fa-solid fa-credit-card"></i> ${t.mode}`;
+            document.getElementById('lblFeePeriod').innerHTML = `<i class="fa-regular fa-calendar"></i> ${t.period}`;
+            document.getElementById('lblDesc').innerText = t.desc;
+            document.getElementById('lblAmount').innerText = t.amt;
+            document.getElementById('lblTuition').innerText = t.tuition;
+            document.getElementById('lblExam').innerText = t.exam;
+            document.getElementById('lblAmountPaid').innerText = t.paid;
+            document.getElementById('lblBalance').innerText = t.balance + ": ₹ 42,500";
+            document.getElementById('lblPayNow').innerText = t.pay;
+            document.getElementById('lblThanks').innerText = t.thanks;
+            document.getElementById('lblThanksMsg').innerText = t.thanksMsg;
+            document.getElementById('lblAuthSign').innerText = t.sign;
+        }
+
+        // 5. Text to Speech (Voice Readout)
+        function speakReceipt() {
+            const text = "Fee receipt for Aman Kumar. Amount paid: 500 rupees. Thank you for your payment.";
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.9;
+            window.speechSynthesis.speak(utterance);
+            Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Reading receipt aloud...', showConfirmButton: false, timer: 2000 });
+        }
+
+        // 6. Download PDF
+        function downloadPDF() {
+            const element = document.getElementById('receiptWrapper');
+            const opt = {
+                margin: 0, filename: 'Ultimate_Receipt.pdf',
+                image: { type: 'jpeg', quality: 1 },
+                html2canvas: { scale: 3, useCORS: true, scrollY: 0 },
+                jsPDF: { unit: 'px', format: [850, 1200], orientation: 'portrait' }
+            };
+            
+            const btn = document.querySelector('.btn-pdf');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+            
+            html2pdf().set(opt).from(element).save().then(() => {
+                btn.innerHTML = '<i class="fa-solid fa-file-pdf"></i> Download PDF';
+                Swal.fire({ icon: 'success', title: 'PDF Saved!', timer: 1500, showConfirmButton: false });
+            });
+        }
+
+        // 7. WhatsApp Share
+        function shareWhatsApp() {
+            Swal.fire({
+                title: 'Share Receipt', text: "PDF will be downloaded first, then WhatsApp will open.",
+                icon: 'info', showCancelButton: true, confirmButtonText: 'Proceed', confirmButtonColor: '#25D366'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    downloadPDF();
+                    setTimeout(() => {
+                        const msg = encodeURIComponent(`Dear Parent, Payment received. Receipt: RCPT-20261119-9736.`);
+                        window.open(`https://wa.me/918986527886?text=${msg}`, '_blank');
+                    }, 1500);
+                }
+            });
+        }
+
+        // 8. Pay Balance Simulator
+        function payBalance() {
+            Swal.fire({
+                title: 'Secure Payment',
+                html: `
+                    <div style="text-align:left;">
+                        <p style="font-size:14px; margin-bottom:10px;">Amount to pay: <b>₹42,500.00</b></p>
+                        <input type="text" placeholder="Card Number" style="width:100%; padding:8px; margin-bottom:8px; border:1px solid #ccc; border-radius:4px;">
+                        <div style="display:flex; gap:10px;">
+                            <input type="text" placeholder="MM/YY" style="width:50%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                            <input type="password" placeholder="CVV" style="width:50%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Pay ₹42,500',
+                confirmButtonColor: '#10b981',
+                showLoaderOnConfirm: true,
+                preConfirm: () => {
+                    return new Promise((resolve) => {
+                        setTimeout(() => { resolve() }, 2000);
+                    });
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    confetti({ particleCount: 200, spread: 100 });
+                    Swal.fire('Payment Successful!', 'Balance cleared. Thank you!', 'success');
+                }
+            });
+        }
+    </script>
 </body>
 </html>
