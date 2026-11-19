@@ -160,8 +160,8 @@
         .ai-message { background: rgba(139, 92, 246, 0.05); border-left: 3px solid #8b5cf6; padding: 10px; margin-top: 10px; border-radius: 4px; text-align: left; font-size: 11px; }
 
         .signature { text-align: center; }
-        .signature .sign { font-family: 'Brush Script MT', cursive; font-size: 36px; color: var(--text-main); margin-bottom: 5px; }
-        .signature p { font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--table-border); padding-top: 8px; }
+        .signature .sign { font-family: 'Brush Script MT', cursive; font-size: 32px; color: var(--text-main); margin-bottom: 5px; }
+        .signature p { font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--table-border); padding-top: 8px; font-weight: 500;}
 
         /* Action Buttons */
         .actions { margin-top: 30px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; z-index: 10; }
@@ -310,15 +310,17 @@
                     <span>Scan to Verify</span>
                 </div>
                 <div class="thank-you">
-                    <h3 id="lblThanks">Thank You for Your Payment!</h3>
-                    <p id="lblThanksMsg">We appreciate your timely fee submission.</p>
+                    <!-- UPDATED DESCRIPTION HERE -->
+                    <h3 id="lblThanks">Payment Confirmed Successfully</h3>
+                    <p id="lblThanksMsg">Your payment has been securely processed. We deeply appreciate your cooperation and timely support in our shared mission to nurture and educate your child.</p>
                     <div class="ai-message">
                         <i class="fa-solid fa-robot"></i> <b>AI Note:</b> Aman has 98% attendance this month. Keep up the great work!
                     </div>
                 </div>
                 <div class="signature">
-                    <div class="sign">R. Sharma</div>
-                    <p id="lblAuthSign">Authorized Signatory</p>
+                    <!-- UPDATED SIGNATORY HERE -->
+                    <div class="sign">Aman Kumar</div>
+                    <p id="lblAuthSign">Student Signature</p>
                 </div>
             </div>
         </div>
@@ -360,8 +362,24 @@
         function toggleLanguage() {
             isHindi = !isHindi;
             const lang = {
-                en: { no: "No:", date: "Date:", student: "Student Info", parent: "Parent Info", mode: "Payment Mode", period: "Fee Period", desc: "Description", amt: "Amount (₹)", tuition: "Tuition Fee", exam: "Exam Fee", paid: "Amount Paid", balance: "Balance", pay: "Pay Now", thanks: "Thank You for Your Payment!", thanksMsg: "We appreciate your timely fee submission.", sign: "Authorized Signatory" },
-                hi: { no: "रसीद नंबर:", date: "दिनांक:", student: "छात्र विवरण", parent: "अभिभावक विवरण", mode: "भुगतान विधि", period: "शुल्क अवधि", desc: "विवरण", amt: "राशि (₹)", tuition: "ट्यूशन फीस", exam: "परीक्षा शुल्क", paid: "भुगतान की गई राशि", balance: "बकाया", pay: "अभी भुगतान करें", thanks: "आपके भुगतान के लिए धन्यवाद!", thanksMsg: "हम समय पर शुल्क जमा करने के लिए आभारी हैं।", sign: "अधिकृत हस्ताक्षरकर्ता" }
+                en: { 
+                    no: "No:", date: "Date:", student: "Student Info", parent: "Parent Info", 
+                    mode: "Payment Mode", period: "Fee Period", desc: "Description", amt: "Amount (₹)", 
+                    tuition: "Tuition Fee", exam: "Exam Fee", paid: "Amount Paid", balance: "Balance", 
+                    pay: "Pay Now", 
+                    thanks: "Payment Confirmed Successfully", 
+                    thanksMsg: "Your payment has been securely processed. We deeply appreciate your cooperation and timely support in our shared mission to nurture and educate your child.", 
+                    sign: "Student Signature" 
+                },
+                hi: { 
+                    no: "रसीद नंबर:", date: "दिनांक:", student: "छात्र विवरण", parent: "अभिभावक विवरण", 
+                    mode: "भुगतान विधि", period: "शुल्क अवधि", desc: "विवरण", amt: "राशि (₹)", 
+                    tuition: "ट्यूशन फीस", exam: "परीक्षा शुल्क", paid: "भुगतान की गई राशि", balance: "बकाया", 
+                    pay: "अभी भुगतान करें", 
+                    thanks: "भुगतान सफलतापूर्वक प्राप्त हुआ", 
+                    thanksMsg: "आपका भुगतान सुरक्षित रूप से संसाधित किया गया है। आपके बच्चे के उज्ज्वल भविष्य के लिए हमारे साथ सहयोग करने हेतु आपका हार्दिक आभार।", 
+                    sign: "छात्र हस्ताक्षर" 
+                }
             };
             const t = isHindi ? lang.hi : lang.en;
             
@@ -385,7 +403,7 @@
 
         // 5. Text to Speech (Voice Readout)
         function speakReceipt() {
-            const text = "Fee receipt for Aman Kumar. Amount paid: 500 rupees. Thank you for your payment.";
+            const text = "Payment confirmed successfully. Fee receipt for Aman Kumar. Amount paid: 500 rupees.";
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.rate = 0.9;
             window.speechSynthesis.speak(utterance);
@@ -420,7 +438,7 @@
                 if (res.isConfirmed) {
                     downloadPDF();
                     setTimeout(() => {
-                        const msg = encodeURIComponent(`Dear Parent, Payment received. Receipt: RCPT-20261119-9736.`);
+                        const msg = encodeURIComponent(`Dear Parent, Payment confirmed successfully. Receipt: RCPT-20261119-9736.`);
                         window.open(`https://wa.me/918986527886?text=${msg}`, '_blank');
                     }, 1500);
                 }
