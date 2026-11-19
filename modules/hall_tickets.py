@@ -44,7 +44,9 @@ def index():
         except Exception:
             pass
         exam_list.append(exam_dict)
-    return render_template('hall_ticket/index.html',
+    
+    # FIX: hall_ticket -> hall_tickets
+    return render_template('hall_tickets/index.html',
                            exams=exam_list, classes=classes,
                            selected_class=class_name)
 
@@ -83,7 +85,9 @@ def seating(exam_id):
 
     students = db.get_exam_students_for_tickets(exam_id)
     summary = db.get_exam_seating_summary(exam_id)
-    return render_template('hall_ticket/seating.html',
+    
+    # FIX: hall_ticket -> hall_tickets
+    return render_template('hall_tickets/seating.html',
                            exam={"id": exam[0], "name": exam[1],
                                  "class_name": exam[2], "exam_date": exam[3]},
                            students=students, summary=summary)
@@ -117,7 +121,9 @@ def view_ticket(exam_id, student_id):
             break
 
     settings = db.get_settings()
-    return render_template('hall_ticket/ticket_single.html',
+    
+    # FIX: hall_ticket -> hall_tickets
+    return render_template('hall_tickets/ticket_single.html',
                            exam=exam_dict, student=student,
                            seating=seating_info, settings=settings)
 
@@ -136,7 +142,9 @@ def bulk_print(exam_id):
                  "max_marks": exam[5]}
     students = db.get_exam_students_for_tickets(exam_id)
     settings = db.get_settings()
-    return render_template('hall_ticket/ticket_bulk.html',
+    
+    # FIX: hall_ticket -> hall_tickets
+    return render_template('hall_tickets/ticket_bulk.html',
                            exam=exam_dict, students=students, settings=settings)
 
 
