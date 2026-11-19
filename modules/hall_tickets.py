@@ -86,8 +86,8 @@ def seating(exam_id):
     students = db.get_exam_students_for_tickets(exam_id)
     summary = db.get_exam_seating_summary(exam_id)
     
-    # FIX: hall_ticket -> hall_tickets
-    return render_template('hall_tickets/seating.html',
+    # FIX: seating.html ki jagah manage.html (kyunki GitHub par yehi hai)
+    return render_template('hall_tickets/manage.html',
                            exam={"id": exam[0], "name": exam[1],
                                  "class_name": exam[2], "exam_date": exam[3]},
                            students=students, summary=summary)
@@ -122,8 +122,8 @@ def view_ticket(exam_id, student_id):
 
     settings = db.get_settings()
     
-    # FIX: hall_ticket -> hall_tickets
-    return render_template('hall_tickets/ticket_single.html',
+    # FIX: ticket_single.html ki jagah print.html (kyunki GitHub par yehi hai)
+    return render_template('hall_tickets/print.html',
                            exam=exam_dict, student=student,
                            seating=seating_info, settings=settings)
 
@@ -143,8 +143,8 @@ def bulk_print(exam_id):
     students = db.get_exam_students_for_tickets(exam_id)
     settings = db.get_settings()
     
-    # FIX: hall_ticket -> hall_tickets
-    return render_template('hall_tickets/ticket_bulk.html',
+    # FIX: ticket_bulk.html ki jagah bulk_generate.html (kyunki GitHub par yehi hai)
+    return render_template('hall_tickets/bulk_generate.html',
                            exam=exam_dict, students=students, settings=settings)
 
 
@@ -163,4 +163,4 @@ def stats(exam_id):
         "unseated": max(len(students) - seated, 0),
         "total_students": len(students),
         "rooms": summary
-    }
+                }
