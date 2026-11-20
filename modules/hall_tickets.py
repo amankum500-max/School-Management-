@@ -14,7 +14,8 @@ def login_required(f):
     def wrapper(*args, **kwargs):
         if not session.get('admin_id'):
             flash("Please login first", "warning")
-            return redirect(url_for('login'))
+            # FIX: 'login' ko badal kar 'auth.login' kiya gaya hai
+            return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return wrapper
 
@@ -45,7 +46,6 @@ def index():
             pass
         exam_list.append(exam_dict)
     
-    # FIX: hall_ticket -> hall_tickets
     return render_template('hall_tickets/index.html',
                            exams=exam_list, classes=classes,
                            selected_class=class_name)
@@ -86,7 +86,6 @@ def seating(exam_id):
     students = db.get_exam_students_for_tickets(exam_id)
     summary = db.get_exam_seating_summary(exam_id)
     
-    # FIX: seating.html ki jagah manage.html (kyunki GitHub par yehi hai)
     return render_template('hall_tickets/manage.html',
                            exam={"id": exam[0], "name": exam[1],
                                  "class_name": exam[2], "exam_date": exam[3]},
@@ -122,7 +121,6 @@ def view_ticket(exam_id, student_id):
 
     settings = db.get_settings()
     
-    # FIX: ticket_single.html ki jagah print.html (kyunki GitHub par yehi hai)
     return render_template('hall_tickets/print.html',
                            exam=exam_dict, student=student,
                            seating=seating_info, settings=settings)
@@ -143,7 +141,6 @@ def bulk_print(exam_id):
     students = db.get_exam_students_for_tickets(exam_id)
     settings = db.get_settings()
     
-    # FIX: ticket_bulk.html ki jagah bulk_generate.html (kyunki GitHub par yehi hai)
     return render_template('hall_tickets/bulk_generate.html',
                            exam=exam_dict, students=students, settings=settings)
 
@@ -163,4 +160,4 @@ def stats(exam_id):
         "unseated": max(len(students) - seated, 0),
         "total_students": len(students),
         "rooms": summary
-                }
+    }
