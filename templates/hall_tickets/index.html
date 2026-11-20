@@ -5,15 +5,14 @@
     
     <!-- Top Stats & Charts -->
     <!-- FIX: hall_tickets/ hata diya gaya hai -->
-    {% include 'components/_analytics.html' %}
-
+    {% include 'hall_tickets/components/_analytics.html' %}
     <!-- Exams Grid (Cards) -->
     <div class="grid grid-cols-3 gap-4 mt-6">
         {% for e in exams %}
             <!-- FIX 1: exam=e add kiya gaya hai taaki card component mein error na aaye -->
             {% with exam=e %}
                 <!-- FIX: hall_tickets/ hata diya gaya hai -->
-                {% include 'components/_exam_card.html' %}
+                {% include 'hall_tickets/components/_exam_card.html' %}
             {% endwith %}
         {% endfor %}
     </div>
