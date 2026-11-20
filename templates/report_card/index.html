@@ -21,7 +21,7 @@
     </div>
     {% if selected_class %}
     <div class="col-md-3">
-      <a href="{{ url_for('report_card.bulk_print', class_name=selected_class, year=current_year) }}" 
+      <a href="{{ url_for('report_cards.bulk_print', class_name=selected_class, year=current_year) }}" 
          class="btn btn-outline-dark" target="_blank">
         <i class="bi bi-printer"></i> Bulk Print
       </a>
@@ -43,7 +43,7 @@
             <td>{{ s.class_name }}</td>
             <td>{{ s.section or '—' }}</td>
             <td class="text-end">
-              <a href="{{ url_for('report_card.view', student_id=s.id, year=current_year) }}" 
+              <a href="{{ url_for('report_cards.view', student_id=s.id, year=current_year) }}" 
                  class="btn btn-sm btn-primary">View Report</a>
             </td>
           </tr>
