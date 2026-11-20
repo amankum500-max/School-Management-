@@ -1,1 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Card - {{ exam.name }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .exam-card {
+            background: #ffffff;
+            width: 100%;
+            max-width: 500px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border-top: 5px solid #4e73df; /* ऊपर नीला बॉर्डर */
+        }
+        .card-header {
+            background-color: #f8f9fc;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #e3e6f0;
+        }
+        .card-header h2 {
+            margin: 0;
+            color: #333;
+            font-size: 22px;
+            text-transform: capitalize;
+        }
+        .card-body {
+            padding: 20px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px dashed #e3e6f0;
+            font-size: 16px;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .label {
+            font-weight: 600;
+            color: #5a5c69;
+        }
+        .value {
+            color: #333;
+            font-weight: 500;
+        }
+        .card-footer {
+            padding: 20px;
+            background-color: #f8f9fc;
+            text-align: center;
+            border-top: 1px solid #e3e6f0;
+        }
+        .btn-seating {
+            display: inline-block;
+            background-color: #4e73df;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 15px;
+            transition: background 0.3s;
+        }
+        .btn-seating:hover {
+            background-color: #2e59d9;
+        }
+    </style>
+</head>
+<body>
 
+    <div class="exam-card">
+        <!-- हेडर सेक्शन -->
+        <div class="card-header">
+            <h2>{{ exam.name }}</h2>
+        </div>
+
+        <!-- डिटेल्स सेक्शन -->
+        <div class="card-body">
+            <div class="detail-row">
+                <span class="label">Class:</span>
+                <span class="value">{{ exam.class_name }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Date:</span>
+                <span class="value">{{ exam.exam_date }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Max Marks:</span>
+                <span class="value">{{ exam.max_marks }}</span>
+            </div>
+        </div>
+
+        <!-- बटन सेक्शन -->
+        <div class="card-footer">
+            <!-- ध्यान दें: यहाँ href="#" की जगह अपने Flask रूट का नाम url_for में डालें -->
+            <a href="{{ url_for('manage_seating_route_name', exam_id=exam.id) }}" class="btn-seating">
+                Manage Seating
+            </a>
+        </div>
+    </div>
+
+</body>
+</html>
