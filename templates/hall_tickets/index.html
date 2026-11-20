@@ -4,15 +4,15 @@
     <h1 class="text-3xl text-[#00ffcc]">Cyber Control Center</h1>
     
     <!-- Top Stats & Charts -->
-    <!-- FIX: hall_tickets/ hata diya gaya hai -->
-    {% include 'hall_tickets/components/_analytics.html' %}
+    <!-- FIX: components hata diya gaya hai kyunki file ab direct hall_tickets folder mein hai -->
+    {% include 'hall_tickets/_analytics.html' %}
+    
     <!-- Exams Grid (Cards) -->
     <div class="grid grid-cols-3 gap-4 mt-6">
         {% for e in exams %}
-            <!-- FIX 1: exam=e add kiya gaya hai taaki card component mein error na aaye -->
             {% with exam=e %}
-                <!-- FIX: hall_tickets/ hata diya gaya hai -->
-                {% include 'hall_tickets/components/_exam_card.html' %}
+                <!-- FIX: components hata diya gaya hai -->
+                {% include 'hall_tickets/_exam_card.html' %}
             {% endwith %}
         {% endfor %}
     </div>
@@ -25,8 +25,9 @@
     </div>
 
     <!-- Modals -->
-    <!-- FIX: hall_tickets/ hata diya gaya hai -->
-    {% include 'components/_modals.html' %}
+    <!-- WARNING: Agar _modals.html bhi hall_tickets folder me move kar diya hai toh niche wala path use karein. 
+         Agar wo abhi bhi components folder ke andar hai, toh 'hall_tickets/components/_modals.html' likhein -->
+    {% include 'hall_tickets/_modals.html' %}
     
 </div>
 {% endblock %}
