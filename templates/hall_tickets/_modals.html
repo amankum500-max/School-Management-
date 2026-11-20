@@ -1,1 +1,135 @@
+<!-- Print Confirmation Modal -->
+<div id="printConfirmationModal" class="custom-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Confirm Print</h3>
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to print this hall ticket?</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+            <!-- 'window.print()' दबाने पर ब्राउज़र का प्रिंट डायलॉग खुलेगा -->
+            <button class="btn btn-print" onclick="triggerPrint()">Print</button>
+        </div>
+    </div>
+</div>
 
+<style>
+    /* मॉडल (पॉप-अप) की स्टाइलिंग */
+    .custom-modal {
+        display: none; /* डिफ़ॉल्ट रूप से छिपा हुआ */
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5); /* पीछे का काला धुंधला बैकग्राउंड */
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-content {
+        background-color: #fff;
+        width: 90%;
+        max-width: 400px;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .modal-header {
+        background-color: #f8f9fc;
+        padding: 15px 20px;
+        border-bottom: 1px solid #e3e6f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        font-size: 18px;
+        color: #333;
+    }
+
+    .close-btn {
+        font-size: 24px;
+        font-weight: bold;
+        color: #888;
+        cursor: pointer;
+    }
+
+    .close-btn:hover {
+        color: #000;
+    }
+
+    .modal-body {
+        padding: 20px;
+        font-size: 16px;
+        color: #555;
+        text-align: center;
+    }
+
+    .modal-footer {
+        padding: 15px 20px;
+        background-color: #f8f9fc;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        border-top: 1px solid #e3e6f0;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 5px;
+        font-size: 14px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    .btn-cancel {
+        background-color: #eaecf4;
+        color: #5a5c69;
+    }
+
+    .btn-cancel:hover {
+        background-color: #d1d3e2;
+    }
+
+    .btn-print {
+        background-color: #4e73df;
+        color: white;
+    }
+
+    .btn-print:hover {
+        background-color: #2e59d9;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+<script>
+    // मॉडल खोलने का फंक्शन
+    function openModal() {
+        document.getElementById('printConfirmationModal').style.display = 'flex';
+    }
+
+    // मॉडल बंद करने का फंक्शन
+    function closeModal() {
+        document.getElementById('printConfirmationModal').style.display = 'none';
+    }
+
+    // प्रिंट शुरू करने का फंक्शन
+    function triggerPrint() {
+        closeModal(); // पहले पॉप-अप बंद करें
+        window.print(); // फिर ब्राउज़र का प्रिंट डायलॉग खोलें
+    }
+</script>
