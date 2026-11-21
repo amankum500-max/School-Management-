@@ -1,33 +1,41 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="bg-[#050505] min-h-screen -m-6 p-6">
-    <h1 class="text-3xl text-[#00ffcc]">Cyber Control Center</h1>
-    
+<div class="bg-[#050505] text-white min-h-screen -m-6 p-4 md:p-6">
+    <h1 class="text-2xl md:text-3xl font-bold text-white tracking-wide">Cyber Control Center</h1>
+
     <!-- Top Stats & Charts -->
-    <!-- FIX: components hata diya gaya hai kyunki file ab direct hall_tickets folder mein hai -->
     {% include 'hall_tickets/_analytics.html' %}
-    
-    <!-- Exams Grid (Cards) -->
-    <div class="grid grid-cols-3 gap-4 mt-6">
+
+    <!-- Exams / Student Hall Tickets Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
         {% for e in exams %}
-            {% with exam=e %}
-                <!-- FIX: components hata diya gaya hai -->
-                {% include 'hall_tickets/_exam_card.html' %}
-            {% endwith %}
+            {% if e.tickets is defined and e.tickets %}
+                {% for tk in e.tickets %}
+                    {% with exam=e, ticket=tk, student=(tk.student if tk.student is defined and tk.student else {}) %}
+                        {% include 'hall_tickets/_exam_card.html' %}
+                    {% endwith %}
+                {% endfor %}
+            {% elif students is defined and students %}
+                {% for st in students %}
+                    {% with exam=e, student=st %}
+                        {% include 'hall_tickets/_exam_card.html' %}
+                    {% endwith %}
+                {% endfor %}
+            {% else %}
+                {% with exam=e %}
+                    {% include 'hall_tickets/_exam_card.html' %}
+                {% endwith %}
+            {% endif %}
         {% endfor %}
     </div>
-    
+
     <!-- Buttons to open new pages -->
-    <div class="mt-8 mb-4 flex gap-4">
-        <!-- FIX 2: url_for hata kar # lagaya hai, kyunki backend mein in routes ke functions nahi hain abhi -->
-        <a href="#" class="holo-btn">Open AI Scanner</a>
-        <a href="#" class="holo-btn">Bulk Generate PDF</a>
+    <div class="mt-8 mb-4 flex flex-wrap gap-4">
+        <a href="{{ url_for('hall_ticket.scanner') if 'hall_ticket.scanner' in current_app.view_functions else '#' }}" class="holo-btn">Open AI Scanner</a>
+        <a href="{{ url_for('hall_ticket.bulk_generate') if 'hall_ticket.bulk_generate' in current_app.view_functions else '#' }}" class="holo-btn">Bulk Generate PDF</a>
     </div>
 
     <!-- Modals -->
-    <!-- WARNING: Agar _modals.html bhi hall_tickets folder me move kar diya hai toh niche wala path use karein. 
-         Agar wo abhi bhi components folder ke andar hai, toh 'hall_tickets/components/_modals.html' likhein -->
     {% include 'hall_tickets/_modals.html' %}
-    
 </div>
 {% endblock %}
