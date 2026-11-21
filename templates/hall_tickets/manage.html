@@ -6,10 +6,10 @@
 
 <div style="margin-bottom:1rem; display:flex; justify-content:space-between;
     align-items:center; flex-wrap:wrap; gap:0.5rem;">
-    <a href="{{ url_for('hall_tickets.index') }}"
+    <a href="{{ url_for('hall_ticket.index') }}"
        style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-        <a href="{{ url_for('hall_tickets.preview', exam_id=exam.id) }}"
+        <a href="{{ url_for('hall_ticket.preview', exam_id=exam.id) }}"
            target="_blank" class="btn"
            style="background:#3b82f6; font-size:0.85rem;">🖨️ Print All Tickets</a>
     </div>
@@ -22,8 +22,15 @@
     </h2>
     <div style="font-size:0.85rem; color:#64748b;">
         {% if exam.exam_date %}Date: <strong>{{ exam.exam_date }}</strong>{% endif %}
-        • Subjects: {{ exam.subjects|join(', ') }}
-        • Max Marks: {{ exam.max_marks }}/subject
+        {% if exam.subjects %}
+            • Subjects:
+            {% if exam.subjects is string %}
+                {{ exam.subjects }}
+            {% else %}
+                {{ exam.subjects|join(', ') }}
+            {% endif %}
+        {% endif %}
+        {% if exam.max_marks is not none %}• Max Marks: {{ exam.max_marks }}/subject{% endif %}
     </div>
 </div>
 
@@ -43,7 +50,7 @@
     </div>
     {% endif %}
 
-    <form method="POST" action="{{ url_for('hall_tickets.auto_seat', exam_id=exam.id) }}"
+    <form method="POST" action="{{ url_for('hall_ticket.auto_seat', exam_id=exam.id) }}"
           style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;"
           onsubmit="return confirm('Auto-assign karega {{ students|length }} students ke seats. Existing overwrite ho jayenge. OK?');">
         <div>
@@ -110,7 +117,7 @@
                 {% else %}—{% endif %}
             </td>
             <td style="padding:0.55rem; text-align:right; white-space:nowrap;">
-                <form method="POST" action="{{ url_for('hall_tickets.set_seat', exam_id=exam.id) }}"
+                <form method="POST" action="{{ url_for('hall_ticket.set_seat', exam_id=exam.id) }}"
                       style="display:inline-flex; gap:0.3rem; align-items:center;">
                     <input type="hidden" name="student_id" value="{{ s.id }}">
                     <input name="room_no" value="{{ s.room_no or '' }}" placeholder="Room"
@@ -124,7 +131,7 @@
                         padding:0.25rem 0.55rem; border-radius:3px; cursor:pointer;
                         font-size:0.75rem; font-weight:600;">✓</button>
                 </form>
-                <a href="{{ url_for('hall_tickets.preview', exam_id=exam.id, student_id=s.id) }}"
+                <a href="{{ url_for('hall_ticket.preview', exam_id=exam.id, student_id=s.id) }}"
                    target="_blank"
                    style="color:#8b5cf6; text-decoration:none; font-size:0.78rem;
                    margin-left:0.4rem;">Ticket</a>
@@ -136,7 +143,7 @@
 </div>
 
 <!-- Hidden clear form -->
-<form method="POST" action="{{ url_for('hall_tickets.clear_seating', exam_id=exam.id) }}"
+<form method="POST" action="{{ url_for('hall_ticket.clear_seating', exam_id=exam.id) }}"
       id="clearForm" style="display:none;"></form>
 <script>
     function clearSeating() {
