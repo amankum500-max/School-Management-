@@ -1,119 +1,524 @@
 {% extends "base.html" %}
-{% block title %}Marks Entry{% endblock %}
+{% block title %}Marks Entry — {{ exam.name }}{% endblock %}
+{% block page_title %}Marks Entry{% endblock %}
 
 {% block content %}
-<div class="card" style="padding: 20px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2>📝 Marks Entry: {{ exam.name }} ({{ exam.class_name }})</h2>
-        <a href="{{ url_for('exams.index') }}" class="btn" style="background: #64748b;">← Back</a>
+<style>
+@media print {
+    .no-print { display: none !important; }
+    .card { border: none !important; box-shadow: none !important; padding: 0 !important; }
+    table { font-size: 11px !important; }
+    input[type="number"] { border: none !important; background: transparent !important; width: auto !important; }
+}
+</style>
+
+<div class="card" style="padding: 1.25rem; border-radius: 12px; border: 1px solid #e2e8f0; background: #ffffff;">
+    <!-- Header & Quick Navigation -->
+    <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.1rem; padding-bottom: 0.85rem; border-bottom: 1px solid #e2e8f0;">
+        <div>
+            <h2 style="margin: 0; font-size: 1.25rem; color: #0f172a;">
+                📝 {{ exam.name }}
+                <span style="font-size: 0.85rem; font-weight: 600; background: #eff6ff; color: #1d4ed8; padding: 0.2rem 0.65rem; border-radius: 999px; margin-left: 0.4rem;">
+                    Class {{ exam.class_name }}
+                </span>
+            </h2>
+            <div style="font-size: 0.84rem; color: #64748b; margin-top: 0.25rem;">
+                Students: <strong>{{ (students or [])|length }}</strong> • Subjects: <strong>{{ (subjects or [])|length }}</strong> • Pass Marks: <strong>{{ exam.pass_marks if exam.pass_marks is defined and exam.pass_marks else 33 }}%</strong>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 0.45rem; flex-wrap: wrap; align-items: center;">
+            <a href="{{ url_for('hall_ticket.seating', exam_id=exam.id) }}"
+               style="padding: 0.45rem 0.75rem; border-radius: 8px; background: #f3e8ff; color: #6b21a8; text-decoration: none; font-size: 0.84rem; font-weight: 600;">
+                🎟️ Tickets
+            </a>
+            <a href="{{ url_for('exams.merit', exam_id=exam.id) }}"
+               style="padding: 0.45rem 0.75rem; border-radius: 8px; background: #ecfdf5; color: #047857; text-decoration: none; font-size: 0.84rem; font-weight: 600;">
+                🏆 Merit
+            </a>
+            <button type="button" onclick="window.print()"
+                    style="padding: 0.45rem 0.75rem; border-radius: 8px; background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; font-size: 0.84rem; font-weight: 600; cursor: pointer;">
+                🖨️ Print Sheet
+            </button>
+            <button type="button" id="export-csv-btn"
+                    style="padding: 0.45rem 0.75rem; border-radius: 8px; background: #0f172a; color: #ffffff; border: none; font-size: 0.84rem; font-weight: 600; cursor: pointer;">
+                ⬇️ Export CSV
+            </button>
+            <a href="{{ url_for('exams.index') }}"
+               style="padding: 0.45rem 0.75rem; border-radius: 8px; background: #f8fafc; color: #334155; border: 1px solid #e2e8f0; text-decoration: none; font-size: 0.84rem; font-weight: 600;">
+                ← Back
+            </a>
+        </div>
     </div>
 
-    <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; text-align: center;">
+    <!-- Live Analytics Strip -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 0.65rem; margin-bottom: 1rem;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 9px; padding: 0.6rem 0.8rem;">
+            <div style="font-size: 0.72rem; color: #64748b; text-transform: uppercase;">Class Average</div>
+            <div id="stat-avg" style="font-size: 1.05rem; font-weight: 700; color: #0f172a;">0.0%</div>
+        </div>
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 9px; padding: 0.6rem 0.8rem;">
+            <div style="font-size: 0.72rem; color: #047857; text-transform: uppercase;">Passed</div>
+            <div id="stat-pass" style="font-size: 1.05rem; font-weight: 700; color: #065f46;">0</div>
+        </div>
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 9px; padding: 0.6rem 0.8rem;">
+            <div style="font-size: 0.72rem; color: #b91c1c; text-transform: uppercase;">Fail / Needs Attn</div>
+            <div id="stat-fail" style="font-size: 1.05rem; font-weight: 700; color: #991b1b;">0</div>
+        </div>
+        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 9px; padding: 0.6rem 0.8rem;">
+            <div style="font-size: 0.72rem; color: #b45309; text-transform: uppercase;">Absent Entries</div>
+            <div id="stat-absent" style="font-size: 1.05rem; font-weight: 700; color: #92400e;">0</div>
+        </div>
+    </div>
+
+    <!-- Toolbar: Search, Filter, Bulk Tools & Status -->
+    <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.65rem; margin-bottom: 0.9rem;">
+        <div style="display: flex; gap: 0.45rem; flex-wrap: wrap; align-items: center; flex: 1; min-width: 240px;">
+            <input type="text" id="student-search" placeholder="🔍 Search name or roll..."
+                   style="padding: 0.48rem 0.7rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.86rem; min-width: 175px;">
+
+            <select id="result-filter"
+                    style="padding: 0.48rem 0.65rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.86rem; background: #fff;">
+                <option value="all">All Students</option>
+                <option value="pass">Passed Only</option>
+                <option value="fail">Failed Only</option>
+                <option value="absent">Has Absent</option>
+            </select>
+
+            <select id="bulk-subject"
+                    style="padding: 0.48rem 0.65rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.86rem; background: #fff;">
+                <option value="">Bulk Subject...</option>
+                {% for sub in subjects or [] %}
+                {% set s_name = sub.subject_name if sub.subject_name is defined else (sub.name if sub.name is defined else sub) %}
+                <option value="{{ s_name }}">{{ s_name }}</option>
+                {% endfor %}
+            </select>
+
+            <button type="button" id="clear-absent-btn"
+                    style="padding: 0.48rem 0.65rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer;">
+                Clear AB (Sub)
+            </button>
+
+            <button type="button" id="reset-filters-btn"
+                    style="padding: 0.48rem 0.65rem; border: 1px solid #cbd5e1; background: #ffffff; color: #64748b; border-radius: 8px; font-size: 0.82rem; cursor: pointer;">
+                Reset
+            </button>
+        </div>
+
+        <div id="save-status"
+             style="font-size: 0.84rem; font-weight: 600; color: #047857; background: #ecfdf5; padding: 0.45rem 0.8rem; border-radius: 8px; border: 1px solid #a7f3d0;">
+            ✅ Auto-save ready
+        </div>
+    </div>
+
+    <!-- Marks Spreadsheet Table -->
+    <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 10px;">
+        <table id="marks-table" data-pass-pct="{{ exam.pass_marks if exam.pass_marks is defined and exam.pass_marks else 33 }}"
+               style="width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 680px;">
             <thead>
-                <tr style="background: #1e293b; color: white;">
-                    <th style="padding: 12px;">Roll No</th>
-                    <th style="padding: 12px; text-align: left;">Student Name</th>
-                    {% for sub in subjects %}
-                    <th style="padding: 12px;">{{ sub.subject_name }} <br><small>(Max: {{ sub.max_marks }})</small></th>
+                <tr style="background: #0f172a; color: #ffffff;">
+                    <th style="padding: 0.7rem; text-align: center; position: sticky; left: 0; background: #0f172a; z-index: 2;">Roll</th>
+                    <th style="padding: 0.7rem; text-align: left; position: sticky; left: 56px; background: #0f172a; z-index: 2;">Student Name</th>
+                    {% for sub in subjects or [] %}
+                    {% set s_name = sub.subject_name if sub.subject_name is defined else (sub.name if sub.name is defined else sub) %}
+                    {% set s_max = sub.max_marks if sub.max_marks is defined and sub.max_marks else (exam.max_marks or 100) %}
+                    <th style="padding: 0.7rem; text-align: center; min-width: 138px;">
+                        <div>{{ s_name }}</div>
+                        <div style="font-size: 0.7rem; font-weight: 400; color: #cbd5e1;">Max: {{ s_max }}</div>
+                    </th>
                     {% endfor %}
+                    <th style="padding: 0.7rem; text-align: center; min-width: 125px;">Total / % / Status</th>
                 </tr>
             </thead>
             <tbody>
-                {% for s in students %}
-                <tr style="border-bottom: 1px solid #e2e8f0;">
-                    <td style="padding: 10px; font-weight: bold;">{{ s.roll_no }}</td>
-                    <td style="padding: 10px; text-align: left; font-weight: 500;">{{ s.name }}</td>
-                    
-                    {% for sub in subjects %}
-                    {% set mark_data = existing_marks.get((s.id, sub.subject_name)) %}
-                    <td style="padding: 10px;">
-                        <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                            <input type="number" 
+                {% for s in students or [] %}
+                {% set sid = s.id if s.id is defined else s[0] %}
+                {% set sroll = s.roll_no if s.roll_no is defined else (s[2] if s|length > 2 else '—') %}
+                {% set sname = s.name if s.name is defined else (s[1] if s|length > 1 else 'Student') %}
+                <tr class="student-row"
+                    data-search="{{ (sroll|string ~ ' ' ~ sname|string)|lower }}"
+                    style="border-top: 1px solid #e2e8f0; background: #ffffff;">
+                    <td style="padding: 0.6rem; text-align: center; font-weight: 700; color: #334155; position: sticky; left: 0; background: #f8fafc; z-index: 1;">
+                        {{ sroll }}
+                    </td>
+                    <td style="padding: 0.6rem; text-align: left; font-weight: 600; color: #0f172a; position: sticky; left: 56px; background: #ffffff; z-index: 1;">
+                        {{ sname }}
+                    </td>
+
+                    {% for sub in subjects or [] %}
+                    {% set s_name = sub.subject_name if sub.subject_name is defined else (sub.name if sub.name is defined else sub) %}
+                    {% set s_max = sub.max_marks if sub.max_marks is defined and sub.max_marks else (exam.max_marks or 100) %}
+                    {% set mark_data = existing_marks.get((sid, s_name)) if existing_marks is defined else none %}
+                    {% set is_abs = mark_data.is_absent if mark_data and mark_data.is_absent is defined else false %}
+                    {% set cur_val = '' if is_abs else (mark_data.marks_obtained if mark_data and mark_data.marks_obtained is not none else '') %}
+
+                    <td class="mark-cell" style="padding: 0.55rem; text-align: center;">
+                        <div style="display: inline-flex; align-items: center; gap: 0.35rem; background: #f8fafc; padding: 0.25rem 0.4rem; border-radius: 7px; border: 1px solid #e2e8f0;">
+                            <input type="number"
                                    class="mark-input"
-                                   data-student="{{ s.id }}" 
-                                   data-subject="{{ sub.subject_name }}"
-                                   value="{{ mark_data.marks_obtained if mark_data and not mark_data.is_absent else '' }}"
-                                   {% if mark_data and mark_data.is_absent %}disabled{% endif %}
-                                   style="width: 60px; padding: 5px; border: 1px solid #cbd5e1; border-radius: 4px;"
-                                   min="0" max="{{ sub.max_marks }}">
-                            
-                            <label title="Mark as Absent" style="cursor: pointer; font-size: 0.75rem; color: #ef4444;">
-                                <input type="checkbox" class="absent-check" 
-                                       data-student="{{ s.id }}" 
-                                       data-subject="{{ sub.subject_name }}"
-                                       {% if mark_data and mark_data.is_absent %}checked{% endif %}> AB
+                                   data-student="{{ sid }}"
+                                   data-subject="{{ s_name }}"
+                                   data-max="{{ s_max }}"
+                                   value="{{ cur_val }}"
+                                   {% if is_abs %}disabled{% endif %}
+                                   min="0"
+                                   max="{{ s_max }}"
+                                   step="any"
+                                   placeholder="0-{{ s_max }}"
+                                   style="width: 62px; padding: 0.34rem 0.38rem; border: 1px solid #cbd5e1; border-radius: 5px; text-align: center; font-size: 0.86rem; background: #ffffff;">
+
+                            <label title="Mark Absent"
+                                   style="display: inline-flex; align-items: center; gap: 0.18rem; font-size: 0.73rem; font-weight: 700; color: #dc2626; cursor: pointer; user-select: none;">
+                                <input type="checkbox"
+                                       class="absent-check"
+                                       data-student="{{ sid }}"
+                                       data-subject="{{ s_name }}"
+                                       {% if is_abs %}checked{% endif %}>
+                                AB
                             </label>
                         </div>
                     </td>
                     {% endfor %}
+
+                    <td class="row-summary" style="padding: 0.6rem; text-align: center; font-weight: 600; color: #1e293b; white-space: nowrap;">
+                        <div>
+                            <span class="total-val">0</span>
+                            <span style="color: #64748b; font-size: 0.78rem;">(<span class="pct-val">0.0</span>%)</span>
+                        </div>
+                        <span class="status-badge" style="display: inline-block; margin-top: 0.15rem; font-size: 0.7rem; padding: 0.1rem 0.45rem; border-radius: 999px; background: #f1f5f9; color: #475569;">
+                            —
+                        </span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="{{ (subjects or [])|length + 3 }}" style="padding: 2rem; text-align: center; color: #64748b;">
+                        Is exam/class ke liye koi student list nahi mili.
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-    <p style="text-align: right; color: #10b981; font-size: 0.85rem; margin-top: 15px;" id="save-status">✅ Marks auto-save hote hain</p>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const inputs = document.querySelectorAll('.mark-input, .absent-check');
     const examId = "{{ exam.id }}";
+    const table = document.getElementById('marks-table');
+    const passPct = parseFloat(table ? table.dataset.passPct : 33) || 33;
     const statusText = document.getElementById('save-status');
+    const searchInput = document.getElementById('student-search');
+    const resultFilter = document.getElementById('result-filter');
+    const bulkSubjectSelect = document.getElementById('bulk-subject');
+    const clearAbsentBtn = document.getElementById('clear-absent-btn');
+    const resetFiltersBtn = document.getElementById('reset-filters-btn');
+    const exportCsvBtn = document.getElementById('export-csv-btn');
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+    const retryQueue = [];
 
-    inputs.forEach(input => {
-        input.addEventListener('change', async function() {
-            const studentId = this.dataset.student;
-            const subject = this.dataset.subject;
-            
-            let marks = 0;
-            let isAbsent = false;
-            
-            // Find associated input and checkbox
-            const row = this.closest('td');
-            const markInput = row.querySelector('.mark-input');
-            const absentCheck = row.querySelector('.absent-check');
+    function setStatus(text, bg, color, border) {
+        statusText.textContent = text;
+        statusText.style.background = bg;
+        statusText.style.color = color;
+        statusText.style.borderColor = border;
+    }
 
-            if (this.classList.contains('absent-check')) {
-                isAbsent = this.checked;
-                if (isAbsent) {
-                    markInput.value = '';
-                    markInput.disabled = true;
-                } else {
-                    markInput.disabled = false;
+    function recomputeAllStats() {
+        const rows = Array.from(document.querySelectorAll('.student-row'));
+        let pctSum = 0;
+        let activeStudents = 0;
+        let passCount = 0;
+        let failCount = 0;
+        let absentCells = 0;
+
+        rows.forEach(row => {
+            let total = 0;
+            let maxTotal = 0;
+            let hasAnyMark = false;
+            let rowHasAbsent = false;
+
+            row.querySelectorAll('.mark-cell').forEach(cell => {
+                const inp = cell.querySelector('.mark-input');
+                const chk = cell.querySelector('.absent-check');
+                const maxVal = parseFloat(inp.dataset.max) || 100;
+                maxTotal += maxVal;
+
+                if (chk && chk.checked) {
+                    absentCells += 1;
+                    rowHasAbsent = true;
+                    return;
                 }
-            } else {
-                marks = this.value;
-                if(marks !== '') isAbsent = false;
-                absentCheck.checked = false;
+
+                const val = parseFloat(inp.value);
+                if (!Number.isNaN(val) && val >= 0) {
+                    total += val;
+                    hasAnyMark = true;
+                }
+            });
+
+            const pct = maxTotal > 0 ? (total / maxTotal) * 100 : 0;
+            const totalEl = row.querySelector('.total-val');
+            const pctEl = row.querySelector('.pct-val');
+            const badge = row.querySelector('.status-badge');
+
+            if (totalEl) totalEl.textContent = Number.isInteger(total) ? total : total.toFixed(1);
+            if (pctEl) pctEl.textContent = pct.toFixed(1);
+
+            let rowStatus = 'none';
+            if (hasAnyMark || rowHasAbsent) {
+                activeStudents += 1;
+                pctSum += pct;
+                if (pct >= passPct && !rowHasAbsent) {
+                    rowStatus = 'pass';
+                    passCount += 1;
+                    if (badge) {
+                        badge.textContent = 'PASS';
+                        badge.style.background = '#dcfce7';
+                        badge.style.color = '#166534';
+                    }
+                } else {
+                    rowStatus = 'fail';
+                    failCount += 1;
+                    if (badge) {
+                        badge.textContent = rowHasAbsent ? 'AB / FAIL' : 'FAIL';
+                        badge.style.background = '#fee2e2';
+                        badge.style.color = '#991b1b';
+                    }
+                }
+            } else if (badge) {
+                badge.textContent = '—';
+                badge.style.background = '#f1f5f9';
+                badge.style.color = '#475569';
             }
 
-            statusText.innerText = "⏳ Saving...";
-            statusText.style.color = "#f59e0b";
+            row.dataset.status = rowStatus;
+            row.dataset.hasAbsent = rowHasAbsent ? '1' : '0';
+        });
 
+        const avgEl = document.getElementById('stat-avg');
+        const passEl = document.getElementById('stat-pass');
+        const failEl = document.getElementById('stat-fail');
+        const absEl = document.getElementById('stat-absent');
+
+        if (avgEl) avgEl.textContent = activeStudents > 0 ? `${(pctSum / activeStudents).toFixed(1)}%` : '0.0%';
+        if (passEl) passEl.textContent = String(passCount);
+        if (failEl) failEl.textContent = String(failCount);
+        if (absEl) absEl.textContent = String(absentCells);
+    }
+
+    function applyFilters() {
+        const q = (searchInput ? searchInput.value : '').trim().toLowerCase();
+        const mode = resultFilter ? resultFilter.value : 'all';
+
+        document.querySelectorAll('.student-row').forEach(row => {
+            const hay = row.dataset.search || '';
+            const st = row.dataset.status || 'none';
+            const hasAbs = row.dataset.hasAbsent === '1';
+
+            const matchText = !q || hay.includes(q);
+            let matchMode = true;
+            if (mode === 'pass') matchMode = st === 'pass';
+            else if (mode === 'fail') matchMode = st === 'fail';
+            else if (mode === 'absent') matchMode = hasAbs;
+
+            row.style.display = (matchText && matchMode) ? '' : 'none';
+        });
+    }
+
+    async function postMarkPayload(payload) {
+        const headers = { 'Content-Type': 'application/json' };
+        if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+
+        const resp = await fetch('/exams/api/save-mark', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(payload)
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    }
+
+    async function flushRetryQueue() {
+        while (retryQueue.length > 0) {
+            const item = retryQueue[0];
             try {
-                const response = await fetch('/exams/api/save-mark', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        student_id: studentId,
-                        exam_id: examId,
-                        subject: subject,
-                        marks: markInput.value || 0,
-                        is_absent: isAbsent
-                    })
-                });
-                
-                if (response.ok) {
-                    statusText.innerText = "✅ Saved successfully!";
-                    statusText.style.color = "#10b981";
-                }
-            } catch (error) {
-                statusText.innerText = "❌ Error saving!";
-                statusText.style.color = "#ef4444";
+                await postMarkPayload(item);
+                retryQueue.shift();
+            } catch (e) {
+                break;
+            }
+        }
+        if (retryQueue.length === 0) {
+            setStatus('✅ All marks synced', '#ecfdf5', '#047857', '#a7f3d0');
+        }
+    }
+
+    async function saveCell(cell) {
+        const markInput = cell.querySelector('.mark-input');
+        const absentCheck = cell.querySelector('.absent-check');
+        const maxVal = parseFloat(markInput.dataset.max) || 100;
+
+        let isAbsent = absentCheck ? absentCheck.checked : false;
+        let rawVal = markInput.value.trim();
+
+        if (!isAbsent && rawVal !== '') {
+            let num = parseFloat(rawVal);
+            if (Number.isNaN(num) || num < 0) {
+                num = 0;
+            } else if (num > maxVal) {
+                num = maxVal;
+                setStatus(`⚠️ Capped at max marks (${maxVal})`, '#fffbeb', '#b45309', '#fde68a');
+            }
+            markInput.value = num;
+            rawVal = String(num);
+        }
+
+        recomputeAllStats();
+        applyFilters();
+        setStatus('⏳ Saving...', '#fffbeb', '#b45309', '#fde68a');
+
+        const payload = {
+            student_id: markInput.dataset.student,
+            exam_id: examId,
+            subject: markInput.dataset.subject,
+            marks: isAbsent || rawVal === '' ? 0 : parseFloat(rawVal),
+            is_absent: isAbsent
+        };
+
+        try {
+            await postMarkPayload(payload);
+            await flushRetryQueue();
+        } catch (err) {
+            retryQueue.push(payload);
+            setStatus(`⚠️ Queued (${retryQueue.length}) — retrying...`, '#fef2f2', '#b91c1c', '#fecaca');
+        }
+    }
+
+    function focusRelativeCell(input, dRow, dCol) {
+        const rows = Array.from(document.querySelectorAll('.student-row')).filter(r => r.style.display !== 'none');
+        const curRow = input.closest('.student-row');
+        const rIdx = rows.indexOf(curRow);
+        if (rIdx === -1) return;
+
+        const subInputsInRow = Array.from(curRow.querySelectorAll('.mark-input'));
+        const cIdx = subInputsInRow.indexOf(input);
+
+        const nextR = rIdx + dRow;
+        const nextC = cIdx + dCol;
+
+        if (nextR >= 0 && nextR < rows.length && nextC >= 0 && nextC < subInputsInRow.length) {
+            const targetRowInputs = Array.from(rows[nextR].querySelectorAll('.mark-input'));
+            const targetInp = targetRowInputs[nextC];
+            if (targetInp && !targetInp.disabled) {
+                targetInp.focus();
+                targetInp.select();
+            }
+        }
+    }
+
+    document.querySelectorAll('.mark-input').forEach(input => {
+        input.addEventListener('change', function() {
+            const cell = this.closest('.mark-cell');
+            const absentCheck = cell.querySelector('.absent-check');
+            if (this.value.trim() !== '' && absentCheck) {
+                absentCheck.checked = false;
+            }
+            saveCell(cell);
+        });
+
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                this.blur();
+                focusRelativeCell(this, 1, 0);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                this.blur();
+                focusRelativeCell(this, -1, 0);
+            } else if (e.key === 'ArrowRight' && this.selectionStart === this.value.length) {
+                focusRelativeCell(this, 0, 1);
+            } else if (e.key === 'ArrowLeft' && this.selectionStart === 0) {
+                focusRelativeCell(this, 0, -1);
             }
         });
     });
+
+    document.querySelectorAll('.absent-check').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const cell = this.closest('.mark-cell');
+            const markInput = cell.querySelector('.mark-input');
+            if (this.checked) {
+                markInput.value = '';
+                markInput.disabled = true;
+            } else {
+                markInput.disabled = false;
+                markInput.focus();
+            }
+            saveCell(cell);
+        });
+    });
+
+    if (clearAbsentBtn) {
+        clearAbsentBtn.addEventListener('click', function() {
+            const sub = bulkSubjectSelect ? bulkSubjectSelect.value : '';
+            if (!sub) {
+                alert('Pehle "Bulk Subject..." select karein.');
+                return;
+            }
+            document.querySelectorAll(`.absent-check[data-subject="${CSS.escape(sub)}"]`).forEach(chk => {
+                if (chk.checked) {
+                    chk.checked = false;
+                    const cell = chk.closest('.mark-cell');
+                    const inp = cell.querySelector('.mark-input');
+                    inp.disabled = false;
+                    saveCell(cell);
+                }
+            });
+        });
+    }
+
+    if (exportCsvBtn && table) {
+        exportCsvBtn.addEventListener('click', function() {
+            const csvRows = [];
+            table.querySelectorAll('tr').forEach(tr => {
+                if (tr.style.display === 'none') return;
+                const cells = Array.from(tr.querySelectorAll('th, td')).map(td => {
+                    const inp = td.querySelector('.mark-input');
+                    const chk = td.querySelector('.absent-check');
+                    let text = '';
+                    if (inp) {
+                        text = (chk && chk.checked) ? 'AB' : (inp.value || '');
+                    } else {
+                        text = td.innerText.replace(/\s+/g, ' ').trim();
+                    }
+                    return '"' + text.replace(/"/g, '""') + '"';
+                });
+                csvRows.push(cells.join(','));
+            });
+            const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `marks_exam_{{ exam.id }}_class_{{ exam.class_name }}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    }
+
+    if (searchInput) searchInput.addEventListener('input', applyFilters);
+    if (resultFilter) resultFilter.addEventListener('change', applyFilters);
+    if (resetFiltersBtn) {
+        resetFiltersBtn.addEventListener('click', function() {
+            if (searchInput) searchInput.value = '';
+            if (resultFilter) resultFilter.value = 'all';
+            if (bulkSubjectSelect) bulkSubjectSelect.value = '';
+            applyFilters();
+        });
+    }
+
+    window.addEventListener('online', flushRetryQueue);
+    recomputeAllStats();
 });
 </script>
 {% endblock %}
