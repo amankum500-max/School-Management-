@@ -4293,24 +4293,47 @@ def clear_exam_seating(exam_id):
         cur.close(); conn.close()
 
 def auto_assign_seating(exam_id, room_capacity=30):
+    try:
+        room_capacity = int(room_capacity)
+    except (ValueError, TypeError):
+        room_capacity = 30
+        
     clear_exam_seating(exam_id)
+    
+    # ✅ IMPORTANT: Yeh function aapko Dictionary ka list return karna chahiye
     students = get_exam_students_for_tickets(exam_id)
-    if not students: return False
-    conn = get_conn(); cur = conn.cursor()
+    
+    if not students:
+        return False
+        
+    conn = get_conn()
+    cur = conn.cursor()
+    
     try:
         room_num, seat_num = 1, 1
+        
         for s in students:
+            # Agar capacity cross ho jaye toh naya room
             if seat_num > room_capacity:
-                room_num += 1; seat_num = 1
-            cur.execute("INSERT INTO exam_seating (exam_id, student_id, room_no, seat_no) VALUES (%s,%s,%s,%s);",
-                        (exam_id, s["id"], str(room_num), str(seat_num)))
+                room_num += 1
+                seat_num = 1
+                
+            # Data insert karein (Ensure karein ki columns ke naam sahi hon)
+            cur.execute(
+                "INSERT INTO exam_seating (exam_id, student_id, room_no, seat_no) VALUES (%s, %s, %s, %s);",
+                (exam_id, s["id"], str(room_num), str(seat_num))
+            )
             seat_num += 1
-        conn.commit(); return True
+            
+        conn.commit()
+        return True
     except Exception as e:
-        conn.rollback(); print(f"Error auto_assign_seating: {e}"); return False
+        conn.rollback()
+        print(f"Error auto assigning seating: {e}")
+        return False
     finally:
-        cur.close(); conn.close()
-
+        cur.close()
+        conn.close()
 def get_exam_seating_summary(exam_id):
     conn = get_conn(); cur = conn.cursor()
     try:
