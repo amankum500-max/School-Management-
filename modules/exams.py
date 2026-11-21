@@ -21,16 +21,18 @@ def index():
 @exams_bp.route("/create", methods=["GET", "POST"])
 @login_required
 def create_exam():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()
         class_name = (request.form.get("class_name") or "").strip()
 
         if not name or not class_name:
+            conn.close()
             flash("Exam Name aur Class zaroori hai!", "error")
             return redirect(url_for("exams.create_exam"))
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
         cursor.execute(
             "INSERT INTO exams (name, class_name) VALUES (%s, %s)",
             (name, class_name),
@@ -41,10 +43,15 @@ def create_exam():
         flash("Exam created successfully.", "success")
         return redirect(url_for("exams.index"))
 
-    return render_template("exams/form.html")
+    cursor.execute("SELECT DISTINCT class_name FROM students WHERE class_name IS NOT NULL ORDER BY class_name")
+    rows = cursor.fetchall()
+    conn.close()
 
-# Agar form.html mein exams.create_manual call ho raha ho, toh alag se route na rakhte hue
-# templates/exams/form.html mein action="{{ url_for('exams.create_exam') }}" kar dein.
+    classes = [r["class_name"] for r in rows if r.get("class_name")]
+    if not classes:
+        classes = ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"]
+
+    return render_template("exams/form.html", classes=classes)
 
 # ==========================================
 # 2. SMART MARKS ENTRY (AJAX Enabled)
