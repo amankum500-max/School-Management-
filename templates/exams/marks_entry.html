@@ -1,65 +1,119 @@
 {% extends "base.html" %}
-{% block title %}{{ exam.name }} — Marks{% endblock %}
-{% block page_title %}{{ exam.name }} — {{ exam.class_name }} — Marks Entry{% endblock %}
+{% block title %}Marks Entry{% endblock %}
 
 {% block content %}
-<div style="margin-bottom:1rem; display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
-    <div style="color:#64748b; font-size:0.9rem;">
-        Max: <strong>{{ exam.max_marks }}</strong> per subject •
-        Subjects: <strong>{{ exam.subjects|length }}</strong>
+<div class="card" style="padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>📝 Marks Entry: {{ exam.name }} ({{ exam.class_name }})</h2>
+        <a href="{{ url_for('exams.index') }}" class="btn" style="background: #64748b;">← Back</a>
     </div>
-    <a href="{{ url_for('exams.merit', exam_id=exam.id) }}" class="btn"
-       style="margin-left:auto; background:#8b5cf6;">View Merit List</a>
+
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: center;">
+            <thead>
+                <tr style="background: #1e293b; color: white;">
+                    <th style="padding: 12px;">Roll No</th>
+                    <th style="padding: 12px; text-align: left;">Student Name</th>
+                    {% for sub in subjects %}
+                    <th style="padding: 12px;">{{ sub.subject_name }} <br><small>(Max: {{ sub.max_marks }})</small></th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in students %}
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 10px; font-weight: bold;">{{ s.roll_no }}</td>
+                    <td style="padding: 10px; text-align: left; font-weight: 500;">{{ s.name }}</td>
+                    
+                    {% for sub in subjects %}
+                    {% set mark_data = existing_marks.get((s.id, sub.subject_name)) %}
+                    <td style="padding: 10px;">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
+                            <input type="number" 
+                                   class="mark-input"
+                                   data-student="{{ s.id }}" 
+                                   data-subject="{{ sub.subject_name }}"
+                                   value="{{ mark_data.marks_obtained if mark_data and not mark_data.is_absent else '' }}"
+                                   {% if mark_data and mark_data.is_absent %}disabled{% endif %}
+                                   style="width: 60px; padding: 5px; border: 1px solid #cbd5e1; border-radius: 4px;"
+                                   min="0" max="{{ sub.max_marks }}">
+                            
+                            <label title="Mark as Absent" style="cursor: pointer; font-size: 0.75rem; color: #ef4444;">
+                                <input type="checkbox" class="absent-check" 
+                                       data-student="{{ s.id }}" 
+                                       data-subject="{{ sub.subject_name }}"
+                                       {% if mark_data and mark_data.is_absent %}checked{% endif %}> AB
+                            </label>
+                        </div>
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p style="text-align: right; color: #10b981; font-size: 0.85rem; margin-top: 15px;" id="save-status">✅ Marks auto-save hote hain</p>
 </div>
 
-{% if not students %}
-<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
-    Is class mein koi student nahi. Pehle students add karo.
-</div>
-{% else %}
-<form method="POST">
-<div class="card" style="padding:0; overflow:auto;">
-<table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:600px;">
-    <thead style="background:#f1f5f9;">
-        <tr>
-            <th style="padding:0.6rem; text-align:left; position:sticky; left:0; background:#f1f5f9;">Student</th>
-            {% for subj in exam.subjects %}
-            <th style="padding:0.6rem; text-align:center;">{{ subj }}</th>
-            {% endfor %}
-            <th style="padding:0.6rem; text-align:right;">Total</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for s in students %}
-        <tr style="border-top:1px solid #e2e8f0;">
-            <td style="padding:0.5rem; position:sticky; left:0; background:white;">
-                <strong>{{ s.name }}</strong>
-                <div style="font-size:0.75rem; color:#64748b;">Roll: {{ s.roll or '—' }}{% if s.section %} • {{ s.section }}{% endif %}</div>
-            </td>
-            {% for subj in exam.subjects %}
-            <td style="padding:0.4rem; text-align:center;">
-                <input type="number" name="mark_{{ s.id }}_{{ subj }}"
-                    value="{{ marks.get(s.id, {}).get(subj) if marks.get(s.id, {}).get(subj) is not none else '' }}"
-                    min="0" max="{{ exam.max_marks }}"
-                    style="width:60px; padding:0.35rem; border:1px solid #cbd5e1; border-radius:4px; text-align:center;">
-            </td>
-            {% endfor %}
-            <td style="padding:0.5rem; text-align:right; font-weight:600;">
-                {% set student_marks = marks.get(s.id, {}) %}
-                {% set total = student_marks.values()|sum if student_marks else 0 %}
-                {{ total }}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = document.querySelectorAll('.mark-input, .absent-check');
+    const examId = "{{ exam.id }}";
+    const statusText = document.getElementById('save-status');
 
-<div style="margin-top:1rem; display:flex; gap:0.75rem;">
-    <button type="submit" class="btn">💾 Save All Marks</button>
-    <a href="{{ url_for('exams.index') }}"
-       style="padding:0.6rem 1.1rem; color:#64748b; text-decoration:none;">Back</a>
-</div>
-</form>
-{% endif %}
+    inputs.forEach(input => {
+        input.addEventListener('change', async function() {
+            const studentId = this.dataset.student;
+            const subject = this.dataset.subject;
+            
+            let marks = 0;
+            let isAbsent = false;
+            
+            // Find associated input and checkbox
+            const row = this.closest('td');
+            const markInput = row.querySelector('.mark-input');
+            const absentCheck = row.querySelector('.absent-check');
+
+            if (this.classList.contains('absent-check')) {
+                isAbsent = this.checked;
+                if (isAbsent) {
+                    markInput.value = '';
+                    markInput.disabled = true;
+                } else {
+                    markInput.disabled = false;
+                }
+            } else {
+                marks = this.value;
+                if(marks !== '') isAbsent = false;
+                absentCheck.checked = false;
+            }
+
+            statusText.innerText = "⏳ Saving...";
+            statusText.style.color = "#f59e0b";
+
+            try {
+                const response = await fetch('/exams/api/save-mark', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        student_id: studentId,
+                        exam_id: examId,
+                        subject: subject,
+                        marks: markInput.value || 0,
+                        is_absent: isAbsent
+                    })
+                });
+                
+                if (response.ok) {
+                    statusText.innerText = "✅ Saved successfully!";
+                    statusText.style.color = "#10b981";
+                }
+            } catch (error) {
+                statusText.innerText = "❌ Error saving!";
+                statusText.style.color = "#ef4444";
+            }
+        });
+    });
+});
+</script>
 {% endblock %}
