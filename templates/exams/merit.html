@@ -451,4 +451,150 @@ document.addEventListener('DOMContentLoaded', function() {
     const exportJsonBtn = document.getElementById('export-merit-json');
     const copyLinkBtn = document.getElementById('copy-merit-link');
     const table = document.getElementById('merit-table');
-    const tbody = table ? table.querySelect
+    const tbody = table ? table.querySelector('tbody') : null;
+    const allRows = Array.from(document.querySelectorAll('.merit-row'));
+    let sortState = { key: 'rank', asc: true };
+
+    function applyMeritFilters() {
+        const q = (searchInput ? searchInput.value : '').trim().toLowerCase();
+        const mode = filterSelect ? filterSelect.value : 'all';
+        let visibleCount = 0;
+
+        allRows.forEach(row => {
+            const hay = row.dataset.search || '';
+            const isTop3 = row.dataset.top3 === '1';
+            const isDist = row.dataset.dist === '1';
+            const isPass = row.dataset.pass === '1';
+
+            const matchText = !q || hay.includes(q);
+            let matchMode = true;
+            if (mode === 'top3') matchMode = isTop3;
+            else if (mode === 'distinction') matchMode = isDist;
+            else if (mode === 'pass') matchMode = isPass;
+            else if (mode === 'fail') matchMode = !isPass;
+
+            const show = matchText && matchMode;
+            row.style.display = show ? '' : 'none';
+            if (show) visibleCount += 1;
+        });
+
+        if (countEl) {
+            countEl.textContent = `Showing ${visibleCount} of ${allRows.length}`;
+        }
+    }
+
+    function sortRows(key) {
+        if (!tbody) return;
+        if (sortState.key === key) {
+            sortState.asc = !sortState.asc;
+        } else {
+            sortState.key = key;
+            sortState.asc = (key === 'name' || key === 'rank' || key === 'roll');
+        }
+
+        const rows = Array.from(tbody.querySelectorAll('.merit-row'));
+        rows.sort((a, b) => {
+            let va = a.dataset[key] || '';
+            let vb = b.dataset[key] || '';
+
+            if (key === 'rank' || key === 'marks' || key === 'pct') {
+                va = parseFloat(va) || 0;
+                vb = parseFloat(vb) || 0;
+                return sortState.asc ? va - vb : vb - va;
+            }
+            if (key === 'roll') {
+                const na = parseFloat(va);
+                const nb = parseFloat(vb);
+                if (!Number.isNaN(na) && !Number.isNaN(nb)) {
+                    return sortState.asc ? na - nb : nb - na;
+                }
+            }
+            return sortState.asc
+                ? String(va).localeCompare(String(vb))
+                : String(vb).localeCompare(String(va));
+        });
+
+        rows.forEach(r => tbody.appendChild(r));
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === '/' && searchInput && document.activeElement !== searchInput && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName || '')) {
+            e.preventDefault();
+            searchInput.focus();
+            searchInput.select();
+        }
+    });
+
+    document.querySelectorAll('#merit-table th.sortable').forEach(th => {
+        th.addEventListener('click', () => sortRows(th.dataset.sort));
+    });
+
+    if (searchInput) searchInput.addEventListener('input', applyMeritFilters);
+    if (filterSelect) filterSelect.addEventListener('change', applyMeritFilters);
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            if (searchInput) searchInput.value = '';
+            if (filterSelect) filterSelect.value = 'all';
+            sortState = { key: 'rank', asc: true };
+            sortRows('rank');
+            applyMeritFilters();
+        });
+    }
+
+    if (copyLinkBtn) {
+        copyLinkBtn.addEventListener('click', function() {
+            navigator.clipboard?.writeText(window.location.href).then(() => {
+                const prev = copyLinkBtn.textContent;
+                copyLinkBtn.textContent = '✅ Copied';
+                setTimeout(() => { copyLinkBtn.textContent = prev; }, 1600);
+            }).catch(() => {});
+        });
+    }
+
+    if (exportCsvBtn && table) {
+        exportCsvBtn.addEventListener('click', function() {
+            const rows = [];
+            table.querySelectorAll('tr').forEach(tr => {
+                if (tr.style.display === 'none') return;
+                const cols = Array.from(tr.querySelectorAll('th, td'))
+                    .filter(td => !td.classList.contains('no-print'))
+                    .map(td => '"' + td.innerText.replace(/\s+/g, ' ').trim().replace(/"/g, '""') + '"');
+                rows.push(cols.join(','));
+            });
+            const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `merit_list_exam_{{ exam.id }}_class_{{ exam.class_name }}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    }
+
+    if (exportJsonBtn) {
+        exportJsonBtn.addEventListener('click', function() {
+            const records = allRows
+                .filter(r => r.style.display !== 'none')
+                .map(r => {
+                    const tds = r.querySelectorAll('td');
+                    return {
+                        rank: parseInt(r.dataset.rank, 10) || 0,
+                        roll_no: tds[1] ? tds[1].innerText.trim() : '',
+                        name: tds[2] ? tds[2].innerText.trim() : '',
+                        total_marks: parseFloat(r.dataset.marks) || 0,
+                        percentage: parseFloat(r.dataset.pct) || 0,
+                        grade: tds[5] ? tds[5].innerText.trim() : ''
+                    };
+                });
+            const blob = new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `merit_list_exam_{{ exam.id }}_class_{{ exam.class_name }}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    }
+});
+</script>
+{% endblock %}
