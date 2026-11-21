@@ -42,7 +42,7 @@ def create_exam():
 
         flash("Exam created successfully.", "success")
         return redirect(url_for("exams.index"))
-            cursor.execute("SELECT DISTINCT class_name FROM students WHERE class_name IS NOT NULL ORDER BY class_name")
+    cursor.execute("SELECT DISTINCT class_name FROM students WHERE class_name IS NOT NULL ORDER BY class_name")
     rows = cursor.fetchall()
     conn.close()
 
