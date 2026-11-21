@@ -1,6 +1,5 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from modules.auth import login_required, role_required
-# Yahan import theek kiya gaya hai (database.py ka chakkar khatam)
 from supabase_client import get_conn as get_db_connection
 import math
 
@@ -23,23 +22,29 @@ def index():
 @login_required
 def create_exam():
     if request.method == "POST":
-        name = request.form.get("name")
-        class_name = request.form.get("class_name")
-        
+        name = (request.form.get("name") or "").strip()
+        class_name = (request.form.get("class_name") or "").strip()
+
         if not name or not class_name:
             flash("Exam Name aur Class zaroori hai!", "error")
             return redirect(url_for("exams.create_exam"))
-            
+
         conn = get_db_connection()
         cursor = conn.cursor()
-        # ? ko %s mein badla gaya hai
-        cursor.execute("INSERT INTO exams (name, class_name) VALUES (%s, %s)", (name, class_name))
+        cursor.execute(
+            "INSERT INTO exams (name, class_name) VALUES (%s, %s)",
+            (name, class_name),
+        )
         conn.commit()
         conn.close()
-        
+
         flash("Exam created successfully.", "success")
         return redirect(url_for("exams.index"))
+
     return render_template("exams/form.html")
+
+# Agar form.html mein exams.create_manual call ho raha ho, toh alag se route na rakhte hue
+# templates/exams/form.html mein action="{{ url_for('exams.create_exam') }}" kar dein.
 
 # ==========================================
 # 2. SMART MARKS ENTRY (AJAX Enabled)
@@ -49,52 +54,85 @@ def create_exam():
 def marks_entry(exam_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    
-    # ? ko %s mein badla gaya hai
+
     cursor.execute("SELECT * FROM exams WHERE id = %s", (exam_id,))
     exam = cursor.fetchone()
-    
-    cursor.execute("SELECT * FROM students WHERE class_name = %s ORDER BY roll_no ASC", (exam['class_name'],))
+    if not exam:
+        conn.close()
+        flash("Exam nahi mila.", "error")
+        return redirect(url_for("exams.index"))
+
+    cursor.execute(
+        "SELECT * FROM students WHERE class_name = %s ORDER BY roll_no ASC",
+        (exam["class_name"],),
+    )
     students = cursor.fetchall()
-    
-    cursor.execute("SELECT * FROM subjects WHERE class_name = %s", (exam['class_name'],))
+
+    cursor.execute(
+        "SELECT * FROM subjects WHERE class_name = %s",
+        (exam["class_name"],),
+    )
     subjects = cursor.fetchall()
-    
-    cursor.execute("SELECT student_id, subject_name, marks_obtained, is_absent FROM marks WHERE exam_id=%s", (exam_id,))
+
+    cursor.execute(
+        "SELECT student_id, subject_name, marks_obtained, is_absent FROM marks WHERE exam_id = %s",
+        (exam_id,),
+    )
     marks_raw = cursor.fetchall()
-    
-    # Existing Marks Map banayein
-    existing_marks = {(m['student_id'], m['subject_name']): m for m in marks_raw}
-    
     conn.close()
-    return render_template("exams/marks_entry.html", exam=exam, students=students, subjects=subjects, existing_marks=existing_marks)
+
+    existing_marks = {(m["student_id"], m["subject_name"]): m for m in marks_raw}
+
+    return render_template(
+        "exams/marks_entry.html",
+        exam=exam,
+        students=students,
+        subjects=subjects,
+        existing_marks=existing_marks,
+    )
 
 @exams_bp.route("/api/save-mark", methods=["POST"])
 @login_required
 def api_save_mark():
     """AJAX route jisse page reload kiye bina marks save honge"""
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     student_id = data.get("student_id")
     exam_id = data.get("exam_id")
     subject = data.get("subject")
     marks = data.get("marks")
-    is_absent = data.get("is_absent", False)
-    
-    if marks == "" or marks is None:
+    is_absent = bool(data.get("is_absent", False))
+
+    if not student_id or not exam_id or not subject:
+        return jsonify({"status": "error", "message": "Missing required fields"}), 400
+
+    if marks == "" or marks is None or is_absent:
         marks = 0
+    else:
+        try:
+            marks = float(marks)
+        except (ValueError, TypeError):
+            return jsonify({"status": "error", "message": "Invalid marks value"}), 400
 
     conn = get_db_connection()
     cursor = conn.cursor()
-    
-    cursor.execute("SELECT id FROM marks WHERE student_id=%s AND exam_id=%s AND subject_name=%s", (student_id, exam_id, subject))
+
+    cursor.execute(
+        "SELECT id FROM marks WHERE student_id = %s AND exam_id = %s AND subject_name = %s",
+        (student_id, exam_id, subject),
+    )
     existing = cursor.fetchone()
-    
+
     if existing:
-        cursor.execute("UPDATE marks SET marks_obtained=%s, is_absent=%s WHERE id=%s", (marks, is_absent, existing['id']))
+        cursor.execute(
+            "UPDATE marks SET marks_obtained = %s, is_absent = %s WHERE id = %s",
+            (marks, is_absent, existing["id"]),
+        )
     else:
-        cursor.execute("INSERT INTO marks (student_id, exam_id, subject_name, marks_obtained, is_absent) VALUES (%s, %s, %s, %s, %s)", 
-                       (student_id, exam_id, subject, marks, is_absent))
-    
+        cursor.execute(
+            "INSERT INTO marks (student_id, exam_id, subject_name, marks_obtained, is_absent) VALUES (%s, %s, %s, %s, %s)",
+            (student_id, exam_id, subject, marks, is_absent),
+        )
+
     conn.commit()
     conn.close()
     return jsonify({"status": "success", "message": "Mark saved"})
@@ -107,23 +145,28 @@ def api_save_mark():
 def merit(exam_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     cursor.execute("SELECT * FROM exams WHERE id = %s", (exam_id,))
     exam = cursor.fetchone()
-    
-    # Rank calculate karein (Absent walo ko ignore karte hue)
-    # 0 ki jagah FALSE use kiya gaya hai
-    cursor.execute("""
-        SELECT s.id, s.name, s.roll_no, SUM(m.marks_obtained) as total_obtained
+    if not exam:
+        conn.close()
+        flash("Exam nahi mila.", "error")
+        return redirect(url_for("exams.index"))
+
+    cursor.execute(
+        """
+        SELECT s.id, s.name, s.roll_no, COALESCE(SUM(m.marks_obtained), 0) AS total_obtained
         FROM students s
         JOIN marks m ON s.id = m.student_id
         WHERE m.exam_id = %s AND s.class_name = %s AND m.is_absent = FALSE
         GROUP BY s.id, s.name, s.roll_no
-        ORDER BY total_obtained DESC
-    """, (exam_id, exam['class_name']))
-    
+        ORDER BY total_obtained DESC, s.roll_no ASC
+        """,
+        (exam_id, exam["class_name"]),
+    )
     merit_list = cursor.fetchall()
     conn.close()
+
     return render_template("exams/merit.html", exam=exam, merit_list=merit_list)
 
 # ==========================================
@@ -134,55 +177,88 @@ def merit(exam_id):
 def report_card(student_id, exam_id):
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     cursor.execute("SELECT * FROM students WHERE id = %s", (student_id,))
     student = cursor.fetchone()
-    
+
     cursor.execute("SELECT * FROM exams WHERE id = %s", (exam_id,))
     exam = cursor.fetchone()
-    
-    # Subquery mein ? ko %s kiya gaya hai
-    cursor.execute("""
-        SELECT subject_name, marks_obtained, is_absent, 
-               (SELECT max_marks FROM subjects WHERE class_name=%s AND subject_name=marks.subject_name) as max_marks 
-        FROM marks WHERE student_id = %s AND exam_id = %s
-    """, (exam['class_name'], student_id, exam_id))
-    marks_list = cursor.fetchall()
-    
-    # Rank calculate karein
-    cursor.execute("""
-        SELECT COUNT(*) + 1 as rank FROM (
-            SELECT student_id, SUM(marks_obtained) as total FROM marks 
-            WHERE exam_id = %s AND is_absent = FALSE GROUP BY student_id
-        ) as subquery 
-        WHERE total > (SELECT SUM(marks_obtained) FROM marks WHERE student_id = %s AND exam_id = %s AND is_absent = FALSE)
-    """, (exam_id, student_id, exam_id))
-    rank_data = cursor.fetchone()
-    rank = rank_data['rank'] if rank_data and rank_data['rank'] else 1
-    
-    conn.close()
-    
+
     if not student or not exam:
+        conn.close()
         flash("Record not found", "error")
         return redirect(url_for("exams.index"))
 
-    # Advanced Calculations
-    total_obtained = sum(m['marks_obtained'] for m in marks_list if not m['is_absent'])
-    total_max = sum(m['max_marks'] for m in marks_list if not m['is_absent'] and m['max_marks'] is not None)
+    cursor.execute(
+        """
+        SELECT m.subject_name, m.marks_obtained, m.is_absent, sub.max_marks
+        FROM marks m
+        LEFT JOIN subjects sub
+            ON sub.class_name = %s AND sub.subject_name = m.subject_name
+        WHERE m.student_id = %s AND m.exam_id = %s
+        """,
+        (exam["class_name"], student_id, exam_id),
+    )
+    marks_list = cursor.fetchall()
+
+    # Class ke andar rank calculate karein
+    cursor.execute(
+        """
+        WITH student_totals AS (
+            SELECT m.student_id, COALESCE(SUM(m.marks_obtained), 0) AS total
+            FROM marks m
+            JOIN students s ON s.id = m.student_id
+            WHERE m.exam_id = %s AND s.class_name = %s AND m.is_absent = FALSE
+            GROUP BY m.student_id
+        )
+        SELECT COUNT(*) + 1 AS rank
+        FROM student_totals
+        WHERE total > COALESCE(
+            (SELECT total FROM student_totals WHERE student_id = %s),
+            0
+        )
+        """,
+        (exam_id, exam["class_name"], student_id),
+    )
+    rank_data = cursor.fetchone()
+    rank = rank_data["rank"] if rank_data and rank_data["rank"] is not None else 1
+
+    conn.close()
+
+    total_obtained = sum(
+        (m["marks_obtained"] or 0) for m in marks_list if not m["is_absent"]
+    )
+    total_max = sum(
+        (m["max_marks"] or 0)
+        for m in marks_list
+        if not m["is_absent"] and m["max_marks"] is not None
+    )
     percentage = (total_obtained / total_max * 100) if total_max > 0 else 0
-    
-    # Auto Grading System
-    if percentage >= 91: grade, remark = "A1", "Outstanding! Keep it up."
-    elif percentage >= 81: grade, remark = "A2", "Excellent performance."
-    elif percentage >= 71: grade, remark = "B1", "Very Good."
-    elif percentage >= 61: grade, remark = "B2", "Good, can do better."
-    elif percentage >= 51: grade, remark = "C1", "Average."
-    elif percentage >= 33: grade, remark = "C2", "Needs improvement."
-    else: grade, remark = "E", "Failed. Requires serious attention."
+
+    if percentage >= 91:
+        grade, remark = "A1", "Outstanding! Keep it up."
+    elif percentage >= 81:
+        grade, remark = "A2", "Excellent performance."
+    elif percentage >= 71:
+        grade, remark = "B1", "Very Good."
+    elif percentage >= 61:
+        grade, remark = "B2", "Good, can do better."
+    elif percentage >= 51:
+        grade, remark = "C1", "Average."
+    elif percentage >= 33:
+        grade, remark = "C2", "Needs improvement."
+    else:
+        grade, remark = "E", "Failed. Requires serious attention."
 
     data = {
-        "student": student, "exam": exam, "marks": marks_list,
-        "total_obtained": round(total_obtained, 2), "total_max": total_max,
-        "percentage": round(percentage, 2), "grade": grade, "remark": remark, "rank": rank
+        "student": student,
+        "exam": exam,
+        "marks": marks_list,
+        "total_obtained": round(total_obtained, 2),
+        "total_max": total_max,
+        "percentage": round(percentage, 2),
+        "grade": grade,
+        "remark": remark,
+        "rank": rank,
     }
     return render_template("exams/report_card.html", data=data)
