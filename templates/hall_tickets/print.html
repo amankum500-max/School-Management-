@@ -1,47 +1,313 @@
-<!-- templates/hall_tickets/print.html -->
-<div class="exam-card-container bg-white text-black p-8 border-2 border-gray-800 max-w-2xl mx-auto mt-10">
-    <div class="text-center mb-4">
-        <!-- Dynamic School Name -->
-        <h2 class="text-3xl font-bold uppercase">{{ school.school_name if school else 'ABC Public School' }}</h2>
-        <p class="text-gray-600">Hall Ticket - {{ exam.name }}</p>
-    </div>
-    
-    <hr class="border-gray-400 mb-4">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hall Ticket — {{ (exam.name if exam is defined and exam else 'Examination') }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #eef2f6;
+            min-height: 100vh;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            color: #0f172a;
+        }
 
-    <!-- Student Details (Yeh loop chalega kyunki ek exam mein multiple students honge) -->
-    {% for student in students %}
-    <div class="mb-6 border-b border-gray-300 pb-6 page-break-after">
-        <div class="flex justify-between mb-4">
-            <p><strong>Student Name:</strong> {{ student.name }}</p>
-            <p><strong>Roll No:</strong> {{ student.roll_no }}</p>
-            <p><strong>Class:</strong> {{ exam.class_name }}</p>
+        /* Top Action Bar */
+        .top-bar {
+            width: 100%;
+            max-width: 640px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 10px 14px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+        }
+        .top-bar-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .btn {
+            border: none;
+            border-radius: 7px;
+            padding: 7px 13px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+        .btn-print { background: #10b981; color: #ffffff; }
+        .btn-pdf { background: #4f46e5; color: #ffffff; }
+        .btn-back { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+
+        /* Horizontal Card Ticket */
+        .hall-card {
+            width: 100%;
+            max-width: 560px;
+            background: #ffffff;
+            border-radius: 14px;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
+            overflow: hidden;
+        }
+        .card-header {
+            background: linear-gradient(90deg, #1e293b 0%, #3730a3 100%);
+            color: #ffffff;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .school-name { font-size: 13.5px; font-weight: 700; letter-spacing: 0.4px; }
+        .exam-sub { font-size: 10.5px; color: #e0e7ff; }
+        .card-tag {
+            background: rgba(255, 255, 255, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            padding: 3px 9px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .card-body {
+            padding: 14px 16px;
+            display: grid;
+            grid-template-columns: 82px 1fr 104px;
+            gap: 14px;
+            align-items: center;
+        }
+        .photo-wrap img {
+            width: 82px;
+            height: 98px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1.5px solid #cbd5e1;
+            display: block;
+            background: #f8fafc;
+        }
+
+        .student-heading {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.25;
+        }
+        .student-sub {
+            font-size: 11.5px;
+            color: #475569;
+            margin-top: 3px;
+        }
+        .meta-grid {
+            margin-top: 8px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 5px 10px;
+            font-size: 11px;
+            color: #1e293b;
+        }
+        .meta-grid span { color: #64748b; }
+
+        .code-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        .qr-box {
+            width: 82px;
+            height: 82px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 3px;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .qr-box img { width: 100%; height: 100%; object-fit: contain; display: block; }
+        .barcode-box {
+            width: 100%;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 5px;
+            padding: 2px 4px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .card-footer {
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            padding: 7px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10.5px;
+            color: #475569;
+        }
+
+        @media (max-width: 520px) {
+            .card-body { grid-template-columns: 72px 1fr; }
+            .code-panel {
+                grid-column: 1 / -1;
+                flex-direction: row;
+                justify-content: space-between;
+            }
+            .barcode-box { width: auto; flex: 1; }
+        }
+
+        @media print {
+            body { background: #ffffff; padding: 0; }
+            .top-bar { display: none !important; }
+            .hall-card { box-shadow: none; max-width: 100%; border-color: #94a3b8; }
+        }
+    </style>
+</head>
+<body>
+    {% set s = student if student is defined and student else {} %}
+    {% set e = exam if exam is defined and exam else {} %}
+    {% set st = seating if seating is defined and seating else {} %}
+    {% set cfg = settings if settings is defined and settings else {} %}
+
+    {% set school_title = cfg.get('school_name') or 'MY SCHOOL' %}
+    {% set s_name = s.get('name') or 'Student Name' %}
+    {% set roll_val = s.get('roll_no') or s.get('roll') or '—' %}
+    {% set photo_src = s.get('photo_url') or ('https://ui-avatars.com/api/?name=' ~ (s_name | urlencode) ~ '&background=3730a3&color=fff&size=150') %}
+
+    <div class="top-bar">
+        <div class="top-bar-title">🎫 Hall Ticket Preview</div>
+        <div class="btn-group">
+            <a href="{{ url_for('hall_ticket.index') }}" class="btn btn-back">← Back</a>
+            <button type="button" class="btn btn-print" onclick="window.print()">
+                <i class="fa-solid fa-print"></i> Print Ticket
+            </button>
+            <button type="button" class="btn btn-pdf" id="pdf-btn" onclick="downloadPDF()">
+                <i class="fa-solid fa-download"></i> PDF
+            </button>
         </div>
-        
-        <!-- Table for exam schedule -->
-        <table class="w-full border-collapse border border-gray-400 mt-2">
-            <thead>
-                <tr class="bg-gray-200">
-                    <th class="border border-gray-400 p-2 text-left">Subject</th>
-                    <th class="border border-gray-400 p-2 text-left">Date</th>
-                    <th class="border border-gray-400 p-2 text-left">Room / Seat</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Subjects loop (exam.subjects se data aayega) -->
-                {% for subject in exam.subjects %}
-                <tr>
-                    <td class="border border-gray-400 p-2">{{ subject }}</td>
-                    <td class="border border-gray-400 p-2">{{ exam.exam_date }}</td>
-                    <!-- Yahan student ki seat detail aayegi (agar manage page se set ki ho) -->
-                    <td class="border border-gray-400 p-2">-</td> 
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
     </div>
-    {% endfor %}
 
-    <div class="text-center mt-8 text-sm text-gray-500">
-        Principal Signature: ___________________
+    <div class="hall-card" id="ticket-card">
+        <div class="card-header">
+            <div>
+                <div class="school-name">{{ school_title }}</div>
+                <div class="exam-sub">{{ e.get('name') or 'Examination' }}</div>
+            </div>
+            <span class="card-tag">Hall Ticket</span>
+        </div>
+
+        <div class="card-body">
+            <div class="photo-wrap">
+                <img src="{{ photo_src }}" alt="{{ s_name }}">
+            </div>
+
+            <div>
+                <div class="student-heading">{{ s_name }}</div>
+                <div class="student-sub">
+                    Class: <strong>{{ e.get('class_name') or s.get('class_name') or '—' }}</strong>
+                    {% if s.get('section') %}-{{ s.get('section') }}{% endif %}
+                    • Roll: <strong>{{ roll_val }}</strong>
+                </div>
+                <div class="meta-grid">
+                    <div><span>Date:</span> <strong>{{ e.get('exam_date') or '—' }}</strong></div>
+                    <div><span>Room:</span> <strong>{{ st.get('room_no') or e.get('room_no') or '—' }}</strong></div>
+                    <div><span>Seat:</span> <strong>{{ st.get('seat_no') or e.get('seat_no') or '—' }}</strong></div>
+                    <div><span>Parent:</span> <strong>{{ s.get('parent_name') or '—' }}</strong></div>
+                </div>
+            </div>
+
+            <div class="code-panel">
+                <div class="qr-box">
+                    <img id="ticket-qr" src="" alt="QR Code">
+                </div>
+                <div class="barcode-box">
+                    <svg id="ticket-barcode"></svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-footer">
+            <span>Exam: {{ e.get('name') or '—' }}</span>
+            <span>Bring valid School ID</span>
+        </div>
     </div>
-</div>
+
+    <script>
+        const studentId = {{ (s.get('id') or '') | tojson }};
+        const examId = {{ (e.get('id') or '') | tojson }};
+        const rollNo = {{ roll_val | tojson }};
+
+        if (String(rollNo) && String(rollNo) !== "—") {
+            JsBarcode("#ticket-barcode", String(rollNo), {
+                format: "CODE128",
+                lineColor: "#0f172a",
+                width: 1.2,
+                height: 22,
+                displayValue: false,
+                margin: 0
+            });
+        }
+
+        const secretKey = "SCHOOL_HALL_TICKET_KEY";
+        const payload = `${examId}|${studentId}|${rollNo}`;
+        const encrypted = CryptoJS.AES.encrypt(payload, secretKey).toString();
+        document.getElementById("ticket-qr").src =
+            `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(encrypted)}`;
+
+        async function downloadPDF() {
+            const btn = document.getElementById("pdf-btn");
+            const prevText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+            btn.disabled = true;
+
+            try {
+                const card = document.getElementById("ticket-card");
+                const canvas = await html2canvas(card, { scale: 2, useCORS: true });
+                const imgData = canvas.toDataURL("image/png");
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF("p", "mm", "a4");
+                const pageW = pdf.internal.pageSize.getWidth();
+                const margin = 16;
+                const imgW = pageW - margin * 2;
+                const imgH = (canvas.height * imgW) / canvas.width;
+                pdf.addImage(imgData, "PNG", margin, 20, imgW, imgH);
+                pdf.save(`hall-ticket-${rollNo || "student"}.pdf`);
+            } catch (e) {
+                alert("PDF download nahi ho paya, Print Ticket option use karein.");
+            } finally {
+                btn.innerHTML = prevText;
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
