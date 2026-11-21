@@ -4678,7 +4678,6 @@ def get_recent_activity(limit=10):
         cur.close(); conn.close()
 
 def get_top_performers(limit=5):
-def get_top_performers(limit=5):
     conn = get_conn(); cur = conn.cursor()
     try:
         cur.execute("SELECT id, name FROM exams ORDER BY id DESC LIMIT 1;")
