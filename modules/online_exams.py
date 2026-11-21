@@ -211,7 +211,7 @@ def submit_exam(eid):
     print(f"✅ Exam ID: {eid} | Score: {score} | Answers submitted: {len(student_answers)}")
 
     return jsonify({"status": "success", "message": "Exam submitted successfully!"})
-    @online_exams_bp.route("/<int:eid>/questions/bulk-add", methods=["POST"])
+@online_exams_bp.route("/<int:eid>/questions/bulk-add", methods=["POST"])
 @login_required
 @role_required("super_admin", "admin")
 def bulk_add_questions(eid):
