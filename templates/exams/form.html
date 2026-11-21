@@ -19,7 +19,7 @@
     <!-- Form 1: Manual Exam Creation -->
     <div id="tab-manual" style="display: block;">
         <h4 style="margin-top: 0; margin-bottom: 1rem; color: #1e293b;">Create New Exam</h4>
-        <form method="POST" action="{{ url_for('exams.create_manual') if url_for is defined else '' }}">
+        <form method="POST" action="{{ url_for('exams.create_exam') if url_for is defined else '' }}">
             <input type="hidden" name="form_type" value="manual">
             
             <div style="margin-bottom: 1rem;">
@@ -34,7 +34,7 @@
                     <select name="class_name" required
                         style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
                         <option value="">Select</option>
-                        {% for c in classes %}
+                        {% for c in classes or [] %}
                         <option value="{{ c }}">{{ c }}</option>
                         {% endfor %}
                     </select>
@@ -68,7 +68,7 @@
     <!-- Form 2: AI Question Paper Generator -->
     <div id="tab-ai" style="display: none;">
         <h4 style="margin-top: 0; margin-bottom: 1rem; color: #1e293b;">📝 Create Exam Paper using AI</h4>
-        <form method="POST" action="{{ url_for('exams.generate_ai') if url_for is defined else '' }}">
+        <form method="POST" action="#">
             <input type="hidden" name="form_type" value="ai">
 
             <div style="margin-bottom: 1rem;">
@@ -82,7 +82,7 @@
                 <select name="grade" required
                     style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
                     <option value="">Select Class</option>
-                    {% for c in classes %}
+                    {% for c in classes or [] %}
                     <option value="{{ c }}">{{ c }}</option>
                     {% endfor %}
                 </select>
