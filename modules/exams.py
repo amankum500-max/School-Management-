@@ -5,6 +5,15 @@ import math
 
 exams_bp = Blueprint("exams", __name__, url_prefix="/exams")
 
+
+def _row_to_dict(row, keys):
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        return row
+    return {k: (row[i] if i < len(row) else None) for i, k in enumerate(keys)}
+
+
 # ==========================================
 # 1. EXAMS DASHBOARD
 # ==========================================
@@ -14,9 +23,13 @@ def index():
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM exams ORDER BY id DESC")
-    exams_list = cursor.fetchall()
+    rows = cursor.fetchall()
     conn.close()
+
+    exam_keys = ["id", "name", "class_name", "exam_date", "subjects", "max_marks"]
+    exams_list = [_row_to_dict(r, exam_keys) for r in rows]
     return render_template("exams/index.html", exams=exams_list)
+
 
 @exams_bp.route("/create", methods=["GET", "POST"])
 @login_required
@@ -42,6 +55,7 @@ def create_exam():
 
         flash("Exam created successfully.", "success")
         return redirect(url_for("exams.index"))
+
     cursor.execute("SELECT DISTINCT class_name FROM students WHERE class_name IS NOT NULL ORDER BY class_name")
     rows = cursor.fetchall()
     conn.close()
@@ -56,6 +70,7 @@ def create_exam():
         classes = ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"]
     return render_template("exams/form.html", classes=classes)
 
+
 # ==========================================
 # 2. SMART MARKS ENTRY (AJAX Enabled)
 # ==========================================
@@ -66,7 +81,8 @@ def marks_entry(exam_id):
     cursor = conn.cursor()
 
     cursor.execute("SELECT * FROM exams WHERE id = %s", (exam_id,))
-    exam = cursor.fetchone()
+    exam_raw = cursor.fetchone()
+    exam = _row_to_dict(exam_raw, ["id", "name", "class_name", "exam_date", "subjects", "max_marks"])
     if not exam:
         conn.close()
         flash("Exam nahi mila.", "error")
@@ -76,13 +92,17 @@ def marks_entry(exam_id):
         "SELECT * FROM students WHERE class_name = %s ORDER BY roll_no ASC",
         (exam["class_name"],),
     )
-    students = cursor.fetchall()
+    students_raw = cursor.fetchall()
+    student_keys = ["id", "name", "roll_no", "class_name", "section"]
+    students = [_row_to_dict(s, student_keys) for s in students_raw]
 
     cursor.execute(
         "SELECT * FROM subjects WHERE class_name = %s",
         (exam["class_name"],),
     )
-    subjects = cursor.fetchall()
+    subjects_raw = cursor.fetchall()
+    subject_keys = ["id", "class_name", "subject_name", "max_marks"]
+    subjects = [_row_to_dict(sub, subject_keys) for sub in subjects_raw]
 
     cursor.execute(
         "SELECT student_id, subject_name, marks_obtained, is_absent FROM marks WHERE exam_id = %s",
@@ -91,7 +111,11 @@ def marks_entry(exam_id):
     marks_raw = cursor.fetchall()
     conn.close()
 
-    existing_marks = {(m["student_id"], m["subject_name"]): m for m in marks_raw}
+    mark_keys = ["student_id", "subject_name", "marks_obtained", "is_absent"]
+    existing_marks = {}
+    for m_row in marks_raw:
+        m = _row_to_dict(m_row, mark_keys)
+        existing_marks[(m["student_id"], m["subject_name"])] = m
 
     return render_template(
         "exams/marks_entry.html",
@@ -100,6 +124,7 @@ def marks_entry(exam_id):
         subjects=subjects,
         existing_marks=existing_marks,
     )
+
 
 @exams_bp.route("/api/save-mark", methods=["POST"])
 @login_required
@@ -133,9 +158,10 @@ def api_save_mark():
     existing = cursor.fetchone()
 
     if existing:
+        existing_id = existing["id"] if isinstance(existing, dict) else existing[0]
         cursor.execute(
             "UPDATE marks SET marks_obtained = %s, is_absent = %s WHERE id = %s",
-            (marks, is_absent, existing["id"]),
+            (marks, is_absent, existing_id),
         )
     else:
         cursor.execute(
@@ -147,6 +173,7 @@ def api_save_mark():
     conn.close()
     return jsonify({"status": "success", "message": "Mark saved"})
 
+
 # ==========================================
 # 3. MERIT LIST (With Class Rank)
 # ==========================================
@@ -157,7 +184,8 @@ def merit(exam_id):
     cursor = conn.cursor()
 
     cursor.execute("SELECT * FROM exams WHERE id = %s", (exam_id,))
-    exam = cursor.fetchone()
+    exam_raw = cursor.fetchone()
+    exam = _row_to_dict(exam_raw, ["id", "name", "class_name", "exam_date", "subjects", "max_marks"])
     if not exam:
         conn.close()
         flash("Exam nahi mila.", "error")
@@ -174,10 +202,12 @@ def merit(exam_id):
         """,
         (exam_id, exam["class_name"]),
     )
-    merit_list = cursor.fetchall()
+    merit_raw = cursor.fetchall()
     conn.close()
 
+    merit_list = [_row_to_dict(r, ["id", "name", "roll_no", "total_obtained"]) for r in merit_raw]
     return render_template("exams/merit.html", exam=exam, merit_list=merit_list)
+
 
 # ==========================================
 # 4. ULTIMATE REPORT CARD (A4 Print Ready)
@@ -189,10 +219,12 @@ def report_card(student_id, exam_id):
     cursor = conn.cursor()
 
     cursor.execute("SELECT * FROM students WHERE id = %s", (student_id,))
-    student = cursor.fetchone()
+    student_raw = cursor.fetchone()
+    student = _row_to_dict(student_raw, ["id", "name", "roll_no", "class_name", "section"])
 
     cursor.execute("SELECT * FROM exams WHERE id = %s", (exam_id,))
-    exam = cursor.fetchone()
+    exam_raw = cursor.fetchone()
+    exam = _row_to_dict(exam_raw, ["id", "name", "class_name", "exam_date", "subjects", "max_marks"])
 
     if not student or not exam:
         conn.close()
@@ -209,7 +241,8 @@ def report_card(student_id, exam_id):
         """,
         (exam["class_name"], student_id, exam_id),
     )
-    marks_list = cursor.fetchall()
+    marks_raw = cursor.fetchall()
+    marks_list = [_row_to_dict(m, ["subject_name", "marks_obtained", "is_absent", "max_marks"]) for m in marks_raw]
 
     # Class ke andar rank calculate karein
     cursor.execute(
@@ -231,7 +264,12 @@ def report_card(student_id, exam_id):
         (exam_id, exam["class_name"], student_id),
     )
     rank_data = cursor.fetchone()
-    rank = rank_data["rank"] if rank_data and rank_data["rank"] is not None else 1
+    if rank_data is None:
+        rank = 1
+    elif isinstance(rank_data, dict):
+        rank = rank_data["rank"] if rank_data.get("rank") is not None else 1
+    else:
+        rank = rank_data[0] if rank_data[0] is not None else 1
 
     conn.close()
 
