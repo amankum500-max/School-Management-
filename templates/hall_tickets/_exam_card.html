@@ -3,13 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Hall Ticket - {{ exam.name }}</title>
-    
+    {% set ex = exam if exam is defined and exam else {} %}
+    {% set st = student if student is defined and student else {} %}
+    {% set st_name = st.name | default('Rahul Kumar') %}
+    {% set st_roll = st.roll_no | default('101') %}
+    <title>Secure Hall Ticket - {{ ex.name | default('Final Examination') }}</title>
+
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- External Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
@@ -42,7 +46,6 @@
             overflow-x: hidden;
         }
 
-        /* Ambient Background Lights */
         .glow {
             position: absolute;
             width: 300px; height: 300px;
@@ -55,10 +58,9 @@
         }
         .glow-2 { background: var(--secondary); top: 20%; right: 10%; animation-delay: 2s; }
         .glow-1 { top: 60%; left: 10%; }
-        
+
         @keyframes float { from { transform: translateY(0); } to { transform: translateY(-50px); } }
 
-        /* Main Ticket Container */
         .ticket-container {
             width: 100%;
             max-width: 750px;
@@ -74,7 +76,6 @@
             transform-style: preserve-3d;
         }
 
-        /* Animated Gradient Border */
         .ticket-container::before {
             content: '';
             position: absolute;
@@ -92,7 +93,6 @@
 
         @keyframes gradientBorder { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
 
-        /* Header */
         .header {
             display: flex;
             justify-content: space-between;
@@ -117,12 +117,10 @@
         .hologram-seal i { font-size: 24px; color: white; text-shadow: 0 0 5px #000; animation: spin 10s linear infinite reverse; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* Body content */
-        .ticket-body { padding: 30px; display: flex; gap: 30px; }
+        .ticket-body { padding: 30px; display: flex; gap: 30px; flex-wrap: wrap; }
 
-        /* Left side: Photo & Details */
-        .left-section { flex: 1; }
-        
+        .left-section { flex: 1; min-width: 280px; }
+
         .student-profile { display: flex; gap: 20px; align-items: center; margin-bottom: 25px; }
         .student-photo {
             width: 100px; height: 120px;
@@ -133,8 +131,7 @@
         }
         .student-name h2 { font-size: 22px; margin-bottom: 5px; }
         .student-name .roll { background: var(--primary); padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 600; display: inline-block; margin-top: 5px; }
-        
-        /* Countdown */
+
         .countdown-container {
             background: rgba(16, 185, 129, 0.1);
             border: 1px solid rgba(16, 185, 129, 0.3);
@@ -147,7 +144,6 @@
         .countdown-text p { font-size: 12px; color: var(--text-muted); }
         .countdown-text span { font-weight: 600; font-size: 16px; color: var(--success); }
 
-        /* Exam Info Grid */
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .info-item { background: rgba(255, 255, 255, 0.03); padding: 12px; border-radius: 10px; border: 1px solid var(--border); }
         .info-item .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
@@ -155,7 +151,6 @@
         .info-item .location-link { color: var(--primary); font-size: 12px; text-decoration: none; display: inline-block; margin-top: 5px; }
         .info-item .location-link:hover { text-decoration: underline; }
 
-        /* Right Side: Verification & Rules */
         .right-section {
             width: 220px;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -165,7 +160,7 @@
 
         .qr-box { background: white; padding: 10px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 0 20px rgba(255,255,255,0.1); }
         .qr-box img { width: 120px; height: 120px; display: block; }
-        
+
         .barcode-box { background: white; padding: 8px; border-radius: 8px; margin-bottom: 15px; width: 100%; display: flex; justify-content: center; }
 
         .btn-rules {
@@ -175,14 +170,13 @@
             padding: 8px 15px;
             border-radius: 8px;
             cursor: pointer;
-            font-family: 'Poppins';
+            font-family: 'Poppins', sans-serif;
             font-size: 12px;
             transition: 0.3s;
             width: 100%;
         }
         .btn-rules:hover { background: rgba(255, 255, 255, 0.1); border-color: var(--text-main); }
 
-        /* Action Buttons */
         .actions {
             padding: 20px 30px;
             background: rgba(0, 0, 0, 0.3);
@@ -196,7 +190,7 @@
             padding: 12px 24px;
             border-radius: 10px;
             font-weight: 600;
-            font-family: 'Poppins';
+            font-family: 'Poppins', sans-serif;
             cursor: pointer;
             border: none;
             display: flex; align-items: center; gap: 8px;
@@ -207,7 +201,6 @@
         .btn-print { background: rgba(255,255,255,0.1); color: white; }
         .btn-print:hover { background: rgba(255,255,255,0.2); }
 
-        /* Modal */
         .modal-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0,0,0,0.8);
@@ -232,7 +225,11 @@
         .modal-body ul { margin-left: 20px; color: var(--text-muted); font-size: 14px; line-height: 1.8; }
         .modal-body ul li strong { color: var(--text-main); }
 
-        /* Print Styles */
+        @media (max-width: 680px) {
+            .ticket-body { flex-direction: column; }
+            .right-section { width: 100%; border-left: none; border-top: 1px dashed var(--border); padding-left: 0; padding-top: 25px; }
+        }
+
         @media print {
             body { background: white; padding: 0; }
             .ticket-container { border: 2px solid #000; box-shadow: none; background: white; color: black; max-width: 100%; }
@@ -251,38 +248,32 @@
 </head>
 <body>
 
-    <!-- Ambient Background -->
     <div class="glow glow-1"></div>
     <div class="glow glow-2"></div>
 
     <div class="ticket-container" id="ticket-to-capture">
-        
-        <!-- Header -->
         <div class="header">
             <div class="school-logo">
                 <h1>MY <span>SCHOOL</span> ACADEMY</h1>
                 <p>Official Examination Hall Ticket</p>
             </div>
-            <!-- Holographic Security Seal -->
             <div class="hologram-seal">
                 <i class="fa-solid fa-shield-halved"></i>
             </div>
         </div>
 
-        <!-- Body -->
         <div class="ticket-body">
-            <!-- Left Section -->
             <div class="left-section">
+                {% set default_avatar = 'https://ui-avatars.com/api/?name=' ~ (st_name | urlencode) ~ '&background=4f46e5&color=fff&size=150' %}
                 <div class="student-profile">
-                    <img src="{{ student.photo_url | default('https://ui-avatars.com/api/?name=' + student.name | default('Rahul Kumar') + '&background=4f46e5&color=fff&size=150') }}" alt="Student" class="student-photo">
+                    <img src="{{ st.photo_url | default(default_avatar) }}" alt="Student" class="student-photo">
                     <div class="student-name">
-                        <h2>{{ student.name | default('Rahul Kumar') }}</h2>
-                        <p>Class: {{ exam.class_name | default('10-A') }} | Section: {{ student.section | default('A') }}</p>
-                        <span class="roll">ROLL NO: {{ student.roll_no | default('101') }}</span>
+                        <h2>{{ st_name }}</h2>
+                        <p>Class: {{ ex.class_name | default('10-A') }} | Section: {{ st.section | default('A') }}</p>
+                        <span class="roll">ROLL NO: {{ st_roll }}</span>
                     </div>
                 </div>
 
-                <!-- Live Countdown -->
                 <div class="countdown-container">
                     <i class="fa-solid fa-stopwatch"></i>
                     <div class="countdown-text">
@@ -294,59 +285,54 @@
                 <div class="info-grid">
                     <div class="info-item">
                         <div class="label">Subject</div>
-                        <div class="value">{{ exam.subject | default('Mathematics') }}</div>
+                        <div class="value">{{ ex.subject | default('Mathematics') }}</div>
                     </div>
                     <div class="info-item">
                         <div class="label">Date</div>
-                        <div class="value" id="exam-date" data-date="{{ exam.exam_date | default('2024-12-15') }}">{{ exam.exam_date | default('15 Dec 2024') }}</div>
+                        <div class="value" id="exam-date" data-date="{{ ex.exam_date | default('2026-12-15') }}">{{ ex.exam_date | default('15 Dec 2026') }}</div>
                     </div>
                     <div class="info-item">
                         <div class="label">Time</div>
-                        <div class="value">{{ exam.start_time | default('10:00 AM') }} - {{ exam.end_time | default('01:00 PM') }}</div>
+                        <div class="value">{{ ex.start_time | default('10:00 AM') }} - {{ ex.end_time | default('01:00 PM') }}</div>
                     </div>
                     <div class="info-item">
                         <div class="label">Center / Room</div>
-                        <div class="value">{{ exam.room_no | default('Hall B - 204') }}</div>
+                        <div class="value">{{ ex.room_no | default('Hall B - 204') }}</div>
                         <a href="https://maps.google.com/?q=School+Exam+Center" target="_blank" class="location-link"><i class="fa-solid fa-map-location-dot"></i> View Location</a>
                     </div>
                 </div>
             </div>
 
-            <!-- Right Section -->
             <div class="right-section">
-                <!-- Encrypted QR (JS will generate) -->
                 <div class="qr-box">
                     <img id="secure-qr" src="" alt="Secure QR">
                 </div>
-                
-                <!-- Barcode -->
+
                 <div class="barcode-box">
                     <svg id="barcode"></svg>
                 </div>
 
-                <button class="btn-rules" onclick="openModal()">
+                <button class="btn-rules" type="button" onclick="openModal()">
                     <i class="fa-solid fa-circle-info"></i> Exam Rules
                 </button>
             </div>
         </div>
 
-        <!-- Footer Actions -->
         <div class="actions">
-            <button class="btn btn-print" onclick="window.print()">
+            <button class="btn btn-print" type="button" onclick="window.print()">
                 <i class="fa-solid fa-print"></i> Print
             </button>
-            <button class="btn btn-pdf" onclick="downloadPDF()" id="pdf-btn">
+            <button class="btn btn-pdf" type="button" onclick="downloadPDF()" id="pdf-btn">
                 <i class="fa-solid fa-download"></i> Download PDF
             </button>
         </div>
     </div>
 
-    <!-- Rules Modal -->
     <div class="modal-overlay" id="rules-modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h3><i class="fa-solid fa-triangle-exclamation"></i> Exam Rules</h3>
-                <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+                <button class="modal-close" type="button" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body">
                 <ul>
@@ -360,52 +346,53 @@
         </div>
     </div>
 
-    <!-- JavaScript Logic -->
     <script>
-        // 1. Initialize 3D Tilt Effect
-        VanillaTilt.init(document.querySelector(".ticket-container"), {
-            max: 10,
-            speed: 400,
-            glare: true,
-            "max-glare": 0.2,
-        });
+        if (window.VanillaTilt) {
+            VanillaTilt.init(document.querySelector(".ticket-container"), {
+                max: 10,
+                speed: 400,
+                glare: true,
+                "max-glare": 0.2,
+            });
+        }
 
-        // 2. Generate Barcode
-        JsBarcode("#barcode", "{{ student.roll_no | default('101') }}", {
-            format: "CODE128",
-            lineColor: "#000",
-            width: 1.5,
-            height: 40,
-            displayValue: false
-        });
+        const rollNo = "{{ st_roll }}";
+        const examId = "{{ ex.id | default('1') }}";
 
-        // 3. Generate ENCRYPTED QR Code (Anti-Fraud)
-        // Hum roll no aur exam id ko encrypt kar rahe hain taaki koi fake QR na bana sake
-        const secretKey = "SCHOOL_SECRET_KEY_2024"; 
-        const payload = "{{ student.roll_no | default('101') }}-{{ exam.id | default('1') }}";
-        
-        // Encrypt the payload using AES
+        if (window.JsBarcode) {
+            JsBarcode("#barcode", rollNo, {
+                format: "CODE128",
+                lineColor: "#000",
+                width: 1.5,
+                height: 40,
+                displayValue: false
+            });
+        }
+
+        const secretKey = "SCHOOL_SECRET_KEY_2026";
+        const payload = `${rollNo}-${examId}`;
         const encryptedData = CryptoJS.AES.encrypt(payload, secretKey).toString();
-        
-        // Encode encrypted string to Base64 for URL safety
-        const base64Data = btoa(encryptedData).substring(0, 50); // Thoda chota kiya for QR
-        
-        // Generate QR using external API (Kyunki JS se direct QR image banana complex hai)
-        document.getElementById('secure-qr').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(encryptedData)}`;
+        document.getElementById('secure-qr').src =
+            `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(encryptedData)}`;
 
-        // 4. Countdown Timer
         function startTimer() {
             const dateEl = document.getElementById('exam-date');
             const examDateStr = dateEl.getAttribute('data-date');
-            const examTime = new Date(examDateStr + 'T10:00:00').getTime();
+            const parsedDate = new Date(`${examDateStr}T10:00:00`);
+            const examTime = parsedDate.getTime();
             const timerEl = document.getElementById('countdown');
 
-            const x = setInterval(() => {
-                const now = new Date().getTime();
+            if (Number.isNaN(examTime)) {
+                timerEl.innerHTML = examDateStr || "Scheduled";
+                return;
+            }
+
+            const intervalId = setInterval(() => {
+                const now = Date.now();
                 const distance = examTime - now;
 
                 if (distance < 0) {
-                    clearInterval(x);
+                    clearInterval(intervalId);
                     timerEl.innerHTML = "Exam Started/Completed";
                     timerEl.style.color = "#f87171";
                     return;
@@ -421,54 +408,43 @@
         }
         startTimer();
 
-        // 5. Download as PDF Function
+        function openModal() {
+            document.getElementById('rules-modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('rules-modal').classList.remove('active');
+        }
+
         async function downloadPDF() {
             const btn = document.getElementById('pdf-btn');
             const originalText = btn.innerHTML;
-            
-            // Show loading
+
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
             btn.disabled = true;
 
             const element = document.getElementById('ticket-to-capture');
-            
+
             try {
-                // Capture the HTML as Canvas
                 const canvas = await html2canvas(element, { scale: 2, useCORS: true });
                 const imgData = canvas.toDataURL('image/png');
-                
-                // Create PDF
+
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF('p', 'mm', 'a4');
-                
-                // Calculate aspect ratio to fit A4
-                const imgProps = pdf.getImageProperties(imgData);
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-                
-                // Add Image to PDF (centered horizontally, slightly below top margin)
-                pdf.addImage(imgData, 'PNG', 0, 10, pdfWidth, pdfHeight);
-                
-                // Save PDF
-                pdf.save(`HallTicket_{{ student.roll_no | default("101") }}.pdf`);
-            } catch (error) {
-                console.error("PDF Error:", error);
-                alert("PDF generate nahi ho paya. Kripya Print option use karein.");
+
+                const pdfWidth = pdf.internal.pageSize.getWidth() - 20;
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+                pdf.addImage(imgData, 'PNG', 10, 10, pdfWidth, pdfHeight);
+                pdf.save(`Hall_Ticket_${rollNo}.pdf`);
+            } catch (err) {
+                console.error("PDF generation failed:", err);
+                alert("PDF generate karne mein dikkat aayi. Kripya Print option try karein.");
             } finally {
-                // Reset Button
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
         }
-
-        // 6. Modal Logic
-        function openModal() { document.getElementById('rules-modal').classList.add('active'); }
-        function closeModal() { document.getElementById('rules-modal').classList.remove('active'); }
-        
-        // Close modal on click outside
-        document.getElementById('rules-modal').addEventListener('click', function(e) {
-            if(e.target === this) closeModal();
-        });
     </script>
 </body>
 </html>
