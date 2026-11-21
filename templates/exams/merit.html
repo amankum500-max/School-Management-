@@ -1,46 +1,454 @@
 {% extends "base.html" %}
-{% block title %}Merit List{% endblock %}
+{% block title %}Merit List — {{ exam.name }}{% endblock %}
+{% block page_title %}Merit List{% endblock %}
 
 {% block content %}
+{% set pass_pct = (exam.pass_marks if exam.pass_marks is defined and exam.pass_marks else 33)|float %}
+{% set total_students = (merit_list or [])|length %}
+
+{% set ns = namespace(
+    top_score=0,
+    pct_sum=0,
+    pass_cnt=0,
+    dist_cnt=0,
+    a1_cnt=0,
+    top1=none,
+    top2=none,
+    top3=none
+) %}
+
+{% for s in merit_list or [] %}
+    {% set obt = (s.total_obtained if s.total_obtained is defined and s.total_obtained is not none else 0)|float %}
+    {% set mx = (s.total_max if s.total_max is defined and s.total_max else 0)|float %}
+    {% set pct = (s.percentage if s.percentage is defined and s.percentage is not none else ((obt / mx * 100) if mx > 0 else 0))|float %}
+    {% set rnk = (s.rank if s.rank is defined and s.rank else loop.index)|int %}
+
+    {% if obt > ns.top_score %}{% set ns.top_score = obt %}{% endif %}
+    {% set ns.pct_sum = ns.pct_sum + pct %}
+    {% if pct >= pass_pct %}{% set ns.pass_cnt = ns.pass_cnt + 1 %}{% endif %}
+    {% if pct >= 75 %}{% set ns.dist_cnt = ns.dist_cnt + 1 %}{% endif %}
+    {% if pct >= 91 %}{% set ns.a1_cnt = ns.a1_cnt + 1 %}{% endif %}
+
+    {% if rnk == 1 and not ns.top1 %}{% set ns.top1 = s %}{% endif %}
+    {% if rnk == 2 and not ns.top2 %}{% set ns.top2 = s %}{% endif %}
+    {% if rnk == 3 and not ns.top3 %}{% set ns.top3 = s %}{% endif %}
+{% endfor %}
+
+{% set avg_pct = (ns.pct_sum / total_students) if total_students > 0 else 0 %}
+{% set pass_rate = ((ns.pass_cnt / total_students) * 100) if total_students > 0 else 0 %}
+
 <style>
-    @media print { .no-print { display: none !important; } body { background: white; } }
-    .gold { background: #fef08a; font-weight: bold; }
-    .silver { background: #e2e8f0; font-weight: bold; }
-    .bronze { background: #fed7aa; font-weight: bold; }
+    @page { size: A4; margin: 10mm; }
+
+    .ml-wrap {
+        max-width: 1080px;
+        margin: auto;
+    }
+
+    .ml-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        margin-bottom: 1rem;
+    }
+
+    .ml-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.48rem 0.85rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+    }
+
+    .ml-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 1.5rem;
+        box-shadow: 0 6px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    .ml-header {
+        text-align: center;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .ml-podium {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.85rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .podium-card {
+        border-radius: 11px;
+        padding: 0.95rem 1.05rem;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+    }
+
+    .podium-1 { background: linear-gradient(135deg, #fef9c3, #fef08a); border-color: #eab308; }
+    .podium-2 { background: linear-gradient(135deg, #f8fafc, #e2e8f0); border-color: #94a3b8; }
+    .podium-3 { background: linear-gradient(135deg, #fff7ed, #fed7aa); border-color: #fb923c; }
+
+    .ml-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+        gap: 0.7rem;
+        margin-bottom: 1rem;
+    }
+
+    .ml-stat-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 9px;
+        padding: 0.65rem 0.85rem;
+    }
+
+    .ml-progress-wrap {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 9px;
+        padding: 0.7rem 0.9rem;
+        margin-bottom: 1.1rem;
+    }
+
+    .ml-progress-bar {
+        height: 8px;
+        width: 100%;
+        background: #e2e8f0;
+        border-radius: 999px;
+        overflow: hidden;
+        margin-top: 0.4rem;
+    }
+
+    .ml-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #16a34a, #2563eb);
+        border-radius: 999px;
+    }
+
+    .ml-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+        margin-bottom: 0.95rem;
+    }
+
+    .ml-table-wrap {
+        overflow-x: auto;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+    }
+
+    .ml-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.89rem;
+        min-width: 780px;
+    }
+
+    .ml-table th {
+        background: #0f172a;
+        color: #ffffff;
+        padding: 0.72rem 0.8rem;
+        text-align: center;
+        font-weight: 600;
+        user-select: none;
+    }
+
+    .ml-table th.sortable { cursor: pointer; }
+    .ml-table th.sortable:hover { background: #1e293b; }
+
+    .ml-table td {
+        padding: 0.68rem 0.8rem;
+        border-top: 1px solid #e2e8f0;
+        text-align: center;
+    }
+
+    .rank-1 { background: #fef9c3 !important; font-weight: 700; }
+    .rank-2 { background: #f1f5f9 !important; font-weight: 600; }
+    .rank-3 { background: #ffedd5 !important; font-weight: 600; }
+
+    .badge {
+        display: inline-block;
+        padding: 0.18rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.74rem;
+        font-weight: 700;
+    }
+
+    .pct-mini-bar {
+        width: 68px;
+        height: 5px;
+        background: #e2e8f0;
+        border-radius: 999px;
+        overflow: hidden;
+        margin: 0.25rem auto 0;
+    }
+
+    .pct-mini-fill {
+        height: 100%;
+        background: #2563eb;
+    }
+
+    @media print {
+        .no-print, .ml-toolbar, .ml-controls { display: none !important; }
+        body { background: #ffffff !important; }
+        .ml-card { border: none !important; box-shadow: none !important; padding: 0 !important; }
+        .rank-1, .rank-2, .rank-3, .podium-1, .podium-2, .podium-3, .ml-progress-fill, .pct-mini-fill {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+    }
 </style>
 
-<div class="no-print" style="margin-bottom: 20px; text-align: right;">
-    <a href="{{ url_for('exams.index') }}" class="btn" style="background:#64748b;">← Back</a>
-    <button onclick="window.print()" class="btn" style="background:#3b82f6;">🖨️ Print Merit List</button>
-</div>
+<div class="ml-wrap">
+    <!-- Top Action Bar -->
+    <div class="ml-toolbar no-print">
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <a href="{{ url_for('exams.index') }}" class="ml-btn" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;">
+                ← Back
+            </a>
+            <a href="{{ url_for('exams.marks_entry', exam_id=exam.id) }}" class="ml-btn" style="background: #eff6ff; color: #1d4ed8;">
+                📝 Marks Entry
+            </a>
+        </div>
 
-<div class="card" style="padding: 30px; max-width: 800px; margin: auto;">
-    <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="margin: 0; color: #1e293b;">🏆 MERIT LIST</h1>
-        <h3 style="margin: 5px 0; color: #64748b;">{{ exam.name }} ({{ exam.class_name }})</h3>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button type="button" id="copy-merit-link" class="ml-btn" style="background: #f8fafc; color: #0f172a; border: 1px solid #cbd5e1;">
+                🔗 Copy Link
+            </button>
+            <button type="button" id="export-merit-json" class="ml-btn" style="background: #334155; color: #ffffff;">
+                { } JSON
+            </button>
+            <button type="button" id="export-merit-csv" class="ml-btn" style="background: #0f766e; color: #ffffff;">
+                ⬇️ Export CSV
+            </button>
+            <button type="button" onclick="window.print()" class="ml-btn" style="background: #2563eb; color: #ffffff;">
+                🖨️ Print Merit List
+            </button>
+        </div>
     </div>
 
-    <table style="width: 100%; border-collapse: collapse; text-align: center;">
-        <thead>
-            <tr style="border-bottom: 2px solid #cbd5e1;">
-                <th style="padding: 15px;">Rank</th>
-                <th style="padding: 15px;">Roll No</th>
-                <th style="padding: 15px; text-align: left;">Student Name</th>
-                <th style="padding: 15px;">Total Marks</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for student in merit_list %}
-            <tr class="{% if loop.index == 1 %}gold{% elif loop.index == 2 %}silver{% elif loop.index == 3 %}bronze{% endif %}" style="border-bottom: 1px solid #e2e8f0;">
-                <td style="padding: 12px; font-size: 1.2rem;">
-                    {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}{{ loop.index }}{% endif %}
-                </td>
-                <td style="padding: 12px;">{{ student.roll_no }}</td>
-                <td style="padding: 12px; text-align: left;">{{ student.name }}</td>
-                <td style="padding: 12px; font-weight: bold;">{{ student.total_obtained }}</td>
-            </tr>
+    <div class="ml-card">
+        <!-- Title Header -->
+        <div class="ml-header">
+            <h1 style="margin: 0; font-size: 1.55rem; color: #0f172a;">🏆 MERIT LIST</h1>
+            <div style="margin-top: 0.35rem; font-size: 0.95rem; color: #475569; font-weight: 600;">
+                {{ exam.name }} • Class {{ exam.class_name }}{% if exam.section %} ({{ exam.section }}){% endif %}
+            </div>
+        </div>
+
+        <!-- Top 3 Podium Cards -->
+        {% if ns.top1 or ns.top2 or ns.top3 %}
+        <div class="ml-podium">
+            {% for medal_item, cls_name, icon_txt, title_txt in [
+                (ns.top1, 'podium-1', '🥇', '1st Place'),
+                (ns.top2, 'podium-2', '🥈', '2nd Place'),
+                (ns.top3, 'podium-3', '🥉', '3rd Place')
+            ] %}
+            {% if medal_item %}
+            {% set m_obt = (medal_item.total_obtained if medal_item.total_obtained is defined and medal_item.total_obtained is not none else 0)|float %}
+            {% set m_mx = (medal_item.total_max if medal_item.total_max is defined and medal_item.total_max else 0)|float %}
+            {% set m_pct = (medal_item.percentage if medal_item.percentage is defined and medal_item.percentage is not none else ((m_obt / m_mx * 100) if m_mx > 0 else 0))|float %}
+            <div class="podium-card {{ cls_name }}">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #475569; text-transform: uppercase;">
+                    {{ icon_txt }} {{ title_txt }} • Roll {{ medal_item.roll_no or '—' }}
+                </div>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-top: 0.2rem;">
+                    {{ medal_item.name }}
+                </div>
+                <div style="font-size: 0.85rem; font-weight: 700; color: #1e293b; margin-top: 0.25rem;">
+                    {{ m_obt|int if m_obt == m_obt|int else "%.1f"|format(m_obt) }} Marks • {{ "%.1f"|format(m_pct) }}%
+                </div>
+            </div>
+            {% endif %}
             {% endfor %}
-        </tbody>
-    </table>
+        </div>
+        {% endif %}
+
+        <!-- Summary Stats -->
+        <div class="ml-stats">
+            <div class="ml-stat-box">
+                <div style="font-size: 0.72rem; color: #64748b; text-transform: uppercase;">Ranked Students</div>
+                <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a;">{{ total_students }}</div>
+            </div>
+            <div class="ml-stat-box">
+                <div style="font-size: 0.72rem; color: #64748b; text-transform: uppercase;">Highest Marks</div>
+                <div style="font-size: 1.15rem; font-weight: 800; color: #b45309;">
+                    {{ ns.top_score|int if ns.top_score == ns.top_score|int else "%.1f"|format(ns.top_score) }}
+                </div>
+            </div>
+            <div class="ml-stat-box">
+                <div style="font-size: 0.72rem; color: #64748b; text-transform: uppercase;">Class Average</div>
+                <div style="font-size: 1.15rem; font-weight: 800; color: #1d4ed8;">{{ "%.1f"|format(avg_pct) }}%</div>
+            </div>
+            <div class="ml-stat-box">
+                <div style="font-size: 0.72rem; color: #64748b; text-transform: uppercase;">A1 Scorers (≥91%)</div>
+                <div style="font-size: 1.15rem; font-weight: 800; color: #047857;">{{ ns.a1_cnt }}</div>
+            </div>
+            <div class="ml-stat-box">
+                <div style="font-size: 0.72rem; color: #64748b; text-transform: uppercase;">Distinction (≥75%)</div>
+                <div style="font-size: 1.15rem; font-weight: 800; color: #6b21a8;">{{ ns.dist_cnt }}</div>
+            </div>
+            <div class="ml-stat-box">
+                <div style="font-size: 0.72rem; color: #64748b; text-transform: uppercase;">Passed (≥{{ pass_pct|int }}%)</div>
+                <div style="font-size: 1.15rem; font-weight: 800; color: #15803d;">{{ ns.pass_cnt }} / {{ total_students }}</div>
+            </div>
+        </div>
+
+        <!-- Pass Rate Progress Bar -->
+        <div class="ml-progress-wrap">
+            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #334155;">
+                <span>Overall Pass Rate</span>
+                <span>{{ "%.1f"|format(pass_rate) }}% ({{ ns.pass_cnt }} of {{ total_students }})</span>
+            </div>
+            <div class="ml-progress-bar">
+                <div class="ml-progress-fill" style="width: {{ pass_rate if pass_rate <= 100 else 100 }}%;"></div>
+            </div>
+        </div>
+
+        <!-- Search & Filter -->
+        <div class="ml-controls no-print">
+            <div style="display: flex; align-items: center; gap: 0.65rem; flex: 1; min-width: 240px;">
+                <input type="text" id="merit-search" placeholder="🔍 Search student name or roll no (press '/')..."
+                       style="padding: 0.48rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; min-width: 220px; flex: 1; max-width: 340px;">
+                <span id="merit-count" style="font-size: 0.8rem; font-weight: 600; color: #64748b; white-space: nowrap;">
+                    Showing {{ total_students }} of {{ total_students }}
+                </span>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                <select id="merit-filter"
+                        style="padding: 0.48rem 0.7rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.86rem; background: #ffffff;">
+                    <option value="all">All Ranks</option>
+                    <option value="top3">Top 3 Only</option>
+                    <option value="distinction">Distinction (≥75%)</option>
+                    <option value="pass">Passed Only</option>
+                    <option value="fail">Below Pass %</option>
+                </select>
+                <button type="button" id="merit-reset"
+                        style="padding: 0.48rem 0.7rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; border-radius: 8px; font-size: 0.84rem; cursor: pointer;">
+                    Reset
+                </button>
+            </div>
+        </div>
+
+        <!-- Merit Table -->
+        <div class="ml-table-wrap">
+            <table class="ml-table" id="merit-table">
+                <thead>
+                    <tr>
+                        <th class="sortable" data-sort="rank" style="width: 11%;">Rank ↕</th>
+                        <th class="sortable" data-sort="roll" style="width: 11%;">Roll ↕</th>
+                        <th class="sortable" data-sort="name" style="text-align: left;">Student Name ↕</th>
+                        <th class="sortable" data-sort="marks" style="width: 15%;">Total Marks ↕</th>
+                        <th class="sortable" data-sort="pct" style="width: 14%;">Percentage ↕</th>
+                        <th style="width: 9%;">Grade</th>
+                        <th style="width: 11%;">Standing</th>
+                        <th class="no-print" style="width: 11%;">Marksheet</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in merit_list or [] %}
+                    {% set rnk = (student.rank if student.rank is defined and student.rank else loop.index)|int %}
+                    {% set sid = student.id if student.id is defined else (student.student_id if student.student_id is defined else '') %}
+                    {% set obt = (student.total_obtained if student.total_obtained is defined and student.total_obtained is not none else 0)|float %}
+                    {% set mx = (student.total_max if student.total_max is defined and student.total_max else 0)|float %}
+                    {% set pct = (student.percentage if student.percentage is defined and student.percentage is not none else ((obt / mx * 100) if mx > 0 else 0))|float %}
+
+                    {% if student.grade is defined and student.grade %}
+                        {% set grd = student.grade %}
+                    {% elif pct >= 91 %}{% set grd = 'A1' %}
+                    {% elif pct >= 81 %}{% set grd = 'A2' %}
+                    {% elif pct >= 71 %}{% set grd = 'B1' %}
+                    {% elif pct >= 61 %}{% set grd = 'B2' %}
+                    {% elif pct >= 51 %}{% set grd = 'C1' %}
+                    {% elif pct >= 33 %}{% set grd = 'C2' %}
+                    {% else %}{% set grd = 'E' %}{% endif %}
+
+                    {% set is_top3 = (rnk <= 3) %}
+                    {% set is_dist = (pct >= 75) %}
+                    {% set is_pass = (pct >= pass_pct) %}
+                    {% set standing_pct = (((total_students - rnk + 1) / total_students) * 100) if total_students > 0 else 0 %}
+
+                    <tr class="merit-row {% if rnk == 1 %}rank-1{% elif rnk == 2 %}rank-2{% elif rnk == 3 %}rank-3{% endif %}"
+                        data-search="{{ (student.roll_no|string ~ ' ' ~ student.name|string)|lower }}"
+                        data-rank="{{ rnk }}"
+                        data-roll="{{ student.roll_no or '' }}"
+                        data-name="{{ (student.name or '')|lower }}"
+                        data-marks="{{ obt }}"
+                        data-pct="{{ pct }}"
+                        data-top3="{{ '1' if is_top3 else '0' }}"
+                        data-dist="{{ '1' if is_dist else '0' }}"
+                        data-pass="{{ '1' if is_pass else '0' }}">
+                        <td style="font-size: 1.02rem;">
+                            {% if rnk == 1 %}🥇 1{% elif rnk == 2 %}🥈 2{% elif rnk == 3 %}🥉 3{% else %}{{ rnk }}{% endif %}
+                        </td>
+                        <td>{{ student.roll_no or '—' }}</td>
+                        <td style="text-align: left;">{{ student.name }}</td>
+                        <td style="font-weight: 700;">
+                            {{ obt|int if obt == obt|int else "%.1f"|format(obt) }}
+                            {% if mx > 0 %}<span style="color: #64748b; font-weight: 400; font-size: 0.78rem;">/ {{ mx|int if mx == mx|int else mx }}</span>{% endif %}
+                        </td>
+                        <td>
+                            <div>{{ "%.1f"|format(pct) }}%</div>
+                            <div class="pct-mini-bar">
+                                <div class="pct-mini-fill" style="width: {{ pct if pct <= 100 else 100 }}%;"></div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge" style="background: {{ '#dcfce7' if is_pass else '#fee2e2' }}; color: {{ '#166534' if is_pass else '#991b1b' }};">
+                                {{ grd }}
+                            </span>
+                        </td>
+                        <td style="font-size: 0.78rem; color: #475569; font-weight: 600;">
+                            Top {{ "%.0f"|format(100 - standing_pct + (100 / total_students if total_students > 0 else 0)) }}%
+                        </td>
+                        <td class="no-print">
+                            {% if sid %}
+                            <a href="{{ url_for('exams.report_card', exam_id=exam.id, student_id=sid) }}"
+                               style="font-size: 0.8rem; font-weight: 600; color: #2563eb; text-decoration: none;">
+                                📄 View
+                            </a>
+                            {% else %}
+                            <span style="color: #94a3b8; font-size: 0.8rem;">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" style="padding: 2rem; color: #64748b;">
+                            Is exam ke liye abhi koi merit records available nahi hain.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
-{% endblock %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('merit-search');
+    const filterSelect = document.getElementById('merit-filter');
+    const resetBtn = document.getElementById('merit-reset');
+    const countEl = document.getElementById('merit-count');
+    const exportCsvBtn = document.getElementById('export-merit-csv');
+    const exportJsonBtn = document.getElementById('export-merit-json');
+    const copyLinkBtn = document.getElementById('copy-merit-link');
+    const table = document.getElementById('merit-table');
+    const tbody = table ? table.querySelect
