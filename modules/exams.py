@@ -54,7 +54,7 @@ def create_exam():
 
     if not classes:
         classes = ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"]
- return render_template("exams/form.html", classes=classes)
+    return render_template("exams/form.html", classes=classes)
 
 # ==========================================
 # 2. SMART MARKS ENTRY (AJAX Enabled)
