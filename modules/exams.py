@@ -29,7 +29,16 @@ def index():
     exam_keys = ["id", "name", "class_name", "exam_date", "subjects", "max_marks"]
     exams_list = [_row_to_dict(r, exam_keys) for r in rows]
     return render_template("exams/index.html", exams=exams_list)
-
+@exams_bp.route("/remove/<int:exam_id>", methods=["POST"])
+@login_required
+def remove(exam_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM exams WHERE id = %s", (exam_id,))
+    conn.commit()
+    conn.close()
+    flash("Exam deleted.", "success")
+    return redirect(url_for("exams.index"))
 
 @exams_bp.route("/create", methods=["GET", "POST"])
 @login_required
