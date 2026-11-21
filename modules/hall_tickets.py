@@ -70,17 +70,18 @@ def _normalize_students(raw_students, default_class=""):
             photo = s.get("photo_url") or s.get("photo") or ""
             sig = s.get("signature_url") or ""
         elif isinstance(s, (list, tuple)):
-            sid = s[0] if len(s) > 0 else ""
-            name = s[1] if len(s) > 1 else ""
-            roll = s[2] if len(s) > 2 else ""
+            # None value को "" में बदलने के लिए `and s[x]` जोड़ा गया है
+            sid = s[0] if len(s) > 0 and s[0] else ""
+            name = s[1] if len(s) > 1 and s[1] else ""
+            roll = s[2] if len(s) > 2 and s[2] else ""
             cls = s[3] if len(s) > 3 and s[3] else (default_class or "")
-            sec = s[4] if len(s) > 4 else ""
-            father = s[7] if len(s) > 7 else ""
-            dob = s[5] if len(s) > 5 else ""
-            gender = s[6] if len(s) > 6 else ""
+            sec = s[4] if len(s) > 4 and s[4] else ""
+            dob = s[5] if len(s) > 5 and s[5] else ""
+            gender = s[6] if len(s) > 6 and s[6] else ""
+            father = s[7] if len(s) > 7 and s[7] else ""
             room = ""
             seat = ""
-            photo = s[13] if len(s) > 13 else ""
+            photo = s[13] if len(s) > 13 and s[13] else ""
             sig = ""
         else:
             continue
@@ -139,6 +140,7 @@ def index():
     for e in exams:
         subjects_val = e[4] if len(e) > 4 and e[4] else []
         first_subject = subjects_val[0] if isinstance(subjects_val, (list, tuple)) and len(subjects_val) > 0 else ""
+        
         exam_dict = {
             "id": e[0],
             "name": e[1],
@@ -146,7 +148,10 @@ def index():
             "exam_date": e[3],
             "subjects": subjects_val,
             "subject": first_subject if isinstance(first_subject, str) else (first_subject.get("name") if isinstance(first_subject, dict) else ""),
-            "max_marks": e[5] if len(e) > 5 else None,
+            "max_marks": e[5] if len(e) > 5 and e[5] else None,
+            # 👇 Result Date और Center जोड़ा गया
+            "result_date": e[6] if len(e) > 6 and e[6] else "",
+            "center": e[7] if len(e) > 7 and e[7] else "",
             "seated_count": 0,
             "total_students": 0,
             "students": [],
@@ -221,7 +226,10 @@ def seating(exam_id):
         "class_name": exam[2],
         "exam_date": exam[3],
         "subjects": exam[4] if len(exam) > 4 and exam[4] else [],
-        "max_marks": exam[5] if len(exam) > 5 else None,
+        "max_marks": exam[5] if len(exam) > 5 and exam[5] else None,
+        # 👇 Result Date और Center जोड़ा गया
+        "result_date": exam[6] if len(exam) > 6 and exam[6] else "",
+        "center": exam[7] if len(exam) > 7 and exam[7] else "",
     }
 
     return render_template(
@@ -254,19 +262,25 @@ def view_ticket(exam_id, student_id):
         "class_name": req_class or exam[2],
         "exam_date": exam[3],
         "subjects": exam[4] if len(exam) > 4 and exam[4] else [],
-        "max_marks": exam[5] if len(exam) > 5 else None,
+        "max_marks": exam[5] if len(exam) > 5 and exam[5] else None,
+        # 👇 Result Date और Center जोड़ा गया
+        "result_date": exam[6] if len(exam) > 6 and exam[6] else "",
+        "center": exam[7] if len(exam) > 7 and exam[7] else "",
     }
 
     student = {
         "id": student_row[0],
         "name": student_row[1],
         "roll_no": student_row[2],
-        "class_name": req_class or (student_row[3] if len(student_row) > 3 else ""),
-        "section": req_section or (student_row[4] if len(student_row) > 4 else ""),
-        "parent_name": student_row[7] if len(student_row) > 7 else "",
-        "father_name": student_row[7] if len(student_row) > 7 else "",
-        "parent_phone": student_row[8] if len(student_row) > 8 else "",
-        "photo_url": student_row[13] if len(student_row) > 13 else "",
+        "class_name": req_class or (student_row[3] if len(student_row) > 3 and student_row[3] else ""),
+        "section": req_section or (student_row[4] if len(student_row) > 4 and student_row[4] else ""),
+        # 👇 डेटाबेस के इंडेक्स के हिसाब से DOB और Gender जोड़ा गया
+        "dob": student_row[5] if len(student_row) > 5 and student_row[5] else "",
+        "gender": student_row[6] if len(student_row) > 6 and student_row[6] else "",
+        "parent_name": student_row[7] if len(student_row) > 7 and student_row[7] else "",
+        "father_name": student_row[7] if len(student_row) > 7 and student_row[7] else "",
+        "parent_phone": student_row[8] if len(student_row) > 8 and student_row[8] else "",
+        "photo_url": student_row[13] if len(student_row) > 13 and student_row[13] else "",
     }
 
     seating_info = {"room_no": "—", "seat_no": "—"}
@@ -309,7 +323,10 @@ def bulk_print(exam_id):
         "class_name": exam[2],
         "exam_date": exam[3],
         "subjects": exam[4] if len(exam) > 4 and exam[4] else [],
-        "max_marks": exam[5] if len(exam) > 5 else None,
+        "max_marks": exam[5] if len(exam) > 5 and exam[5] else None,
+        # 👇 Result Date और Center जोड़ा गया
+        "result_date": exam[6] if len(exam) > 6 and exam[6] else "",
+        "center": exam[7] if len(exam) > 7 and exam[7] else "",
     }
     students = _normalize_students(db.get_exam_students_for_tickets(exam_id), default_class=exam[2] or "")
     settings = _get_school_settings()
