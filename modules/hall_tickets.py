@@ -85,11 +85,23 @@ def seating(exam_id):
 
     students = db.get_exam_students_for_tickets(exam_id)
     summary = db.get_exam_seating_summary(exam_id)
-    
+    total_set = sum(r.get("student_count", r.get("count", 0)) for r in summary)
+
+    exam_dict = {
+        "id": exam[0],
+        "name": exam[1],
+        "class_name": exam[2],
+        "exam_date": exam[3],
+        "subjects": exam[4] if len(exam) > 4 and exam[4] else [],
+        "max_marks": exam[5] if len(exam) > 5 else None,
+    }
+
     return render_template('hall_tickets/manage.html',
-                           exam={"id": exam[0], "name": exam[1],
-                                 "class_name": exam[2], "exam_date": exam[3]},
-                           students=students, summary=summary)
+                           exam=exam_dict,
+                           students=students,
+                           summary=summary,
+                           seating_summary=summary,
+                           total_set=total_set)
 
 
 # ─────────────────────────────────────────────────────────
