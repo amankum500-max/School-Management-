@@ -3,14 +3,26 @@
 {% block page_title %}Exam Management{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width: 650px; margin: auto; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; background: #ffffff;">
+<div class="card" style="max-width: 680px; margin: auto; padding: 1.5rem; border-radius: 10px; border: 1px solid #e2e8f0; background: #ffffff;">
+    <!-- Top Quick Actions -->
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
+        <a href="{{ url_for('exams.index') if url_for is defined else '#' }}"
+            style="font-size: 0.85rem; color: #475569; text-decoration: none;">
+            ← Back to Exams & Marks
+        </a>
+        <a href="{{ url_for('hall_ticket.index') if url_for is defined else '#' }}"
+            style="font-size: 0.85rem; color: #2563eb; text-decoration: none; font-weight: 600;">
+            🎟️ Open Hall Tickets
+        </a>
+    </div>
+
     <!-- Tab Navigation -->
     <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid #e2e8f0; margin-bottom: 1.5rem;">
-        <button id="tab-manual-btn" type="button" onclick="switchTab('manual')" 
+        <button id="tab-manual-btn" type="button" onclick="switchTab('manual')"
             style="padding: 0.6rem 1rem; border: none; background: none; font-weight: 600; color: #2563eb; border-bottom: 2px solid #2563eb; margin-bottom: -2px; cursor: pointer;">
             📋 Manual Exam Entry
         </button>
-        <button id="tab-ai-btn" type="button" onclick="switchTab('ai')" 
+        <button id="tab-ai-btn" type="button" onclick="switchTab('ai')"
             style="padding: 0.6rem 1rem; border: none; background: none; font-weight: 600; color: #64748b; margin-bottom: -2px; cursor: pointer;">
             ✨ Generate AI Paper
         </button>
@@ -20,47 +32,66 @@
     <div id="tab-manual" style="display: block;">
         <h4 style="margin-top: 0; margin-bottom: 1rem; color: #1e293b;">Create New Exam</h4>
         <form method="POST" action="{{ url_for('exams.create_exam') if url_for is defined else '' }}">
+            {% if csrf_token is defined %}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% endif %}
             <input type="hidden" name="form_type" value="manual">
-            
+
             <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.85rem; color: #334155; margin-bottom: 0.25rem;">Exam Name *</label>
+                <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                    Exam Name *
+                </label>
                 <input name="name" required placeholder="e.g. Mid Term / Final Exam"
                     style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
                 <div>
-                    <label style="display: block; font-size: 0.85rem; color: #334155; margin-bottom: 0.25rem;">Class / Grade *</label>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                        Class / Grade *
+                    </label>
                     <select name="class_name" required
-                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
-                        <option value="">Select</option>
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; background: #fff;">
+                        <option value="">Select Class</option>
                         {% for c in classes or [] %}
                         <option value="{{ c }}">{{ c }}</option>
                         {% endfor %}
                     </select>
                 </div>
+
                 <div>
-                    <label style="display: block; font-size: 0.85rem; color: #334155; margin-bottom: 0.25rem;">Exam Date</label>
-                    <input type="date" name="exam_date"
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                        Exam Date *
+                    </label>
+                    <input type="date" name="exam_date" required
                         style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
                 </div>
             </div>
 
             <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.85rem; color: #334155; margin-bottom: 0.25rem;">Subjects * <small style="color: #64748b;">(comma separated)</small></label>
+                <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                    Subjects * <small style="color: #64748b;">(comma separated)</small>
+                </label>
                 <input name="subjects" required placeholder="Math, Science, English, Hindi"
                     style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
             </div>
 
             <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.85rem; color: #334155; margin-bottom: 0.25rem;">Max Marks per Subject</label>
+                <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                    Max Marks per Subject
+                </label>
                 <input name="max_marks" type="number" value="100" min="1"
                     style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
             </div>
 
-            <div style="margin-top: 1.25rem; display: flex; align-items: center; gap: 0.75rem;">
-                <button type="submit" class="btn btn-primary" style="padding: 0.6rem 1.2rem; cursor: pointer;">Create & Enter Marks</button>
-                <a href="{{ url_for('exams.index') if url_for is defined else '#' }}" style="color: #64748b; text-decoration: none;">Cancel</a>
+            <div style="margin-top: 1.25rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <button type="submit" class="btn btn-primary" style="padding: 0.6rem 1.2rem; cursor: pointer;">
+                    Create & Enter Marks
+                </button>
+                <a href="{{ url_for('exams.index') if url_for is defined else '#' }}"
+                    style="color: #64748b; text-decoration: none; font-size: 0.9rem;">
+                    Cancel
+                </a>
             </div>
         </form>
     </div>
@@ -68,19 +99,26 @@
     <!-- Form 2: AI Question Paper Generator -->
     <div id="tab-ai" style="display: none;">
         <h4 style="margin-top: 0; margin-bottom: 1rem; color: #1e293b;">📝 Create Exam Paper using AI</h4>
-        <form method="POST" action="#">
+        <form method="POST" action="{{ url_for('generate_exam') if url_for is defined else '#' }}">
+            {% if csrf_token is defined %}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% endif %}
             <input type="hidden" name="form_type" value="ai">
 
             <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.85rem; color: #334155; margin-bottom: 0.25rem;">Subject Name *</label>
+                <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                    Subject Name *
+                </label>
                 <input type="text" name="subject" class="form-control" placeholder="e.g., Science, Mathematics" required
                     style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
             </div>
 
             <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.85rem; color: #334155; margin-bottom: 0.25rem;">Class / Grade *</label>
+                <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                    Class / Grade *
+                </label>
                 <select name="grade" required
-                    style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                    style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; background: #fff;">
                     <option value="">Select Class</option>
                     {% for c in classes or [] %}
                     <option value="{{ c }}">{{ c }}</option>
@@ -89,7 +127,9 @@
             </div>
 
             <div style="margin-top: 1.25rem;">
-                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.6rem 1.2rem; cursor: pointer;">✨ Generate Paper (AI)</button>
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.6rem 1.2rem; cursor: pointer;">
+                    ✨ Generate Paper (AI)
+                </button>
             </div>
         </form>
     </div>
