@@ -45,9 +45,17 @@
 
 <!-- Add question -->
 <div class="card" style="margin-bottom:1rem;">
-    <h3 style="font-size:1rem; margin-bottom:0.65rem; color:#1e293b;">
-        ➕ Add Question
-    </h3>
+    <!-- Header with Bulk Import Button -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.65rem; flex-wrap:wrap; gap:0.5rem;">
+        <h3 style="font-size:1rem; color:#1e293b; margin:0;">
+            ➕ Add Question
+        </h3>
+        <button type="button" class="btn" onclick="document.getElementById('bulkImportModal').style.display='flex'" 
+                style="background:#8b5cf6; font-size:0.8rem; padding:0.3rem 0.8rem; display:flex; align-items:center; gap:5px;">
+            📁 Bulk Import (CSV)
+        </button>
+    </div>
+
     <form method="POST" action="{{ url_for('online_exams.add_question', eid=exam.id) }}">
         <div style="margin-bottom:0.65rem;">
             <label style="font-size:0.78rem; color:#64748b; display:block;
@@ -117,6 +125,24 @@
     </form>
 </div>
 
+<!-- Bulk Import Modal (Popup) -->
+<div id="bulkImportModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 450px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <h3 style="margin-top: 0; font-size: 1.1rem; color: #1e293b;">📁 Bulk Questions Import</h3>
+        <p style="font-size: 0.82rem; color: #64748b; line-height: 1.4; margin-bottom: 15px;">
+            CSV file format:<br>
+            <code style="background:#f1f5f9; padding:2px 4px; border-radius:3px; font-size:0.75rem;">Question, Option A, Option B, Option C, Option D, Correct Option (A/B/C/D), Marks</code>
+        </p>
+        
+        <input type="file" id="csvFileInput" accept=".csv" style="margin-bottom: 15px; display: block; width: 100%; font-size: 0.85rem; border: 1px solid #cbd5e1; padding: 5px; border-radius: 4px;">
+        
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" onclick="document.getElementById('bulkImportModal').style.display='none'" style="padding: 0.45rem 1rem; background: #cbd5e1; color: #1e293b; border: none; border-radius: 5px; cursor: pointer; font-size: 0.85rem;">Cancel</button>
+            <button type="button" id="uploadCsvBtn" style="padding: 0.45rem 1rem; background: #8b5cf6; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 0.85rem;">Upload & Import</button>
+        </div>
+    </div>
+</div>
+
 <!-- Questions list -->
 {% if questions %}
 <div class="card" style="padding:0;">
@@ -165,7 +191,7 @@
 </div>
 {% else %}
 <div class="card" style="text-align:center; padding:2rem; color:#64748b;">
-    Abhi koi question nahi. Upar se add karo.
+    Abhi koi question nahi. Upar se add karo ya Bulk Import karein.
 </div>
 {% endif %}
 
@@ -213,4 +239,84 @@
     </table>
 </div>
 {% endif %}
+
+<!-- JavaScript for Bulk Import -->
+<script>
+document.getElementById('uploadCsvBtn').addEventListener('click', function() {
+    const fileInput = document.getElementById('csvFileInput');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert("Bhai, pehle CSV file select karo!");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        const rows = text.split('\n');
+        const questions = [];
+        
+        // Assuming first row is header, start from index 1
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i].trim();
+            if (!row) continue; // Blank lines skip karein
+            
+            // Comma se split karein (Note: Agar text mein comma hai toh thodi dikkat aayegi)
+            const cols = row.split(',');
+            
+            // Kam se kam 6 columns toh hone chahiye (Q, A, B, C, D, Correct)
+            if (cols.length >= 6) {
+                questions.push({
+                    question_text: cols[0],
+                    option_a: cols[1],
+                    option_b: cols[2],
+                    option_c: cols[3] || "",
+                    option_d: cols[4] || "",
+                    correct_option: cols[5],
+                    marks: cols[6] || 1
+                });
+            }
+        }
+
+        if (questions.length === 0) {
+            alert("File mein koi valid data nahi mila. Format check karein.");
+            return;
+        }
+
+        const btn = document.getElementById('uploadCsvBtn');
+        btn.innerText = "Importing...";
+        btn.disabled = true;
+        btn.style.background = "#94a3b8";
+
+        // API Call to Backend
+        fetch("{{ url_for('online_exams.bulk_add_questions', eid=exam.id) }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ questions: questions })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "success") {
+                alert(data.message);
+                location.reload(); // Reload page to show new questions
+            } else {
+                alert("Error: " + data.message + "\n\nErrors:\n" + (data.errors ? data.errors.join('\n') : ''));
+                btn.innerText = "Upload & Import";
+                btn.disabled = false;
+                btn.style.background = "#8b5cf6";
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Server error aaya hai. Console check karein.");
+            btn.innerText = "Upload & Import";
+            btn.disabled = false;
+            btn.style.background = "#8b5cf6";
+        });
+    };
+    reader.readAsText(file);
+});
+</script>
+
 {% endblock %}
