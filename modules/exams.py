@@ -42,16 +42,19 @@ def create_exam():
 
         flash("Exam created successfully.", "success")
         return redirect(url_for("exams.index"))
-
-    cursor.execute("SELECT DISTINCT class_name FROM students WHERE class_name IS NOT NULL ORDER BY class_name")
+            cursor.execute("SELECT DISTINCT class_name FROM students WHERE class_name IS NOT NULL ORDER BY class_name")
     rows = cursor.fetchall()
     conn.close()
 
-    classes = [r["class_name"] for r in rows if r.get("class_name")]
+    classes = []
+    for r in rows:
+        val = r.get("class_name") if isinstance(r, dict) else r[0]
+        if val:
+            classes.append(val)
+
     if not classes:
         classes = ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"]
-
-    return render_template("exams/form.html", classes=classes)
+ return render_template("exams/form.html", classes=classes)
 
 # ==========================================
 # 2. SMART MARKS ENTRY (AJAX Enabled)
