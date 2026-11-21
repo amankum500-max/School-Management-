@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from modules.auth import login_required, role_required
-from database import get_db_connection
+# Yahan import theek kiya gaya hai (database.py ka chakkar khatam)
+from supabase_client import get_conn as get_db_connection
 import math
 
 exams_bp = Blueprint("exams", __name__, url_prefix="/exams")
@@ -31,7 +32,8 @@ def create_exam():
             
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO exams (name, class_name) VALUES (?, ?)", (name, class_name))
+        # ? ko %s mein badla gaya hai
+        cursor.execute("INSERT INTO exams (name, class_name) VALUES (%s, %s)", (name, class_name))
         conn.commit()
         conn.close()
         
@@ -48,19 +50,20 @@ def marks_entry(exam_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT * FROM exams WHERE id = ?", (exam_id,))
+    # ? ko %s mein badla gaya hai
+    cursor.execute("SELECT * FROM exams WHERE id = %s", (exam_id,))
     exam = cursor.fetchone()
     
-    cursor.execute("SELECT * FROM students WHERE class_name = ? ORDER BY roll_no ASC", (exam['class_name'],))
+    cursor.execute("SELECT * FROM students WHERE class_name = %s ORDER BY roll_no ASC", (exam['class_name'],))
     students = cursor.fetchall()
     
-    # Class ke hisaab se subjects fetch karein
-    cursor.execute("SELECT * FROM subjects WHERE class_name = ?", (exam['class_name'],))
+    cursor.execute("SELECT * FROM subjects WHERE class_name = %s", (exam['class_name'],))
     subjects = cursor.fetchall()
     
-    # Existing Marks Map banayein
-    cursor.execute("SELECT student_id, subject_name, marks_obtained, is_absent FROM marks WHERE exam_id=?", (exam_id,))
+    cursor.execute("SELECT student_id, subject_name, marks_obtained, is_absent FROM marks WHERE exam_id=%s", (exam_id,))
     marks_raw = cursor.fetchall()
+    
+    # Existing Marks Map banayein
     existing_marks = {(m['student_id'], m['subject_name']): m for m in marks_raw}
     
     conn.close()
@@ -83,13 +86,13 @@ def api_save_mark():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT id FROM marks WHERE student_id=? AND exam_id=? AND subject_name=?", (student_id, exam_id, subject))
+    cursor.execute("SELECT id FROM marks WHERE student_id=%s AND exam_id=%s AND subject_name=%s", (student_id, exam_id, subject))
     existing = cursor.fetchone()
     
     if existing:
-        cursor.execute("UPDATE marks SET marks_obtained=?, is_absent=? WHERE id=?", (marks, is_absent, existing['id']))
+        cursor.execute("UPDATE marks SET marks_obtained=%s, is_absent=%s WHERE id=%s", (marks, is_absent, existing['id']))
     else:
-        cursor.execute("INSERT INTO marks (student_id, exam_id, subject_name, marks_obtained, is_absent) VALUES (?, ?, ?, ?, ?)", 
+        cursor.execute("INSERT INTO marks (student_id, exam_id, subject_name, marks_obtained, is_absent) VALUES (%s, %s, %s, %s, %s)", 
                        (student_id, exam_id, subject, marks, is_absent))
     
     conn.commit()
@@ -105,16 +108,17 @@ def merit(exam_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT * FROM exams WHERE id = ?", (exam_id,))
+    cursor.execute("SELECT * FROM exams WHERE id = %s", (exam_id,))
     exam = cursor.fetchone()
     
     # Rank calculate karein (Absent walo ko ignore karte hue)
+    # 0 ki jagah FALSE use kiya gaya hai
     cursor.execute("""
         SELECT s.id, s.name, s.roll_no, SUM(m.marks_obtained) as total_obtained
         FROM students s
         JOIN marks m ON s.id = m.student_id
-        WHERE m.exam_id = ? AND s.class_name = ? AND m.is_absent = 0
-        GROUP BY s.id
+        WHERE m.exam_id = %s AND s.class_name = %s AND m.is_absent = FALSE
+        GROUP BY s.id, s.name, s.roll_no
         ORDER BY total_obtained DESC
     """, (exam_id, exam['class_name']))
     
@@ -131,24 +135,30 @@ def report_card(student_id, exam_id):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT * FROM students WHERE id = ?", (student_id,))
+    cursor.execute("SELECT * FROM students WHERE id = %s", (student_id,))
     student = cursor.fetchone()
     
-    cursor.execute("SELECT * FROM exams WHERE id = ?", (exam_id,))
+    cursor.execute("SELECT * FROM exams WHERE id = %s", (exam_id,))
     exam = cursor.fetchone()
     
-    cursor.execute("SELECT subject_name, marks_obtained, is_absent, (SELECT max_marks FROM subjects WHERE class_name=? AND subject_name=marks.subject_name) as max_marks FROM marks WHERE student_id = ? AND exam_id = ?", (exam['class_name'], student_id, exam_id))
+    # Subquery mein ? ko %s kiya gaya hai
+    cursor.execute("""
+        SELECT subject_name, marks_obtained, is_absent, 
+               (SELECT max_marks FROM subjects WHERE class_name=%s AND subject_name=marks.subject_name) as max_marks 
+        FROM marks WHERE student_id = %s AND exam_id = %s
+    """, (exam['class_name'], student_id, exam_id))
     marks_list = cursor.fetchall()
     
     # Rank calculate karein
     cursor.execute("""
         SELECT COUNT(*) + 1 as rank FROM (
             SELECT student_id, SUM(marks_obtained) as total FROM marks 
-            WHERE exam_id = ? AND is_absent = 0 GROUP BY student_id
-        ) WHERE total > (SELECT SUM(marks_obtained) FROM marks WHERE student_id = ? AND exam_id = ? AND is_absent = 0)
+            WHERE exam_id = %s AND is_absent = FALSE GROUP BY student_id
+        ) as subquery 
+        WHERE total > (SELECT SUM(marks_obtained) FROM marks WHERE student_id = %s AND exam_id = %s AND is_absent = FALSE)
     """, (exam_id, student_id, exam_id))
     rank_data = cursor.fetchone()
-    rank = rank_data['rank'] if rank_data else 1
+    rank = rank_data['rank'] if rank_data and rank_data['rank'] else 1
     
     conn.close()
     
@@ -158,7 +168,7 @@ def report_card(student_id, exam_id):
 
     # Advanced Calculations
     total_obtained = sum(m['marks_obtained'] for m in marks_list if not m['is_absent'])
-    total_max = sum(m['max_marks'] for m in marks_list if not m['is_absent'])
+    total_max = sum(m['max_marks'] for m in marks_list if not m['is_absent'] and m['max_marks'] is not None)
     percentage = (total_obtained / total_max * 100) if total_max > 0 else 0
     
     # Auto Grading System
