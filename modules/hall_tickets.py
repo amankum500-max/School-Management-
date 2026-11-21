@@ -55,7 +55,7 @@ def _normalize_students(raw_students, default_class=""):
     if not raw_students:
         return formatted
 
-    for idx, s in enumerate(raw_students, start=1):
+    for s in raw_students:
         if isinstance(s, dict):
             sid = s.get("id") or s.get("student_id") or ""
             name = s.get("name") or s.get("student_name") or ""
@@ -103,6 +103,27 @@ def _normalize_students(raw_students, default_class=""):
     return formatted
 
 
+def _fallback_students_for_class(exam_class):
+    if not hasattr(db, "get_students"):
+        return []
+    try:
+        all_students = db.get_students() or []
+    except Exception:
+        return []
+
+    target_cls = str(exam_class or "").strip().lower()
+    if not target_cls:
+        return _normalize_students(all_students, default_class=exam_class or "")
+
+    matched = []
+    for s in all_students:
+        s_cls = (s.get("class_name") or s.get("class") or "") if isinstance(s, dict) else (s[3] if len(s) > 3 else "")
+        if str(s_cls).strip().lower() == target_cls:
+            matched.append(s)
+
+    return _normalize_students(matched, default_class=exam_class or "")
+
+
 # ─────────────────────────────────────────────────────────
 # 1. LIST EXAMS (select exam to generate hall tickets)
 # ─────────────────────────────────────────────────────────
@@ -136,6 +157,9 @@ def index():
 
             raw_students = db.get_exam_students_for_tickets(e[0])
             students = _normalize_students(raw_students, default_class=e[2] or "")
+            if not students:
+                students = _fallback_students_for_class(e[2] or "")
+
             exam_dict["students"] = students
             exam_dict["total_students"] = len(students)
         except Exception:
