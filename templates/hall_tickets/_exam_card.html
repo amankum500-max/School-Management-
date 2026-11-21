@@ -2,9 +2,21 @@
 {% set st = student if student is defined and student else {} %}
 {% set sc = school if school is defined and school else {} %}
 {% set sched = schedule if schedule is defined and schedule else [] %}
-{% set st_name = st.name | default('Rahul Kumar') %}
-{% set st_roll = st.roll_no | default('101') %}
+{% set st_id = st.id if st.id is defined and st.id else '' %}
+{% set ex_id = ex.id if ex.id is defined and ex.id else '' %}
+{% set st_name = st.name if st.name is defined and st.name else 'Student Name' %}
+{% set st_roll = st.roll_no if st.roll_no is defined and st.roll_no else '—' %}
+{% set st_class = ex.class_name if ex.class_name is defined and ex.class_name else (st.class_name if st.class_name is defined and st.class_name else '—') %}
+{% set st_section = st.section if st.section is defined and st.section else '—' %}
 {% set default_avatar = 'https://ui-avatars.com/api/?name=' ~ (st_name | urlencode) ~ '&background=4f46e5&color=fff&size=150' %}
+
+{% if ex_id and st_id %}
+  {% set ticket_url = url_for('hall_ticket.view_ticket', exam_id=ex_id, student_id=st_id) ~ '?class_name=' ~ (st_class | urlencode) ~ '&section=' ~ (st_section | urlencode) %}
+  {% set pdf_url = ticket_url ~ '&download=pdf' %}
+{% else %}
+  {% set ticket_url = '/hall-ticket?student_id=' ~ (st_id | urlencode) ~ '&class_name=' ~ (st_class | urlencode) ~ '&section=' ~ (st_section | urlencode) %}
+  {% set pdf_url = ticket_url ~ '&download=pdf' %}
+{% endif %}
 
 <style>
   .dash-ticket-card {
@@ -241,6 +253,9 @@
     font-weight: 600;
     cursor: pointer;
     color: #ffffff;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
   }
 
   .dash-btn-print { background: #3b82f6; }
@@ -275,7 +290,7 @@
 <div class="dash-ticket-card">
   <div class="dash-ticket-top">
     <div class="dash-school-title">
-      <h3>{{ sc.name | default('MY SCHOOL ACADEMY') }}</h3>
+      <h3>{{ sc.name if sc.name is defined and sc.name else 'MY SCHOOL ACADEMY' }}</h3>
       <p>Official Examination Hall Ticket</p>
     </div>
     <div class="dash-seal">
@@ -287,14 +302,14 @@
     <div>
       <div class="dash-student-row">
         <img
-          src="{{ st.photo_url | default(default_avatar) }}"
+          src="{{ st.photo_url if st.photo_url is defined and st.photo_url else default_avatar }}"
           alt="{{ st_name }}"
           class="dash-avatar"
           onerror="this.onerror=null;this.src='{{ default_avatar }}';"
         >
         <div class="dash-student-meta">
           <h4>{{ st_name }}</h4>
-          <p>Class: {{ ex.class_name | default(st.class_name | default('1')) }} | Section: {{ st.section | default('A') }}</p>
+          <p>Class: {{ st_class }} | Section: {{ st_section }}</p>
           <span class="dash-roll-tag">ROLL NO: {{ st_roll }}</span>
         </div>
       </div>
@@ -302,19 +317,19 @@
       <div class="dash-mini-grid">
         <div class="dash-field">
           <small>Father's Name</small>
-          <strong>{{ st.father_name | default('TBA') }}</strong>
+          <strong>{{ st.father_name if st.father_name is defined and st.father_name else 'TBA' }}</strong>
         </div>
         <div class="dash-field">
           <small>DOB / Gender</small>
-          <strong>{{ st.dob | default('TBA') }} • {{ st.gender | default('TBA') }}</strong>
+          <strong>{{ st.dob if st.dob is defined and st.dob else 'TBA' }} • {{ st.gender if st.gender is defined and st.gender else 'TBA' }}</strong>
         </div>
         <div class="dash-field">
           <small>Center / Room</small>
-          <strong>{{ ex.room_no | default('Hall B - 204') }}</strong>
+          <strong>{{ st.room_no if st.room_no is defined and st.room_no else (ex.room_no if ex.room_no is defined and ex.room_no else 'TBA') }}</strong>
         </div>
         <div class="dash-field">
           <small>Result Date</small>
-          <strong>{{ ex.result_date | default('TBA') }}</strong>
+          <strong>{{ ex.result_date if ex.result_date is defined and ex.result_date else 'TBA' }}</strong>
         </div>
       </div>
 
@@ -332,16 +347,16 @@
             {% if sched and sched|length > 0 %}
               {% for row in sched %}
               <tr>
-                <td>{{ row.exam_date | default('TBA') }}</td>
-                <td>{{ row.subject_name | default(row.subject | default('Subject')) }}</td>
-                <td>{{ row.start_time | default('10:00 AM') }} - {{ row.end_time | default('01:00 PM') }}</td>
+                <td>{{ row.exam_date if row.exam_date is defined and row.exam_date else 'TBA' }}</td>
+                <td>{{ row.subject_name if row.subject_name is defined and row.subject_name else (row.subject if row.subject is defined and row.subject else '—') }}</td>
+                <td>{{ row.start_time if row.start_time is defined and row.start_time else '—' }}{% if row.end_time is defined and row.end_time %} - {{ row.end_time }}{% endif %}</td>
               </tr>
               {% endfor %}
             {% else %}
               <tr>
-                <td>{{ ex.exam_date | default('TBA') }}</td>
-                <td>{{ ex.subject | default('Mathematics') }}</td>
-                <td>{{ ex.start_time | default('10:00 AM') }} - {{ ex.end_time | default('01:00 PM') }}</td>
+                <td>{{ ex.exam_date if ex.exam_date is defined and ex.exam_date else 'TBA' }}</td>
+                <td>{{ ex.subject if ex.subject is defined and ex.subject else '—' }}</td>
+                <td>{{ ex.start_time if ex.start_time is defined and ex.start_time else '—' }}{% if ex.end_time is defined and ex.end_time %} - {{ ex.end_time }}{% endif %}</td>
               </tr>
             {% endif %}
           </tbody>
@@ -350,13 +365,13 @@
 
       <div class="dash-sigs">
         <div class="dash-sig-box">
-          {% if st.signature_url %}
+          {% if st.signature_url is defined and st.signature_url %}
             <img src="{{ st.signature_url }}" alt="Student Sign" style="max-height:24px;display:block;margin:0 auto;">
           {% endif %}
           <div class="dash-sig-line">Student Signature</div>
         </div>
         <div class="dash-sig-box">
-          {% if sc.principal_signature_url %}
+          {% if sc.principal_signature_url is defined and sc.principal_signature_url %}
             <img src="{{ sc.principal_signature_url }}" alt="Principal Sign" style="max-height:24px;display:block;margin:0 auto;">
           {% endif %}
           <div class="dash-sig-line">Principal Signature</div>
@@ -366,7 +381,7 @@
 
     <div class="dash-code-panel">
       <img
-        src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data={{ ('ROLL-' ~ st_roll ~ '-' ~ (ex.id | default('1'))) | urlencode }}"
+        src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data={{ ('ID-' ~ st_id ~ '-ROLL-' ~ st_roll ~ '-CLS-' ~ st_class ~ '-' ~ st_section) | urlencode }}"
         alt="QR Code"
         onerror="this.style.display='none';"
       >
@@ -375,7 +390,7 @@
   </div>
 
   <div class="dash-ticket-actions">
-    <button type="button" class="dash-btn dash-btn-print" onclick="window.print()">Print</button>
-    <button type="button" class="dash-btn dash-btn-pdf" onclick="window.print()">Download PDF</button>
+    <a href="{{ ticket_url }}" target="_blank" class="dash-btn dash-btn-print">Print</a>
+    <a href="{{ pdf_url }}" target="_blank" class="dash-btn dash-btn-pdf">Download PDF</a>
   </div>
 </div>
