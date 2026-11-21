@@ -1,145 +1,567 @@
 {% extends "base.html" %}
-{% block title %}Report Card - {{ data.student.name }}{% endblock %}
+{% block title %}Report Card — {{ st_name }}{% endblock %}
+{% block page_title %}Report Card{% endblock %}
 
 {% block content %}
+{% set st = data.student if data is defined and data.student is defined else (student if student is defined else {}) %}
+{% set ex = data.exam if data is defined and data.exam is defined else (exam if exam is defined else {}) %}
+{% set marks_list = data.marks if data is defined and data.marks is defined else (marks if marks is defined else []) %}
+{% set sch = school if school is defined and school else (settings if settings is defined and settings else {}) %}
+
+{% set school_name = sch.school_name or sch.name or 'MY SCHOOL ACADEMY' %}
+{% set school_address = sch.address or sch.school_address or 'School Campus, India' %}
+{% set school_phone = sch.phone or sch.contact_phone or '' %}
+{% set school_email = sch.email or sch.contact_email or '' %}
+{% set logo_src = sch.logo_url or url_for('static', filename='logo.png') %}
+{% set principal_sig = sch.principal_signature_url or '' %}
+
+{% set st_id = st.id if st is mapping else (st[0] if st and st|length > 0 else '') %}
+{% set st_name = st.name if st is mapping else (st[1] if st and st|length > 1 else 'Student') %}
+{% set st_roll = st.roll_no if st is mapping else (st[2] if st and st|length > 2 else '—') %}
+{% set st_class = (st.class_name if st is mapping else (st[3] if st and st|length > 3 else '')) or (ex.class_name if ex is mapping else '') %}
+{% set st_sec = st.section if st is mapping else (st[4] if st and st|length > 4 else '') %}
+{% set st_father = st.father_name or st.parent_name if st is mapping else (st[7] if st and st|length > 7 else '—') %}
+{% set st_dob = st.dob if st is mapping else (st[5] if st and st|length > 5 else '—') %}
+{% set st_photo = st.photo_url or st.photo if st is mapping else (st[13] if st and st|length > 13 else '') %}
+
+{% set ex_name = ex.name if ex is mapping else (ex[1] if ex and ex|length > 1 else 'Examination') %}
+{% set ex_id = ex.id if ex is mapping else (ex[0] if ex and ex|length > 0 else 0) %}
+{% set ex_session = ex.session if ex is mapping and ex.session else (sch.session if sch.session is defined else '2026-27') %}
+{% set pass_mark_pct = (ex.pass_marks if ex is mapping and ex.pass_marks else 33)|float %}
+
 <style>
-    /* A4 Size & Print Configuration */
     @page { size: A4; margin: 10mm; }
-    
-    @media print {
-        body * { visibility: hidden; }
-        .print-area, .print-area * { visibility: visible; }
-        .print-area { position: absolute; left: 0; top: 0; width: 100%; }
-        .no-print { display: none !important; }
-        
-        /* Remove background colors for clean print */
-        .marksheet-table th { background: #e2e8f0 !important; color: black !important; -webkit-print-color-adjust: exact; }
+
+    .rc-toolbar {
+        max-width: 880px;
+        margin: 0 auto 16px auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .rc-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 13.5px;
+        font-weight: 600;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
     }
 
     .marksheet-container {
-        max-width: 800px;
+        max-width: 880px;
         margin: auto;
-        background: white;
-        padding: 40px;
-        border: 1px solid #cbd5e1;
-        box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        font-family: 'Times New Roman', Times, serif;
+        background: #ffffff;
+        padding: 30px 36px;
+        border: 1.5px solid #cbd5e1;
+        border-radius: 10px;
+        box-shadow: 0 8px 26px rgba(15, 23, 42, 0.08);
+        font-family: 'Georgia', 'Times New Roman', serif;
+        color: #0f172a;
         position: relative;
         overflow: hidden;
     }
 
-    /* Watermark Design */
     .watermark {
         position: absolute;
-        top: 50%; left: 50%;
-        transform: translate(-50%, -50%) rotate(-45deg);
-        font-size: 100px;
-        color: rgba(0,0,0,0.04);
-        font-weight: bold;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-32deg);
+        font-size: 68px;
+        color: rgba(15, 23, 42, 0.04);
+        font-weight: 800;
         z-index: 0;
         pointer-events: none;
         white-space: nowrap;
+        text-transform: uppercase;
     }
 
-    .content-relative { position: relative; z-index: 1; }
+    .content-relative {
+        position: relative;
+        z-index: 1;
+    }
 
-    .marksheet-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    .marksheet-table th, .marksheet-table td { border: 1px solid #333; padding: 10px; text-align: center; }
-    .marksheet-table th { background: #f1f5f9; }
+    .rc-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        border-bottom: 2.5px solid #1e293b;
+        padding-bottom: 14px;
+        margin-bottom: 16px;
+    }
+
+    .rc-school-info {
+        text-align: center;
+        flex: 1;
+    }
+
+    .rc-badge {
+        margin-top: 8px;
+        background: #1e293b;
+        color: #ffffff;
+        display: inline-block;
+        padding: 5px 18px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        letter-spacing: 0.7px;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-weight: 700;
+    }
+
+    .rc-meta-wrap {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 14px;
+        align-items: center;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-size: 14px;
+        font-family: system-ui, -apple-system, sans-serif;
+        margin-bottom: 16px;
+    }
+
+    .rc-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 6px 18px;
+    }
+
+    .rc-meta-item {
+        margin: 2px 0;
+    }
+
+    .rc-qr-box {
+        text-align: center;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 6px 8px;
+        min-width: 84px;
+    }
+
+    .marksheet-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 8px;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 13.5px;
+    }
+
+    .marksheet-table th,
+    .marksheet-table td {
+        border: 1px solid #334155;
+        padding: 8px 10px;
+        text-align: center;
+    }
+
+    .marksheet-table th {
+        background: #e2e8f0;
+        color: #0f172a;
+        font-weight: 700;
+    }
+
+    .rc-extra-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 12px;
+        margin-top: 14px;
+        font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .rc-panel {
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 10px 13px;
+        font-size: 13px;
+    }
+
+    .rc-summary-box {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 12px 14px;
+        font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .rc-stat-label {
+        font-size: 11.5px;
+        color: #64748b;
+        text-transform: uppercase;
+        font-weight: 700;
+    }
+
+    .rc-stat-val {
+        font-size: 17px;
+        font-weight: 800;
+        margin-top: 2px;
+    }
+
+    .rc-footer-note {
+        margin-top: 14px;
+        font-size: 13px;
+        font-family: system-ui, -apple-system, sans-serif;
+        color: #334155;
+        border-left: 3px solid #2563eb;
+        padding-left: 10px;
+    }
+
+    .rc-grade-legend {
+        margin-top: 12px;
+        font-size: 11px;
+        color: #475569;
+        font-family: system-ui, -apple-system, sans-serif;
+        text-align: center;
+    }
+
+    .rc-signatures {
+        margin-top: 46px;
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        flex-wrap: wrap;
+        font-size: 13px;
+        font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .rc-sig-line {
+        border-top: 1px solid #334155;
+        min-width: 150px;
+        text-align: center;
+        padding-top: 6px;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    @media print {
+        body * { visibility: hidden; }
+        .print-area, .print-area * { visibility: visible; }
+        .print-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            max-width: 100%;
+            border: none;
+            box-shadow: none;
+            padding: 12px;
+        }
+        .no-print, .rc-toolbar { display: none !important; }
+        .marksheet-table th {
+            background: #e2e8f0 !important;
+            color: #000000 !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+    }
 </style>
 
-<!-- Buttons -->
-<div class="no-print" style="max-width: 800px; margin: 0 auto 20px auto; text-align: right;">
-    <a href="{{ url_for('exams.index') }}" class="btn" style="background: #64748b;">← Back</a>
-    <button onclick="window.print()" class="btn" style="background: #3b82f6; color: white;">🖨️ Print / Save PDF</button>
+<!-- Action Toolbar -->
+<div class="rc-toolbar no-print">
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <a href="{{ url_for('exams.index') }}" class="rc-btn" style="background: #64748b; color: #fff;">
+            ← Back to Exams
+        </a>
+        {% if ex_id %}
+        <a href="{{ url_for('exams.merit', exam_id=ex_id) }}" class="rc-btn" style="background: #0f766e; color: #fff;">
+            🏆 Merit List
+        </a>
+        {% endif %}
+    </div>
+
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button type="button" id="copy-link-btn" class="rc-btn" style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1;">
+            🔗 Copy Link
+        </button>
+        <button type="button" onclick="window.print()" class="rc-btn" style="background: #2563eb; color: #fff;">
+            🖨️ Print / Save PDF
+        </button>
+    </div>
 </div>
 
-<!-- Actual Marksheet -->
-<div class="print-area marksheet-container">
-    <div class="watermark">YOUR SCHOOL NAME</div>
-    
+<!-- Report Card Container -->
+<div class="print-area marksheet-container"
+     data-verify="{{ school_name }} | {{ ex_name }} ({{ ex_session }}) | Student: {{ st_name }} | ID: {{ st_id }} | Roll: {{ st_roll }} | Class: {{ st_class }}{% if st_sec %}-{{ st_sec }}{% endif %}">
+    <div class="watermark">{{ school_name }}</div>
+
     <div class="content-relative">
         <!-- Header -->
-        <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px;">
-            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" style="height: 60px; margin-bottom: 10px;">
-            <h1 style="margin: 0; font-size: 28px; text-transform: uppercase;">Your School Name</h1>
-            <p style="margin: 5px 0 0 0; font-size: 14px;">123, Main Road, Patna, Bihar | Phone: 9876543210 | Email: info@school.com</p>
-            <h3 style="margin: 15px 0 0 0; background: #333; color: white; display: inline-block; padding: 5px 20px; border-radius: 20px;">
-                {{ data.exam.name|upper }} REPORT CARD
-            </h3>
+        <div class="rc-header">
+            <img src="{{ logo_src }}" alt="School Logo"
+                 onerror="this.style.display='none'"
+                 style="height: 64px; width: 64px; object-fit: contain; border-radius: 6px;">
+
+            <div class="rc-school-info">
+                <h1 style="margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 0.5px;">
+                    {{ school_name }}
+                </h1>
+                <p style="margin: 4px 0 0 0; font-size: 12.5px; color: #334155; font-family: system-ui, sans-serif;">
+                    {{ school_address }}
+                    {% if school_phone %} | 📞 {{ school_phone }}{% endif %}
+                    {% if school_email %} | ✉️ {{ school_email }}{% endif %}
+                </p>
+                <div class="rc-badge">
+                    {{ ex_name|upper }} REPORT CARD ({{ ex_session }})
+                </div>
+            </div>
+
+            {% if st_photo %}
+            <img src="{{ st_photo }}" alt="Student Photo"
+                 onerror="this.style.display='none'"
+                 style="height: 74px; width: 62px; object-fit: cover; border: 1px solid #94a3b8; border-radius: 6px;">
+            {% else %}
+            <div style="width: 64px;"></div>
+            {% endif %}
         </div>
 
-        <!-- Student Details -->
-        <div style="display: flex; justify-content: space-between; font-size: 16px; margin-bottom: 20px;">
-            <div>
-                <p style="margin: 5px 0;"><strong>Student Name:</strong> {{ data.student.name }}</p>
-                <p style="margin: 5px 0;"><strong>Roll Number:</strong> {{ data.student.roll_no }}</p>
+        <!-- Student Details & Verification QR -->
+        <div class="rc-meta-wrap">
+            <div class="rc-meta-grid">
+                <div>
+                    <p class="rc-meta-item"><strong>Student Name:</strong> {{ st_name }}</p>
+                    <p class="rc-meta-item"><strong>Father's Name:</strong> {{ st_father or '—' }}</p>
+                    <p class="rc-meta-item"><strong>Roll / Student ID:</strong> {{ st_roll }} {% if st_id %}(#{{ st_id }}){% endif %}</p>
+                </div>
+                <div>
+                    <p class="rc-meta-item"><strong>Class / Section:</strong> {{ st_class or '—' }}{% if st_sec %} ({{ st_sec }}){% endif %}</p>
+                    <p class="rc-meta-item"><strong>Date of Birth:</strong> {{ st_dob or '—' }}</p>
+                    <p class="rc-meta-item"><strong>Class Rank:</strong> {{ data.rank if data is defined and data.rank else '—' }}</p>
+                </div>
             </div>
-            <div>
-                <p style="margin: 5px 0;"><strong>Class:</strong> {{ data.student.class_name }}</p>
-                <p style="margin: 5px 0;"><strong>Class Rank:</strong> {{ data.rank }}</p>
+
+            <div class="rc-qr-box">
+                <div id="rc-qr-canvas" style="width: 68px; height: 68px; margin: 0 auto;"></div>
+                <div style="font-size: 9.5px; font-weight: 700; color: #475569; margin-top: 3px;">VERIFY ID</div>
             </div>
         </div>
 
         <!-- Marks Table -->
+        {% set ns = namespace(calc_max=0, calc_obt=0, has_absent=false, sub_fail=false) %}
         <table class="marksheet-table">
             <thead>
                 <tr>
-                    <th width="40%">Subject</th>
-                    <th>Max Marks</th>
-                    <th>Marks Obtained</th>
-                    <th>Grade</th>
+                    <th style="width: 7%;">#</th>
+                    <th style="width: 37%; text-align: left;">Subject</th>
+                    <th style="width: 14%;">Max</th>
+                    <th style="width: 16%;">Obtained</th>
+                    <th style="width: 12%;">Grade</th>
+                    <th style="width: 14%;">Status</th>
                 </tr>
             </thead>
             <tbody>
-                {% for m in data.marks %}
+                {% for m in marks_list %}
+                {% set sub_name = m.subject_name if m.subject_name is defined else (m.subject if m.subject is defined else 'Subject') %}
+                {% set max_m = (m.max_marks if m.max_marks is defined and m.max_marks else (ex.max_marks if ex is mapping and ex.max_marks else 100))|float %}
+                {% set is_abs = m.is_absent if m.is_absent is defined else false %}
+                {% set obt_m = (m.marks_obtained if m.marks_obtained is defined and m.marks_obtained is not none else 0)|float %}
+
+                {% set ns.calc_max = ns.calc_max + max_m %}
+                {% if is_abs %}
+                    {% set ns.has_absent = true %}
+                    {% set ns.sub_fail = true %}
+                {% else %}
+                    {% set ns.calc_obt = ns.calc_obt + obt_m %}
+                {% endif %}
+
+                {% set subj_pct = (obt_m / max_m * 100) if (not is_abs and max_m > 0) else 0 %}
+                {% if is_abs %}
+                    {% set sub_grade = 'AB' %}
+                    {% set sub_status = 'ABSENT' %}
+                {% elif subj_pct >= 91 %}
+                    {% set sub_grade = 'A1' %}
+                    {% set sub_status = 'PASS' %}
+                {% elif subj_pct >= 81 %}
+                    {% set sub_grade = 'A2' %}
+                    {% set sub_status = 'PASS' %}
+                {% elif subj_pct >= 71 %}
+                    {% set sub_grade = 'B1' %}
+                    {% set sub_status = 'PASS' %}
+                {% elif subj_pct >= 61 %}
+                    {% set sub_grade = 'B2' %}
+                    {% set sub_status = 'PASS' %}
+                {% elif subj_pct >= 51 %}
+                    {% set sub_grade = 'C1' %}
+                    {% set sub_status = 'PASS' %}
+                {% elif subj_pct >= pass_mark_pct %}
+                    {% set sub_grade = 'C2' %}
+                    {% set sub_status = 'PASS' %}
+                {% else %}
+                    {% set sub_grade = 'E' %}
+                    {% set sub_status = 'FAIL' %}
+                    {% set ns.sub_fail = true %}
+                {% endif %}
+
                 <tr>
-                    <td style="text-align: left; font-weight: bold;">{{ m.subject_name }}</td>
-                    <td>{{ m.max_marks }}</td>
+                    <td>{{ loop.index }}</td>
+                    <td style="text-align: left; font-weight: 600;">{{ sub_name }}</td>
+                    <td>{{ max_m|int if max_m == max_m|int else max_m }}</td>
                     <td>
-                        {% if m.is_absent %}
-                            <span style="color: red; font-weight: bold;">AB (Absent)</span>
+                        {% if is_abs %}
+                            <span style="color: #dc2626; font-weight: 700;">AB</span>
                         {% else %}
-                            {{ m.marks_obtained }}
+                            {{ obt_m|int if obt_m == obt_m|int else obt_m }}
                         {% endif %}
                     </td>
-                    <td>
-                        {% if not m.is_absent %}
-                            {% set subj_pct = (m.marks_obtained / m.max_marks * 100) %}
-                            {% if subj_pct >= 91 %} A1 {% elif subj_pct >= 81 %} A2 {% elif subj_pct >= 71 %} B1 
-                            {% elif subj_pct >= 61 %} B2 {% elif subj_pct >= 51 %} C1 {% elif subj_pct >= 33 %} C2 {% else %} E {% endif %}
-                        {% else %} - {% endif %}
+                    <td style="font-weight: 700;">{{ sub_grade }}</td>
+                    <td style="font-weight: 700; color: {{ '#15803d' if sub_status == 'PASS' else '#b91c1c' }};">
+                        {{ sub_status }}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" style="padding: 18px; color: #64748b;">
+                        No marks recorded for this examination yet.
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
+
+            {% set final_max = (data.total_max if data is defined and data.total_max is not none else ns.calc_max)|float %}
+            {% set final_obt = (data.total_obtained if data is defined and data.total_obtained is not none else ns.calc_obt)|float %}
+            {% set final_pct = (data.percentage if data is defined and data.percentage is not none else ((final_obt / final_max * 100) if final_max > 0 else 0))|float %}
+
+            {% if data is defined and data.grade %}
+                {% set final_grade = data.grade %}
+            {% elif final_pct >= 91 %}
+                {% set final_grade = 'A1' %}
+            {% elif final_pct >= 81 %}
+                {% set final_grade = 'A2' %}
+            {% elif final_pct >= 71 %}
+                {% set final_grade = 'B1' %}
+            {% elif final_pct >= 61 %}
+                {% set final_grade = 'B2' %}
+            {% elif final_pct >= 51 %}
+                {% set final_grade = 'C1' %}
+            {% elif final_pct >= 33 %}
+                {% set final_grade = 'C2' %}
+            {% else %}
+                {% set final_grade = 'E' %}
+            {% endif %}
+
             <tfoot>
-                <tr style="font-weight: bold; background: #e2e8f0;">
-                    <td>TOTAL</td>
-                    <td>{{ data.total_max }}</td>
-                    <td>{{ data.total_obtained }}</td>
-                    <td>{{ data.grade }}</td>
+                <tr style="font-weight: 700; background: #e2e8f0;">
+                    <td colspan="2" style="text-align: left;">GRAND TOTAL</td>
+                    <td>{{ final_max|int if final_max == final_max|int else final_max }}</td>
+                    <td>{{ final_obt|int if final_obt == final_obt|int else final_obt }}</td>
+                    <td>{{ final_grade }}</td>
+                    <td>—</td>
                 </tr>
             </tfoot>
         </table>
 
         <!-- Result Summary -->
-        <div style="margin-top: 20px; font-size: 16px; border: 1px solid #333; padding: 10px;">
-            <p style="margin: 5px 0;"><strong>Percentage:</strong> {{ data.percentage }}%</p>
-            <p style="margin: 5px 0;"><strong>Result:</strong> 
-                <span style="color: {{ '#10b981' if data.percentage >= 33 else '#ef4444' }}; font-weight: bold;">
-                    {{ "PASS" if data.percentage >= 33 else "FAIL" }}
-                </span>
-            </p>
-            <p style="margin: 5px 0;"><strong>Teacher's Remark:</strong> <em>{{ data.remark }}</em></p>
+        {% set is_pass = (final_pct >= pass_mark_pct) and (not ns.sub_fail) %}
+        <div class="rc-summary-box">
+            <div>
+                <div class="rc-stat-label">Percentage</div>
+                <div class="rc-stat-val">{{ "%.2f"|format(final_pct) }}%</div>
+            </div>
+            <div>
+                <div class="rc-stat-label">Overall Grade</div>
+                <div class="rc-stat-val">{{ final_grade }}</div>
+            </div>
+            <div>
+                <div class="rc-stat-label">Pass Criteria</div>
+                <div class="rc-stat-val" style="font-size: 14px; color: #334155;">{{ pass_mark_pct|int }}% & All Subs</div>
+            </div>
+            <div>
+                <div class="rc-stat-label">Final Result</div>
+                <div class="rc-stat-val" style="color: {{ '#15803d' if is_pass else '#b91c1c' }};">
+                    {{ 'PASS' if is_pass else ('ABSENT / FAIL' if ns.has_absent else 'FAIL') }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Co-Scholastic & Attendance Block -->
+        <div class="rc-extra-grid">
+            <div class="rc-panel">
+                <div style="font-weight: 700; margin-bottom: 4px; color: #0f172a;">Attendance & Conduct</div>
+                <div>Attendance: <strong>{{ data.attendance if data is defined and data.attendance else '—' }}</strong></div>
+                <div>Discipline / Conduct: <strong>{{ data.conduct if data is defined and data.conduct else 'Good' }}</strong></div>
+            </div>
+            <div class="rc-panel">
+                <div style="font-weight: 700; margin-bottom: 4px; color: #0f172a;">Co-Scholastic / Activity</div>
+                <div>Sports & Activity: <strong>{{ data.activity if data is defined and data.activity else 'Active Participation' }}</strong></div>
+                <div>Issue Date: <strong>{{ data.issue_date if data is defined and data.issue_date else '—' }}</strong></div>
+            </div>
+        </div>
+
+        <!-- Remarks -->
+        <div class="rc-footer-note">
+            <strong>Class Teacher's Remark:</strong>
+            <em>{{ data.remark if data is defined and data.remark else ('Promoted / Commendable performance.' if is_pass else 'Needs extra academic support and regular practice.') }}</em>
+        </div>
+
+        <!-- Grading Scale -->
+        <div class="rc-grade-legend">
+            <strong>Grading Scale:</strong> A1 (91–100%) • A2 (81–90%) • B1 (71–80%) • B2 (61–70%) • C1 (51–60%) • C2 (33–50%) • E (&lt;33% / Fail) • AB (Absent)
         </div>
 
         <!-- Signatures -->
-        <div style="margin-top: 60px; display: flex; justify-content: space-between; font-size: 14px;">
-            <div style="border-top: 1px solid #333; width: 150px; text-align: center; padding-top: 5px;">Class Teacher</div>
-            <div style="border-top: 1px solid #333; width: 150px; text-align: center; padding-top: 5px;">Principal</div>
-            <div style="border-top: 1px solid #333; width: 150px; text-align: center; padding-top: 5px;">Parent's Sign</div>
+        <div class="rc-signatures">
+            <div class="rc-sig-line">Class Teacher</div>
+            <div class="rc-sig-line">
+                {% if principal_sig %}
+                <img src="{{ principal_sig }}" alt="Principal Sign" onerror="this.style.display='none'" style="height: 28px; display: block; margin: 0 auto 2px;">
+                {% endif %}
+                Principal
+            </div>
+            <div class="rc-sig-line">Parent / Guardian</div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const copyBtn = document.getElementById('copy-link-btn');
+    if (copyBtn) {
+        copyBtn.addEventListener('click', function() {
+            navigator.clipboard?.writeText(window.location.href).then(() => {
+                const prev = copyBtn.textContent;
+                copyBtn.textContent = '✅ Link Copied';
+                setTimeout(() => { copyBtn.textContent = prev; }, 1800);
+            }).catch(() => {});
+        });
+    }
+
+    const qrBox = document.getElementById('rc-qr-canvas');
+    const cardEl = document.querySelector('.marksheet-container');
+    if (qrBox && cardEl) {
+        const text = cardEl.dataset.verify || window.location.href;
+        let hash = 0;
+        for (let i = 0; i < text.length; i++) {
+            hash = ((hash << 5) - hash) + text.charCodeAt(i);
+            hash |= 0;
+        }
+        const size = 9;
+        let svg = `<svg viewBox="0 0 ${size} ${size}" width="68" height="68" xmlns="http://www.w3.org/2000/svg">`;
+        svg += `<rect width="${size}" height="${size}" fill="#ffffff"/>`;
+        for (let r = 0; r < size; r++) {
+            for (let c = 0; c < size; c++) {
+                const isCorner = (r < 2 && c < 2) || (r < 2 && c >= size - 2) || (r >= size - 2 && c < 2);
+                const bit = isCorner || (((hash >> ((r * size + c) % 24)) ^ (r * 3 + c)) & 1);
+                if (bit) {
+                    svg += `<rect x="${c}" y="${r}" width="1" height="1" fill="#0f172a"/>`;
+                }
+            }
+        }
+        svg += `</svg>`;
+        qrBox.innerHTML = svg;
+    }
+});
+</script>
 {% endblock %}
