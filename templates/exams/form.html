@@ -3,24 +3,32 @@
 {% block page_title %}Exam Management{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width: 680px; margin: auto; padding: 1.5rem; border-radius: 10px; border: 1px solid #e2e8f0; background: #ffffff;">
-    <!-- Top Quick Actions -->
+<div class="card" style="max-width: 740px; margin: auto; padding: 1.5rem; border-radius: 10px; border: 1px solid #e2e8f0; background: #ffffff;">
+    <!-- Top Navigation & Quick Links -->
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
         <a href="{{ url_for('exams.index') if url_for is defined else '#' }}"
             style="font-size: 0.85rem; color: #475569; text-decoration: none;">
             ← Back to Exams & Marks
         </a>
-        <a href="{{ url_for('hall_ticket.index') if url_for is defined else '#' }}"
-            style="font-size: 0.85rem; color: #2563eb; text-decoration: none; font-weight: 600;">
-            🎟️ Open Hall Tickets
-        </a>
+        <div style="display: flex; gap: 0.9rem; flex-wrap: wrap;">
+            <a href="{{ url_for('hall_ticket.index') if url_for is defined else '#' }}"
+                style="font-size: 0.85rem; color: #2563eb; text-decoration: none; font-weight: 600;">
+                🎟️ Hall Tickets
+            </a>
+            {% if exam is defined and exam and exam.id is defined %}
+            <a href="{{ url_for('hall_ticket.seating', exam_id=exam.id) if url_for is defined else '#' }}"
+                style="font-size: 0.85rem; color: #0f766e; text-decoration: none; font-weight: 600;">
+                🪑 Seating Plan
+            </a>
+            {% endif %}
+        </div>
     </div>
 
     <!-- Tab Navigation -->
-    <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid #e2e8f0; margin-bottom: 1.5rem;">
+    <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid #e2e8f0; margin-bottom: 1.5rem; flex-wrap: wrap;">
         <button id="tab-manual-btn" type="button" onclick="switchTab('manual')"
             style="padding: 0.6rem 1rem; border: none; background: none; font-weight: 600; color: #2563eb; border-bottom: 2px solid #2563eb; margin-bottom: -2px; cursor: pointer;">
-            📋 Manual Exam Entry
+            📋 Complete Exam Entry
         </button>
         <button id="tab-ai-btn" type="button" onclick="switchTab('ai')"
             style="padding: 0.6rem 1rem; border: none; background: none; font-weight: 600; color: #64748b; margin-bottom: -2px; cursor: pointer;">
@@ -28,7 +36,7 @@
         </button>
     </div>
 
-    <!-- Form 1: Manual Exam Creation -->
+    <!-- Tab 1: Complete Manual Exam Creation -->
     <div id="tab-manual" style="display: block;">
         <h4 style="margin-top: 0; margin-bottom: 1rem; color: #1e293b;">Create New Exam</h4>
         <form method="POST" action="{{ url_for('exams.create_exam') if url_for is defined else '' }}">
@@ -37,15 +45,27 @@
             {% endif %}
             <input type="hidden" name="form_type" value="manual">
 
-            <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
-                    Exam Name *
-                </label>
-                <input name="name" required placeholder="e.g. Mid Term / Final Exam"
-                    style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+            <!-- Basic Exam Details -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                        Exam Name *
+                    </label>
+                    <input name="name" required placeholder="e.g. Half Yearly / Final Exam"
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                        Exam Code / Term
+                    </label>
+                    <input name="exam_code" placeholder="e.g. HY-2026 / Term-1"
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+            <!-- Class, Section & Session -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
                 <div>
                     <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
                         Class / Grade *
@@ -61,32 +81,148 @@
 
                 <div>
                     <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
-                        Exam Date *
+                        Section
                     </label>
-                    <input type="date" name="exam_date" required
+                    <input name="section" placeholder="e.g. A, B or All"
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                        Academic Session
+                    </label>
+                    <input name="session" value="2026-27" placeholder="e.g. 2026-27"
                         style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
                 </div>
             </div>
 
+            <!-- Date, Time & End Date -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                        Start Date *
+                    </label>
+                    <input type="date" name="exam_date" required
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                        End Date
+                    </label>
+                    <input type="date" name="end_date"
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                        Exam Timing / Shift
+                    </label>
+                    <input type="text" name="exam_time" placeholder="e.g. 10:00 AM - 01:00 PM"
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <!-- Center, Room & Capacity -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                        Exam Center
+                    </label>
+                    <input type="text" name="exam_center" placeholder="e.g. Main School Campus"
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                        Default Room / Hall
+                    </label>
+                    <input type="text" name="room_no" placeholder="e.g. Hall A / Room 101"
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                        Room Seat Capacity
+                    </label>
+                    <input type="number" name="room_capacity" value="30" min="1"
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <!-- Subjects -->
             <div style="margin-bottom: 1rem;">
                 <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
                     Subjects * <small style="color: #64748b;">(comma separated)</small>
                 </label>
-                <input name="subjects" required placeholder="Math, Science, English, Hindi"
+                <input name="subjects" required placeholder="Math, Science, English, Hindi, Social Science"
                     style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
             </div>
 
+            <!-- Marks, Passing Marks & Status -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                        Max Marks / Subject
+                    </label>
+                    <input name="max_marks" type="number" value="100" min="1"
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                        Passing Marks
+                    </label>
+                    <input name="pass_marks" type="number" value="33" min="0"
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                        Result Date
+                    </label>
+                    <input type="date" name="result_date"
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                        Status
+                    </label>
+                    <select name="status"
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; background: #fff;">
+                        <option value="Upcoming">Upcoming</option>
+                        <option value="Ongoing">Ongoing</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Hall Ticket Options -->
+            <div style="display: flex; flex-wrap: wrap; gap: 1.2rem; margin-bottom: 1rem; padding: 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+                <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: #334155; cursor: pointer;">
+                    <input type="checkbox" name="auto_seating" value="1" checked>
+                    Auto-assign seating after create
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: #334155; cursor: pointer;">
+                    <input type="checkbox" name="enable_hall_tickets" value="1" checked>
+                    Enable Hall Tickets for students
+                </label>
+            </div>
+
+            <!-- Instructions / Remarks -->
             <div style="margin-bottom: 1rem;">
                 <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
-                    Max Marks per Subject
+                    Hall Ticket & Exam Instructions
                 </label>
-                <input name="max_marks" type="number" value="100" min="1"
-                    style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                <textarea name="instructions" rows="3" placeholder="e.g. 1. Carry school ID card. 2. Reach exam room 30 minutes early. 3. Mobile phones and smart watches are strictly prohibited."
+                    style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;"></textarea>
             </div>
 
+            <!-- Submit Buttons -->
             <div style="margin-top: 1.25rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                <button type="submit" class="btn btn-primary" style="padding: 0.6rem 1.2rem; cursor: pointer;">
-                    Create & Enter Marks
+                <button type="submit" class="btn btn-primary" style="padding: 0.65rem 1.3rem; cursor: pointer;">
+                    Save Exam & Continue
                 </button>
                 <a href="{{ url_for('exams.index') if url_for is defined else '#' }}"
                     style="color: #64748b; text-decoration: none; font-size: 0.9rem;">
@@ -96,7 +232,7 @@
         </form>
     </div>
 
-    <!-- Form 2: AI Question Paper Generator -->
+    <!-- Tab 2: AI Question Paper Generator -->
     <div id="tab-ai" style="display: none;">
         <h4 style="margin-top: 0; margin-bottom: 1rem; color: #1e293b;">📝 Create Exam Paper using AI</h4>
         <form method="POST" action="{{ url_for('generate_exam') if url_for is defined else '#' }}">
@@ -105,29 +241,49 @@
             {% endif %}
             <input type="hidden" name="form_type" value="ai">
 
-            <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
-                    Subject Name *
-                </label>
-                <input type="text" name="subject" class="form-control" placeholder="e.g., Science, Mathematics" required
-                    style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                        Subject Name *
+                    </label>
+                    <input type="text" name="subject" class="form-control" placeholder="e.g., Science, Mathematics" required
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                        Class / Grade *
+                    </label>
+                    <select name="grade" required
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; background: #fff;">
+                        <option value="">Select Class</option>
+                        {% for c in classes or [] %}
+                        <option value="{{ c }}">{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
 
-            <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
-                    Class / Grade *
-                </label>
-                <select name="grade" required
-                    style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; background: #fff;">
-                    <option value="">Select Class</option>
-                    {% for c in classes or [] %}
-                    <option value="{{ c }}">{{ c }}</option>
-                    {% endfor %}
-                </select>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                        Total Marks / Duration
+                    </label>
+                    <input type="text" name="paper_meta" placeholder="e.g. 80 Marks | 3 Hours"
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #334155; margin-bottom: 0.3rem;">
+                        Chapters / Syllabus Focus
+                    </label>
+                    <input type="text" name="chapters" placeholder="e.g. Chapters 1 to 5"
+                        style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;">
+                </div>
             </div>
 
             <div style="margin-top: 1.25rem;">
-                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.6rem 1.2rem; cursor: pointer;">
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.65rem 1.2rem; cursor: pointer;">
                     ✨ Generate Paper (AI)
                 </button>
             </div>
