@@ -1,19 +1,91 @@
 {% extends "base.html" %}
+{% block title %}Bulk Hall Tickets{% endblock %}
+{% block page_title %}Bulk Hall Tickets — {{ exam.name }}{% endblock %}
+
 {% block content %}
-<div class="bg-[#0a0a0a] min-h-screen p-8 text-[#00ffcc]">
-    <h1 class="text-2xl">NEXUS PDF GENERATOR</h1>
-    
-    <!-- Web3 Connect -->
-    <button onclick="connectWallet()" class="border border-[#00ffcc] p-2 mt-4">Connect MetaMask</button>
-    
-    <!-- Progress Bar -->
-    <div class="w-full bg-gray-800 h-4 mt-8 rounded">
-        <div id="progressBar" class="bg-[#00ffcc] h-4 rounded" style="width: 0%"></div>
+<div class="no-print" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+    <div>
+        <h3 style="margin: 0; color: #1e293b;">{{ exam.name }} (Class {{ exam.class_name }})</h3>
+        <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px;">Total Students: {{ students|length }}</p>
     </div>
-    
-    <!-- Terminal Logs -->
-    <div id="logs" class="bg-black p-4 h-64 overflow-y-auto mt-4 border border-[#00ffcc]/30 font-mono text-xs">
-        > Awaiting Command...
+    <div>
+        <button onclick="window.print()" class="btn" style="background: #4f46e5; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+            🖨️ Print All Tickets
+        </button>
+        <a href="{{ url_for('hall_ticket.index') }}" class="btn" style="background: #e2e8f0; color: #334155; padding: 10px 20px; border: none; border-radius: 8px; text-decoration: none; font-weight: bold; margin-left: 10px;">
+            ← Back
+        </a>
     </div>
 </div>
+
+<!-- Loop for all students -->
+{% for student in students %}
+<div class="hall-card print-break" style="width: 100%; max-width: 750px; background: #fff; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto 30px auto; overflow: hidden; font-family: 'Poppins', sans-serif;">
+    
+    <!-- Header -->
+    <div style="background: linear-gradient(90deg, #1e293b 0%, #3730a3 100%); color: #fff; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <div style="font-size: 18px; font-weight: 700; letter-spacing: 0.5px;">{{ school.school_name or 'MY SCHOOL ACADEMY' }}</div>
+            <div style="font-size: 12px; color: #e0e7ff; margin-top: 3px;">{{ exam.name }} — Official Hall Ticket</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: bold;">
+            HALL TICKET
+        </div>
+    </div>
+
+    <!-- Body -->
+    <div style="padding: 20px; display: flex; gap: 20px; align-items: flex-start; border-bottom: 1px solid #e2e8f0;">
+        
+        <!-- Photo -->
+        <div>
+            {% if student.photo_url %}
+                <img src="{{ student.photo_url }}" alt="Photo" style="width: 90px; height: 110px; object-fit: cover; border-radius: 8px; border: 2px solid #cbd5e1;">
+            {% else %}
+                <div style="width: 90px; height: 110px; background: #f1f5f9; border-radius: 8px; border: 2px dashed #cbd5e1; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px; text-align: center;">No<br>Photo</div>
+            {% endif %}
+        </div>
+
+        <!-- Student Details -->
+        <div style="flex: 1;">
+            <h2 style="margin: 0 0 5px 0; font-size: 20px; color: #0f172a;">{{ student.name }}</h2>
+            <div style="font-size: 14px; color: #475569; margin-bottom: 12px;">
+                Class: <strong>{{ student.class_name }}</strong> 
+                {% if student.section %} - {{ student.section }}{% endif %} 
+                | Roll No: <strong>{{ student.roll_no }}</strong>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; color: #334155;">
+                <div><span style="color: #64748b;">Father Name:</span> <strong>{{ student.father_name }}</strong></div>
+                <div><span style="color: #64748b;">DOB:</span> <strong>{{ student.dob }}</strong></div>
+                <div><span style="color: #64748b;">Gender:</span> <strong>{{ student.gender }}</strong></div>
+                <div><span style="color: #64748b;">Exam Date:</span> <strong>{{ exam.exam_date }}</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Signatures -->
+    <div style="padding: 15px 20px; display: flex; justify-content: space-between; align-items: flex-end; background: #f8fafc;">
+        <div style="text-align: center; font-size: 12px; color: #334155;">
+            <div style="border-top: 1px solid #64748b; width: 150px; margin-bottom: 5px; padding-top: 5px;">Student Signature</div>
+        </div>
+        <div style="text-align: center; font-size: 12px; color: #334155;">
+            <div style="border-top: 1px solid #64748b; width: 150px; margin-bottom: 5px; padding-top: 5px;">Principal Signature</div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div style="text-align: center; padding: 50px; background: #fff; border-radius: 12px; color: #64748b;">
+    <h3>Koi student nahi mila is class mein.</h3>
+</div>
+{% endfor %}
+
+<!-- Print CSS -->
+<style>
+    @media print {
+        body { background: #fff; margin: 0; padding: 0; }
+        .no-print { display: none !important; }
+        .hall-card { box-shadow: none !important; border: 1px solid #000 !important; margin-bottom: 0 !important; }
+        .print-break { page-break-after: always; } /* Har ticket ek naye page par */
+    }
+</style>
 {% endblock %}
