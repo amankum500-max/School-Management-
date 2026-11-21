@@ -211,3 +211,69 @@ def submit_exam(eid):
     print(f"✅ Exam ID: {eid} | Score: {score} | Answers submitted: {len(student_answers)}")
 
     return jsonify({"status": "success", "message": "Exam submitted successfully!"})
+    @online_exams_bp.route("/<int:eid>/questions/bulk-add", methods=["POST"])
+@login_required
+@role_required("super_admin", "admin")
+def bulk_add_questions(eid):
+    exam = get_online_exam(eid)
+    if not exam:
+        abort(404)
+
+    # Frontend se JSON data expect kar rahe hain (jo CSV/Excel se parse hokar aayega)
+    payload = request.get_json(silent=True) or {}
+    questions = payload.get("questions", [])
+
+    if not isinstance(questions, list) or not questions:
+        return jsonify({"status": "error", "message": "Koi valid question nahi mila"}), 400
+
+    added_count = 0
+    errors = []
+
+    for idx, q in enumerate(questions, start=1):
+        # 1. Formatting & Cleaning: Extra spaces hatana
+        q_text = str(q.get("question_text", "")).strip()
+        opt_a = str(q.get("option_a", "")).strip()
+        opt_b = str(q.get("option_b", "")).strip()
+        opt_c = str(q.get("option_c", "")).strip()
+        opt_d = str(q.get("option_d", "")).strip()
+        
+        # Correct option ko standard banayein (A, B, C, D)
+        correct = str(q.get("correct_option", "A")).strip().upper()
+        
+        # 2. Marks Validation
+        try:
+            marks = int(q.get("marks") or 1)
+            if marks <= 0: marks = 1
+        except (ValueError, TypeError):
+            marks = 1
+
+        # 3. Validation: Zaroori fields check karein
+        if not q_text or not opt_a or not opt_b:
+            errors.append(f"Row {idx}: Question, Option A aur Option B zaroori hain.")
+            continue
+
+        # Agar correct option C ya D hai par option khali hai, toh default A kar dein
+        if correct == "C" and not opt_c:
+            correct = "A"
+        if correct == "D" and not opt_d:
+            correct = "A"
+            
+        if correct not in ("A", "B", "C", "D"):
+            correct = "A"
+
+        # 4. Database mein save karein (Aapka existing function)
+        try:
+            add_exam_question(eid, q_text, opt_a, opt_b, opt_c, opt_d, correct, marks)
+            added_count += 1
+        except Exception as e:
+            errors.append(f"Row {idx}: Database Error - {str(e)[:50]}")
+
+    if added_count == 0:
+        return jsonify({"status": "error", "message": "Koi question save nahi ho paya.", "errors": errors}), 400
+
+    return jsonify({
+        "status": "success",
+        "message": f"{added_count} questions successfully add ho gaye!",
+        "added": added_count,
+        "errors": errors # Agar kuch rows fail hui toh yahan error list jayegi
+    })
