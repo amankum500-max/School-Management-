@@ -5308,6 +5308,24 @@ def update_class_details(old_class_name=None, new_class_name=None, section=None,
         raise
     finally:
         cur.close(); conn.close()
+def get_classes_stats():
+    classes = get_advanced_classes_list()
+    total_classes = len(classes)
+    active_classes = sum(1 for c in classes if (c.get("active") or 0) > 0)
+    inactive_classes = max(0, total_classes - active_classes)
+    total_students = sum(c.get("total") or 0 for c in classes)
+    active_students = sum(c.get("active") or 0 for c in classes)
+    inactive_students = sum(c.get("inactive") or 0 for c in classes)
+
+    return {
+        "total_classes": total_classes,
+        "active_classes": active_classes,
+        "inactive_classes": inactive_classes,
+        "total_students": total_students,
+        "active_students": active_students,
+        "inactive_students": inactive_students,
+    }
+
       
   
       
