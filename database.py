@@ -5332,7 +5332,7 @@ def add_section_to_class(class_name, section, roll_no=None, student_name=None):
         return None
     return create_new_class(cls, section=sec, roll_no=roll_no, student_name=student_name)
   
- def get_class_subjects(class_name=None, section=None, class_id=None, **kwargs):
+def get_class_subjects(class_name=None, section=None, class_id=None, **kwargs):
     target_cls = class_name or kwargs.get("cls")
     if not target_cls and class_id is not None:
         cls_obj = get_class_by_id(class_id)
