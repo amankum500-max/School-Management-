@@ -1,7 +1,11 @@
 {% set ex = exam if exam is defined and exam else {} %}
 {% set st = student if student is defined and student else {} %}
 {% set sc = school if school is defined and school else {} %}
-{% set sched = schedule if schedule is defined and schedule else [] %}
+{% set seat = seating if seating is defined and seating else {} %}
+
+{% set raw_sched = schedule if schedule is defined and schedule else (ex.subjects if ex.subjects is defined and ex.subjects else []) %}
+{% set sched = raw_sched if raw_sched is iterable and raw_sched is not string and raw_sched is not mapping else [] %}
+
 {% set st_id = st.id if st.id is defined and st.id else '' %}
 {% set ex_id = ex.id if ex.id is defined and ex.id else '' %}
 {% set st_name = st.name if st.name is defined and st.name else 'Student Name' %}
@@ -9,6 +13,18 @@
 {% set st_class = ex.class_name if ex.class_name is defined and ex.class_name else (st.class_name if st.class_name is defined and st.class_name else '—') %}
 {% set st_section = st.section if st.section is defined and st.section else '—' %}
 {% set default_avatar = 'https://ui-avatars.com/api/?name=' ~ (st_name | urlencode) ~ '&background=4f46e5&color=fff&size=150' %}
+
+{% set room_val = seat.room_no if seat.room_no is defined and seat.room_no else (st.room_no if st.room_no is defined and st.room_no else (ex.room_no if ex.room_no is defined and ex.room_no else '')) %}
+{% set center_val = ex.center if ex.center is defined and ex.center else '' %}
+{% if center_val and room_val and room_val != '—' %}
+  {% set center_room_display = center_val ~ ' / Room: ' ~ room_val %}
+{% elif center_val %}
+  {% set center_room_display = center_val %}
+{% elif room_val %}
+  {% set center_room_display = 'Room: ' ~ room_val %}
+{% else %}
+  {% set center_room_display = 'TBA' %}
+{% endif %}
 
 {% if ex_id and st_id %}
   {% set ticket_url = url_for('hall_ticket.view_ticket', exam_id=ex_id, student_id=st_id) ~ '?class_name=' ~ (st_class | urlencode) ~ '&section=' ~ (st_section | urlencode) %}
@@ -193,6 +209,35 @@
     border-bottom: none;
   }
 
+  .dash-alert-box {
+    background: rgba(245, 158, 11, 0.1);
+    border-left: 3px solid #f59e0b;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: #e2e8f0;
+  }
+
+  .dash-alert-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #fbbf24;
+    margin-bottom: 4px;
+    letter-spacing: 0.4px;
+  }
+
+  .dash-alert-list {
+    margin: 0;
+    padding-left: 16px;
+  }
+
+  .dash-alert-list li {
+    margin-bottom: 3px;
+  }
+
   .dash-code-panel {
     background: #ffffff;
     color: #0f172a;
@@ -277,9 +322,12 @@
     .dash-student-meta h4,
     .dash-field strong,
     .dash-schedule-table td,
+    .dash-alert-box,
+    .dash-alert-title,
     .dash-sigs { color: #000000 !important; }
     .dash-field,
-    .dash-schedule-wrap {
+    .dash-schedule-wrap,
+    .dash-alert-box {
       background: #f8fafc !important;
       border-color: #cbd5e1 !important;
     }
@@ -317,7 +365,7 @@
       <div class="dash-mini-grid">
         <div class="dash-field">
           <small>Father's Name</small>
-          <strong>{{ st.father_name if st.father_name is defined and st.father_name else 'TBA' }}</strong>
+          <strong>{{ st.father_name if st.father_name is defined and st.father_name else (st.parent_name if st.parent_name is defined and st.parent_name else 'TBA') }}</strong>
         </div>
         <div class="dash-field">
           <small>DOB / Gender</small>
@@ -325,7 +373,7 @@
         </div>
         <div class="dash-field">
           <small>Center / Room</small>
-          <strong>{{ st.room_no if st.room_no is defined and st.room_no else (ex.room_no if ex.room_no is defined and ex.room_no else 'TBA') }}</strong>
+          <strong>{{ center_room_display }}</strong>
         </div>
         <div class="dash-field">
           <small>Result Date</small>
@@ -346,11 +394,23 @@
           <tbody>
             {% if sched and sched|length > 0 %}
               {% for row in sched %}
-              <tr>
-                <td>{{ row.exam_date if row.exam_date is defined and row.exam_date else 'TBA' }}</td>
-                <td>{{ row.subject_name if row.subject_name is defined and row.subject_name else (row.subject if row.subject is defined and row.subject else '—') }}</td>
-                <td>{{ row.start_time if row.start_time is defined and row.start_time else '—' }}{% if row.end_time is defined and row.end_time %} - {{ row.end_time }}{% endif %}</td>
-              </tr>
+                {% if row is mapping %}
+                  {% set r_date = row.exam_date if row.exam_date is defined and row.exam_date else (row.date if row.date is defined and row.date else (ex.exam_date if ex.exam_date is defined and ex.exam_date else 'TBA')) %}
+                  {% set r_sub = row.subject_name if row.subject_name is defined and row.subject_name else (row.subject if row.subject is defined and row.subject else (row.name if row.name is defined and row.name else '—')) %}
+                  {% set r_start = row.start_time if row.start_time is defined and row.start_time else (row.time if row.time is defined and row.time else '—') %}
+                  {% set r_end = row.end_time if row.end_time is defined and row.end_time else '' %}
+                  <tr>
+                    <td>{{ r_date }}</td>
+                    <td>{{ r_sub }}</td>
+                    <td>{{ r_start }}{% if r_end %} - {{ r_end }}{% endif %}</td>
+                  </tr>
+                {% else %}
+                  <tr>
+                    <td>{{ ex.exam_date if ex.exam_date is defined and ex.exam_date else 'TBA' }}</td>
+                    <td>{{ row }}</td>
+                    <td>{{ ex.start_time if ex.start_time is defined and ex.start_time else '—' }}{% if ex.end_time is defined and ex.end_time %} - {{ ex.end_time }}{% endif %}</td>
+                  </tr>
+                {% endif %}
               {% endfor %}
             {% else %}
               <tr>
@@ -361,6 +421,16 @@
             {% endif %}
           </tbody>
         </table>
+      </div>
+
+      <div class="dash-alert-box">
+        <div class="dash-alert-title">Official Examination Alert & Instructions</div>
+        <ul class="dash-alert-list">
+          <li><strong>Reporting Time:</strong> Reach the exam center at least 30 minutes before the scheduled time.</li>
+          <li><strong>Mandatory Carry:</strong> Bring this Hall Ticket and valid School ID Card; keep required stationery in a transparent pouch.</li>
+          <li><strong>Strictly Prohibited:</strong> Mobile phones, smartwatches, calculators, notes, or unfair means are not allowed inside the hall.</li>
+          <li><strong>Detail Verification:</strong> Verify name, roll number, subject dates, and timings immediately; report any error to the exam office beforehand.</li>
+        </ul>
       </div>
 
       <div class="dash-sigs">
