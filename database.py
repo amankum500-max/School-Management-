@@ -5199,6 +5199,29 @@ def create_new_class(class_name, section=None, roll_no=None, student_name=None):
         raise
     finally:
         cur.close(); conn.close()
+def archive_class(class_name, section=None):
+    cls = (str(class_name) if class_name is not None else "").strip()
+    if not cls:
+        return 0
+    sec = (str(section).strip() if section else None)
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        q = "UPDATE students SET status='inactive' WHERE class_name=%s AND status='active'"
+        params = [cls]
+        if sec:
+            q += " AND section=%s"
+            params.append(sec)
+        q += ";"
+        cur.execute(q, tuple(params))
+        updated = cur.rowcount
+        conn.commit()
+        return updated
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+      
       
       
       
