@@ -5264,6 +5264,51 @@ def get_class_by_id(class_id):
             return item
 
     return None
+def update_class_details(old_class_name=None, new_class_name=None, section=None, old_section=None, class_id=None, **kwargs):
+    target_old_cls = old_class_name or kwargs.get("current_class") or kwargs.get("class_name")
+    if not target_old_cls and class_id is not None:
+        cls_obj = get_class_by_id(class_id)
+        if cls_obj:
+            target_old_cls = cls_obj.get("class_name") or cls_obj.get("name")
+
+    target_new_cls = new_class_name or kwargs.get("updated_class") or target_old_cls
+    target_old_cls = (str(target_old_cls).strip() if target_old_cls else "")
+    target_new_cls = (str(target_new_cls).strip() if target_new_cls else "")
+
+    if not target_old_cls or not target_new_cls:
+        return 0
+
+    new_sec = section if section is not None else kwargs.get("new_section")
+    old_sec = old_section if old_section is not None else kwargs.get("current_section")
+
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        set_parts = ["class_name=%s"]
+        params = [target_new_cls]
+
+        if new_sec is not None:
+            clean_new_sec = str(new_sec).strip() or None
+            set_parts.append("section=%s")
+            params.append(clean_new_sec)
+
+        q = f"UPDATE students SET {', '.join(set_parts)} WHERE class_name=%s"
+        params.append(target_old_cls)
+
+        if old_sec:
+            q += " AND section=%s"
+            params.append(str(old_sec).strip())
+
+        q += ";"
+        cur.execute(q, tuple(params))
+        updated = cur.rowcount
+        conn.commit()
+        return updated
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+      
   
       
       
