@@ -5243,7 +5243,28 @@ def restore_class(class_name, section=None):
         raise
     finally:
         cur.close(); conn.close()
-      
+def get_class_by_id(class_id):
+    classes = get_advanced_classes_list()
+    if class_id is None:
+        return None
+
+    target_str = str(class_id).strip()
+    if not target_str:
+        return None
+
+    if target_str.isdigit():
+        num_id = int(target_str)
+        for item in classes:
+            if item.get("id") == num_id:
+                return item
+
+    for item in classes:
+        cls_name = str(item.get("class_name") or item.get("name") or "").strip()
+        if cls_name.lower() == target_str.lower():
+            return item
+
+    return None
+  
       
       
       
