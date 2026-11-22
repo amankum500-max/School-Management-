@@ -1,81 +1,90 @@
 <!-- Print Confirmation Modal -->
-<div id="printConfirmationModal" class="custom-modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Confirm Print</h3>
-            <span class="close-btn" onclick="closeModal()">&times;</span>
+<div id="printConfirmationModal" class="ht-custom-modal" role="dialog" aria-modal="true" aria-labelledby="htModalTitle">
+    <div class="ht-modal-content">
+        <div class="ht-modal-header">
+            <h3 id="htModalTitle">Confirm Print</h3>
+            <button type="button" class="ht-close-btn" onclick="closeModal()" aria-label="Close">&times;</button>
         </div>
-        <div class="modal-body">
-            <p>Are you sure you want to print this hall ticket?</p>
+        <div class="ht-modal-body">
+            <p id="htPrintConfirmText">Are you sure you want to print this hall ticket?</p>
         </div>
-        <div class="modal-footer">
-            <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
-            <!-- 'window.print()' दबाने पर ब्राउज़र का प्रिंट डायलॉग खुलेगा -->
-            <button class="btn btn-print" onclick="triggerPrint()">Print</button>
+        <div class="ht-modal-footer">
+            <button type="button" class="ht-btn ht-btn-cancel" onclick="closeModal()">Cancel</button>
+            <button type="button" class="ht-btn ht-btn-print" onclick="triggerPrint()">Print</button>
         </div>
     </div>
 </div>
 
 <style>
-    /* मॉडल (पॉप-अप) की स्टाइलिंग */
-    .custom-modal {
-        display: none; /* डिफ़ॉल्ट रूप से छिपा हुआ */
+    .ht-custom-modal {
+        display: none;
         position: fixed;
-        z-index: 1000;
+        z-index: 1050;
         left: 0;
         top: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0, 0, 0, 0.5); /* पीछे का काला धुंधला बैकग्राउंड */
+        background-color: rgba(0, 0, 0, 0.55);
         align-items: center;
         justify-content: center;
+        padding: 16px;
     }
 
-    .modal-content {
-        background-color: #fff;
-        width: 90%;
+    .ht-modal-content {
+        background-color: #ffffff;
+        width: 100%;
         max-width: 400px;
         border-radius: 10px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
         overflow: hidden;
-        animation: fadeIn 0.3s ease-in-out;
+        animation: htFadeIn 0.2s ease-out;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
-    .modal-header {
+    .ht-modal-header {
         background-color: #f8f9fc;
-        padding: 15px 20px;
+        padding: 14px 18px;
         border-bottom: 1px solid #e3e6f0;
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
 
-    .modal-header h3 {
+    .ht-modal-header h3 {
         margin: 0;
-        font-size: 18px;
-        color: #333;
+        font-size: 17px;
+        color: #1e293b;
+        font-weight: 700;
     }
 
-    .close-btn {
+    .ht-close-btn {
+        background: transparent;
+        border: none;
         font-size: 24px;
+        line-height: 1;
         font-weight: bold;
-        color: #888;
+        color: #64748b;
         cursor: pointer;
+        padding: 0 4px;
     }
 
-    .close-btn:hover {
-        color: #000;
+    .ht-close-btn:hover {
+        color: #0f172a;
     }
 
-    .modal-body {
+    .ht-modal-body {
         padding: 20px;
-        font-size: 16px;
-        color: #555;
+        font-size: 15px;
+        color: #475569;
         text-align: center;
     }
 
-    .modal-footer {
-        padding: 15px 20px;
+    .ht-modal-body p {
+        margin: 0;
+    }
+
+    .ht-modal-footer {
+        padding: 12px 18px;
         background-color: #f8f9fc;
         display: flex;
         justify-content: flex-end;
@@ -83,53 +92,82 @@
         border-top: 1px solid #e3e6f0;
     }
 
-    .btn {
+    .ht-btn {
         padding: 8px 16px;
         border: none;
-        border-radius: 5px;
+        border-radius: 6px;
         font-size: 14px;
         cursor: pointer;
         font-weight: 600;
     }
 
-    .btn-cancel {
-        background-color: #eaecf4;
-        color: #5a5c69;
+    .ht-btn-cancel {
+        background-color: #e2e8f0;
+        color: #334155;
     }
 
-    .btn-cancel:hover {
-        background-color: #d1d3e2;
+    .ht-btn-cancel:hover {
+        background-color: #cbd5e1;
     }
 
-    .btn-print {
+    .ht-btn-print {
         background-color: #4e73df;
-        color: white;
+        color: #ffffff;
     }
 
-    .btn-print:hover {
+    .ht-btn-print:hover {
         background-color: #2e59d9;
     }
 
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(-20px); }
+    @keyframes htFadeIn {
+        from { opacity: 0; transform: translateY(-14px); }
         to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media print {
+        .ht-custom-modal,
+        #printConfirmationModal {
+            display: none !important;
+        }
     }
 </style>
 
 <script>
-    // मॉडल खोलने का फंक्शन
-    function openModal() {
-        document.getElementById('printConfirmationModal').style.display = 'flex';
+    function openModal(customMessage) {
+        const modal = document.getElementById('printConfirmationModal');
+        const textEl = document.getElementById('htPrintConfirmText');
+        if (!modal) return;
+
+        if (textEl) {
+            textEl.textContent = customMessage || 'Are you sure you want to print this hall ticket?';
+        }
+        modal.style.display = 'flex';
     }
 
-    // मॉडल बंद करने का फंक्शन
     function closeModal() {
-        document.getElementById('printConfirmationModal').style.display = 'none';
+        const modal = document.getElementById('printConfirmationModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
     }
 
-    // प्रिंट शुरू करने का फंक्शन
     function triggerPrint() {
-        closeModal(); // पहले पॉप-अप बंद करें
-        window.print(); // फिर ब्राउज़र का प्रिंट डायलॉग खोलें
+        closeModal();
+        setTimeout(function () {
+            window.print();
+        }, 80);
     }
+
+    document.addEventListener('click', function (e) {
+        const modal = document.getElementById('printConfirmationModal');
+        if (modal && e.target === modal) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            closeModal();
+        }
+    });
 </script>
