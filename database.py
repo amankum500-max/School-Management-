@@ -5093,3 +5093,35 @@ def get_app_metrics():
                 "server_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
     finally:
         cur.close(); conn.close()
+def get_next_roll_number(class_name=None, section=None):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        q = """
+            SELECT COALESCE(
+                MAX(
+                    CASE
+                        WHEN roll_no ~ '^[0-9]+$' THEN roll_no::int
+                        ELSE NULL
+                    END
+                ), 0
+            ) + 1
+            FROM students
+            WHERE 1=1
+        """
+        params = []
+        if class_name:
+            q += " AND class_name=%s"
+            params.append(class_name)
+        if section:
+            q += " AND section=%s"
+            params.append(section)
+        q += ";"
+        cur.execute(q, tuple(params))
+        nxt = cur.fetchone()[0] or 1
+        return str(nxt)
+    except Exception:
+        conn.rollback()
+        return "1"
+    finally:
+        cur.close(); conn.close()
+      
