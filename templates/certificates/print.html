@@ -1,241 +1,265 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" x-data="certStudioV5()" :class="{'dark': isDarkMode}">
 <head>
     <meta charset="UTF-8">
-    <title>{{ c.cert_type }} — {{ c.name }} ({{ c.cert_no }})</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Certificate Studio — {{ c.cert_no }}</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> tailwind.config = { darkMode: 'class' } </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.17/dist/interact.min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
     <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body {
-            font-family: 'Georgia', 'Times New Roman', serif;
-            background: #e2e8f0;
-            padding: 1.5rem;
-            color: #1e293b;
-        }
-        .page {
-            background: white;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 2.5rem 3rem;
-            border: 1px solid #cbd5e1;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-            position: relative;
-        }
+        body { font-family: 'Inter', sans-serif; background: #f1f5f9; overflow: hidden; }
+        .dark body { background: #0f172a; }
+        .a4-canvas { width: 210mm; height: 297mm; background: white; margin: 0 auto; position: relative; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.2); overflow: hidden; }
+        .dark .a4-canvas { box-shadow: 0 20px 40px -10px rgba(0,0,0,0.8); }
+        
+        .draggable { cursor: grab; touch-action: none; user-select: none; position: absolute; z-index: 10; }
+        .draggable:active { cursor: grabbing; outline: 2px solid #3b82f6; }
+        .draggable:hover { outline: 1px dashed #94a3b8; }
 
-        /* Letterhead */
-        .letterhead {
-            text-align: center;
-            border-bottom: 3px double #1e293b;
-            padding-bottom: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .letterhead h1 {
-            font-size: 1.9rem;
-            font-weight: 800;
-            letter-spacing: 1px;
-            color: #1e293b;
-            text-transform: uppercase;
-        }
-        .letterhead .tagline {
-            font-size: 0.85rem;
-            color: #64748b;
-            font-style: italic;
-            margin-top: 0.2rem;
-        }
-        .letterhead .contact {
-            font-size: 0.75rem;
-            color: #64748b;
-            margin-top: 0.35rem;
-        }
-
-        /* Title */
-        .cert-title {
-            text-align: center;
-            font-size: 1.35rem;
-            font-weight: 700;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            color: #1e293b;
-            margin: 1.5rem 0 0.35rem;
-        }
-        .cert-title::before,
-        .cert-title::after {
-            content: '— ';
-        }
-        .cert-title::after { content: ' —'; }
-
-        .cert-meta {
-            text-align: center;
-            font-size: 0.8rem;
-            color: #64748b;
-            margin-bottom: 2rem;
-            font-family: system-ui, sans-serif;
-        }
-        .cert-meta span { margin: 0 0.5rem; }
-
-        /* Body */
-        .cert-body {
-            font-size: 1.02rem;
-            line-height: 2;
-            text-align: justify;
-            text-indent: 2rem;
-            color: #1e293b;
-            min-height: 180px;
-        }
-
-        /* Remarks */
-        .remarks {
-            font-size: 0.85rem;
-            color: #475569;
-            margin-top: 1.25rem;
-            padding: 0.6rem 0.9rem;
-            border-left: 3px solid #3b82f6;
-            background: #eff6ff;
-            font-family: system-ui, sans-serif;
-        }
-
-        /* Signature */
-        .signs {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 3.5rem;
-            font-family: system-ui, sans-serif;
-        }
-        .sign {
-            text-align: center;
-            font-size: 0.8rem;
-            color: #334155;
-        }
-        .sign .line {
-            width: 140px;
-            border-top: 1.5px solid #1e293b;
-            margin: 0 auto 0.35rem;
-        }
-
-        /* Seal */
-        .seal {
-            position: absolute;
-            right: 3rem;
-            top: 45%;
-            width: 80px;
-            height: 80px;
-            border: 2px dashed #94a3b8;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #94a3b8;
-            font-size: 0.6rem;
-            text-align: center;
-            font-family: system-ui, sans-serif;
-            transform: rotate(-15deg);
-            line-height: 1.1;
-        }
-
-        /* Footer */
-        .foot {
-            margin-top: 2rem;
-            padding-top: 0.75rem;
-            border-top: 1px dashed #cbd5e1;
-            font-size: 0.68rem;
-            color: #94a3b8;
-            text-align: center;
-            font-family: system-ui, sans-serif;
-        }
-
-        /* Actions */
-        .actions {
-            text-align: center;
-            margin-top: 1.25rem;
-            font-family: system-ui, sans-serif;
-        }
-        .actions button, .actions a {
-            padding: 0.55rem 1.2rem;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.88rem;
-            text-decoration: none;
-            display: inline-block;
-            margin: 0 0.25rem;
-        }
-        .btn-print { background: #3b82f6; color: white; }
-        .btn-back { background: #64748b; color: white; }
-        .btn-del { background: #ef4444; color: white; }
-
-        @media print {
-            @page { size: A4; margin: 15mm; }
-            body { background: white; padding: 0; }
-            .page {
-                box-shadow: none;
-                border: none;
-                padding: 0;
-                max-width: none;
-            }
-            .actions { display: none; }
-            .seal { border-color: #cbd5e1; color: #cbd5e1; }
-        }
+        /* AI Typing Animation */
+        .ai-typing { border-right: 2px solid #3b82f6; animation: blink 0.75s step-end infinite; }
+        @keyframes blink { 50% { border-color: transparent; } }
     </style>
 </head>
-<body>
-    <div class="page">
-        <!-- Letterhead -->
-        <div class="letterhead">
-            <h1>{{ school.school_name }}</h1>
-            {% if school.tagline %}
-            <div class="tagline">{{ school.tagline }}</div>
-            {% endif %}
-            <div class="contact">
-                {% if school.address %}{{ school.address }}{% endif %}
-                {% if school.address and (school.phone or school.email) %} • {% endif %}
-                {% if school.phone %}📞 {{ school.phone }}{% endif %}
-                {% if school.phone and school.email %} • {% endif %}
-                {% if school.email %}✉️ {{ school.email }}{% endif %}
+<body class="antialiased" x-cloak>
+
+    <!-- TOP BAR -->
+    <header class="fixed top-0 left-0 right-0 h-14 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 z-50 flex items-center justify-between px-4">
+        <div class="flex items-center gap-4">
+            <h1 class="text-lg font-bold text-slate-800 dark:text-white">Certificate Studio</h1>
+            <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full text-xs font-medium border border-emerald-200 dark:border-emerald-800">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                Principal is viewing
             </div>
         </div>
-
-        <!-- Title -->
-        <div class="cert-title">{{ c.cert_type }}</div>
-        <div class="cert-meta">
-            <span>Certificate No: <strong>{{ c.cert_no }}</strong></span>
-            <span>Date: <strong>{{ c.issue_date.strftime('%d %B %Y') if c.issue_date else '—' }}</strong></span>
+        <div class="flex gap-2">
+            <button @click="saveAsTemplate()" class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-blue-600 px-3 py-1.5">Save as Template</button>
+            <button @click="generatePDF()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium shadow-sm">Export PDF</button>
         </div>
+    </header>
 
-        <!-- Body -->
-        <div class="cert-body">{{ c.body }}</div>
-
-        {% if c.remarks %}
-        <div class="remarks"><strong>Remarks:</strong> {{ c.remarks }}</div>
-        {% endif %}
-
-        <!-- Seal -->
-        <div class="seal">School<br>Seal</div>
-
-        <!-- Signatures -->
-        <div class="signs">
-            <div class="sign">
-                <div class="line"></div>
-                Class Teacher
+    <!-- MAIN LAYOUT -->
+    <div class="flex pt-14 h-screen">
+        
+        <!-- LEFT SIDEBAR (Tools) -->
+        <aside class="w-72 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col h-full z-40">
+            <!-- Tabs -->
+            <div class="flex border-b border-slate-200 dark:border-slate-700">
+                <button @click="activeTab = 'design'" :class="{'border-b-2 border-blue-500 text-blue-600': activeTab === 'design', 'text-slate-500': activeTab !== 'design'}" class="flex-1 py-3 text-sm font-medium">Design</button>
+                <button @click="activeTab = 'layers'" :class="{'border-b-2 border-blue-500 text-blue-600': activeTab === 'layers', 'text-slate-500': activeTab !== 'layers'}" class="flex-1 py-3 text-sm font-medium">Layers</button>
             </div>
-            <div class="sign">
-                <div class="line"></div>
-                Principal
-            </div>
-        </div>
 
-        <!-- Footer -->
-        <div class="foot">
-            This is a computer-generated certificate. Academic Year: {{ ay }}
-        </div>
+            <div class="p-4 flex-1 overflow-y-auto">
+                <!-- AI ASSISTANT -->
+                <div class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-700 p-3 rounded-lg border border-blue-100 dark:border-slate-600">
+                    <h3 class="text-xs font-bold text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        AI Writer
+                    </h3>
+                    <textarea id="aiPrompt" rows="2" placeholder="e.g. Write a character certificate for a top student..." class="w-full text-xs p-2 rounded border border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-800 mb-2"></textarea>
+                    <button @click="generateAIText()" :disabled="isAiGenerating" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs py-1.5 rounded transition flex justify-center items-center gap-2">
+                        <svg x-show="isAiGenerating" class="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        <span x-text="isAiGenerating ? 'Writing...' : 'Generate Text'"></span>
+                    </button>
+                </div>
+
+                <!-- DESIGN TAB -->
+                <div x-show="activeTab === 'design'" class="space-y-4">
+                    <div>
+                        <label class="text-xs font-bold text-slate-500 uppercase">Theme</label>
+                        <select x-model="theme" class="w-full mt-1 text-sm p-2 rounded border bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                            <option value="classic">Classic</option>
+                            <option value="modern">Modern</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-500 uppercase">Font</label>
+                        <select x-model="fontFamily" class="w-full mt-1 text-sm p-2 rounded border bg-slate-50 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                            <option value="'Playfair Display', serif">Serif (Classic)</option>
+                            <option value="'Inter', sans-serif">Sans-Serif (Modern)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- LAYERS TAB -->
+                <div x-show="activeTab === 'layers'" class="space-y-2">
+                    <p class="text-xs text-slate-500 mb-2">Drag to reorder (Mock)</p>
+                    <template x-for="layer in layers" :key="layer.id">
+                        <div class="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-600 cursor-move">
+                            <span class="text-sm font-medium text-slate-700 dark:text-slate-200" x-text="layer.name"></span>
+                            <button @click="toggleLayerVisibility(layer.id)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                                <svg x-show="layer.visible" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                <svg x-show="!layer.visible" class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </aside>
+
+        <!-- CENTER CANVAS -->
+        <main class="flex-1 overflow-auto p-8 flex justify-center bg-slate-100 dark:bg-slate-900 relative">
+            
+            <div id="certificateCanvas" class="a4-canvas" :class="`theme-${theme}`" :style="{ fontFamily: fontFamily }">
+                
+                <!-- Header -->
+                <div class="text-center pb-4 border-b-2 border-slate-800 mb-8 pt-10 px-10">
+                    <h1 class="text-3xl font-extrabold uppercase">{{ school.school_name }}</h1>
+                    <p class="text-sm text-slate-500 mt-1">{{ school.address }}</p>
+                </div>
+
+                <!-- Body (AI Target) -->
+                <div class="px-16 text-justify text-lg leading-loose min-h-[200px]" :class="{'ai-typing': isAiGenerating}">
+                    <div id="certBodyText" x-html="bodyContent"></div>
+                </div>
+
+                <!-- Draggable Elements -->
+                <div class="absolute inset-0 pointer-events-none">
+                    <div class="draggable pointer-events-auto" x-show="layers.find(l => l.id === 'qr').visible" data-id="qr" :style="`transform: translate(${elements.qr.x}px, ${elements.qr.y}px);`">
+                        <div class="bg-white p-1 border border-slate-300 rounded shadow-sm"><div id="qrcode"></div></div>
+                    </div>
+                    
+                    <div class="draggable pointer-events-auto text-center" x-show="layers.find(l => l.id === 'sign1').visible" data-id="sign1" :style="`transform: translate(${elements.sign1.x}px, ${elements.sign1.y}px);`">
+                        <div class="w-40 border-t border-slate-800 mb-1"></div>
+                        <p class="text-sm font-bold">Principal</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floating Zoom Controls -->
+            <div class="absolute bottom-6 right-6 bg-white dark:bg-slate-800 shadow-lg border border-slate-200 dark:border-slate-700 rounded-lg flex items-center p-1">
+                <button class="px-3 py-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300">-</button>
+                <span class="text-xs font-medium px-2 text-slate-800 dark:text-slate-200">100%</span>
+                <button class="px-3 py-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300">+</button>
+            </div>
+        </main>
     </div>
 
-    <div class="actions">
-        <button class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
-        <a href="{{ url_for('certificates.index') }}" class="btn-back">← All Certificates</a>
-        <form method="POST" action="{{ url_for('certificates.remove', cid=c.id) }}"
-              onsubmit="return confirm('Delete certificate {{ c.cert_no }}?');"
-              style="display:inline;">
-            <button class="btn-del">Delete</button>
-        </form>
-    </div>
+    <script>
+        function certStudioV5() {
+            return {
+                theme: 'classic',
+                fontFamily: "'Playfair Display', serif",
+                activeTab: 'design',
+                isAiGenerating: false,
+                bodyContent: `{{ c.body | safe }}`,
+                
+                // Layer Management State
+                layers: [
+                    { id: 'sign1', name: 'Principal Signature', visible: true },
+                    { id: 'qr', name: 'Verification QR Code', visible: true }
+                ],
+
+                // Drag Positions
+                elements: {
+                    qr:    { x: 500, y: 600 },
+                    sign1: { x: 50,  y: 650 }
+                },
+
+                init() {
+                    new QRCode(document.getElementById("qrcode"), {
+                        text: `https://yourschool.com/verify/${'{{ c.cert_no }}'}`, width: 64, height: 64
+                    });
+
+                    // Initialize Drag & Drop
+                    interact('.draggable').draggable({
+                        modifiers: [interact.modifiers.restrictRect({ restriction: 'parent', endOnly: true })],
+                        listeners: {
+                            move: (event) => {
+                                const target = event.target;
+                                const dataId = target.getAttribute('data-id');
+                                const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+                                const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+
+                                target.style.transform = `translate(${x}px, ${y}px)`;
+                                target.setAttribute('data-x', x);
+                                target.setAttribute('data-y', y);
+
+                                this.elements[dataId].x = x;
+                                this.elements[dataId].y = y;
+                            }
+                        }
+                    });
+                },
+
+                // AI Generation (Mock API Call)
+                generateAIText() {
+                    const prompt = document.getElementById('aiPrompt').value;
+                    if(!prompt) return Swal.fire('Wait', 'Please enter a prompt first.', 'warning');
+                    
+                    this.isAiGenerating = true;
+                    this.bodyContent = ''; // Clear current
+                    
+                    // MOCK API CALL (In reality, fetch to OpenAI/Claude API here)
+                    setTimeout(() => {
+                        let generatedText = `<p>This is to certify that <strong>{{ c.student_name }}</strong>, a student of Class {{ c.class_name }}, has successfully completed the academic requirements. Based on the prompt: <em>"${prompt}"</em>, we wish him/her the very best for future endeavors.</p>`;
+                        
+                        // Typewriter effect
+                        let i = 0;
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = generatedText;
+                        const plainText = tempDiv.innerText;
+                        
+                        const typeWriter = setInterval(() => {
+                            if (i < plainText.length) {
+                                this.bodyContent = plainText.substring(0, i + 1);
+                                i++;
+                            } else {
+                                clearInterval(typeWriter);
+                                this.bodyContent = generatedText; // Set final HTML
+                                this.isAiGenerating = false;
+                            }
+                        }, 20);
+                        
+                    }, 1500);
+                },
+
+                toggleLayerVisibility(id) {
+                    const layer = this.layers.find(l => l.id === id);
+                    if(layer) layer.visible = !layer.visible;
+                },
+
+                saveAsTemplate() {
+                    Swal.fire({
+                        title: 'Save as Template?',
+                        text: "This design layout will be saved for future certificates.",
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Save Template'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            Swal.fire('Saved!', 'Template saved successfully.', 'success');
+                        }
+                    });
+                },
+
+                async generatePDF() {
+                    const element = document.getElementById('certificateCanvas');
+                    // Temporarily remove outlines for clean PDF
+                    document.querySelectorAll('.draggable').forEach(el => el.style.outline = 'none');
+                    
+                    await html2pdf().set({
+                        margin: 0, image: { type: 'jpeg', quality: 1 },
+                        html2canvas: { scale: 3, useCORS: true },
+                        jsPDF: { unit: 'mm', format: 'a4' }
+                    }).from(element).save();
+                    
+                    Swal.fire({ toast: true, position: 'top-right', icon: 'success', title: 'PDF Exported!', showConfirmButton: false, timer: 3000 });
+                }
+            }
+        }
+    </script>
 </body>
 </html>
