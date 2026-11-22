@@ -1,84 +1,417 @@
 {% extends "base.html" %}
 {% block title %}Certificates{% endblock %}
-{% block page_title %}Certificates{% endblock %}
+{% block page_title %}Certificate Records{% endblock %}
+
+{% block extra_head %}
+<!-- Alpine.js -->
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<!-- SweetAlert2 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<!-- Flatpickr (Beautiful Date Picker) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+
+<style>
+    /* Custom Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f8fafc; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .dark .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
+    
+    /* Dark Mode Overrides for Flatpickr */
+    .dark .flatpickr-calendar { background: #1e293b; border-color: #334155; }
+    .dark .flatpickr-day { color: #cbd5e1; }
+    .dark .flatpickr-day:hover { background: #334155; }
+    .dark .flatpickr-day.selected { background: #3b82f6; }
+</style>
+{% endblock %}
 
 {% block content %}
+<!-- Alpine Component: x-data initializes the state -->
+<div x-data="enterpriseCertTable()" x-init="init()" :class="{'dark': isDarkMode}" class="min-h-screen transition-colors duration-300">
+    
+    <!-- Alpine Root Wrapper for styling -->
+    <div class="max-w-7xl mx-auto space-y-4 p-2 sm:p-0">
 
-<div class="card" style="margin-bottom:1rem;">
-<form method="GET" style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:end;">
-    <div>
-        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Type</label>
-        <select name="type"
-            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px;">
-            <option value="">All Types</option>
-            {% for t in cert_types %}
-            <option value="{{ t }}" {% if t == selected_type %}selected{% endif %}>{{ t }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    <div>
-        <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Search</label>
-        <input name="q" value="{{ search }}" placeholder="student name / cert no"
-            style="padding:0.55rem; border:1px solid #cbd5e1; border-radius:6px; width:200px;">
-    </div>
-    <button type="submit" class="btn">Filter</button>
-    <a href="{{ url_for('certificates.new') }}" class="btn"
-       style="background:#8b5cf6; margin-left:auto;">+ New Certificate</a>
-</form>
-</div>
+        <!-- 1. QUICK STATS BAR (Dashboard Metrics) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Total Issued</p>
+                    <h3 class="text-2xl font-bold text-slate-800 dark:text-white">{{ certs.total }}</h3>
+                </div>
+                <div class="p-3 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Issued This Month</p>
+                    <h3 class="text-2xl font-bold text-slate-800 dark:text-white">{{ this_month_count or 0 }}</h3>
+                </div>
+                <div class="p-3 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Revoked/Deleted</p>
+                    <h3 class="text-2xl font-bold text-slate-800 dark:text-white">{{ revoked_count or 0 }}</h3>
+                </div>
+                <div class="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+            </div>
+        </div>
 
-{% if not certs %}
-<div class="card" style="text-align:center; padding:2rem; color:#64748b;">
-    Koi certificate issue nahi hua abhi. "+ New Certificate" se shuru karo.
-</div>
-{% else %}
-<div class="card" style="padding:0; overflow:auto;">
-<table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:700px;">
-    <thead style="background:#f1f5f9;">
-        <tr>
-            <th style="padding:0.6rem; text-align:left;">Cert No</th>
-            <th style="padding:0.6rem; text-align:left;">Type</th>
-            <th style="padding:0.6rem; text-align:left;">Student</th>
-            <th style="padding:0.6rem; text-align:left;">Class</th>
-            <th style="padding:0.6rem; text-align:left;">Issue Date</th>
-            <th style="padding:0.6rem; text-align:right;">Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for c in certs %}
-        <tr style="border-top:1px solid #e2e8f0;">
-            <td style="padding:0.55rem; font-family:monospace; font-size:0.8rem;">
-                {{ c.cert_no }}
-            </td>
-            <td style="padding:0.55rem;">
-                <span style="font-size:0.72rem; background:#ede9fe; color:#5b21b6;
-                    padding:0.15rem 0.45rem; border-radius:3px; font-weight:600;">
-                    {{ c.cert_type }}
-                </span>
-            </td>
-            <td style="padding:0.55rem;"><strong>{{ c.student_name }}</strong></td>
-            <td style="padding:0.55rem;">
-                {{ c.class_name or '—' }}{% if c.section %}-{{ c.section }}{% endif %}
-            </td>
-            <td style="padding:0.55rem; font-size:0.8rem;">
-                {{ c.issue_date.strftime('%d %b %Y') if c.issue_date else '—' }}
-            </td>
-            <td style="padding:0.55rem; text-align:right; white-space:nowrap;">
-                <a href="{{ url_for('certificates.view', cid=c.id) }}"
-                   style="color:#3b82f6; text-decoration:none; font-size:0.82rem; margin-right:0.5rem;">
-                    View
+        <!-- 2. HEADER & ADVANCED TOOLBAR -->
+        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col xl:flex-row gap-4 justify-between items-center">
+            
+            <!-- Search & Filters -->
+            <form method="GET" id="filterForm" class="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+                <div class="relative w-full sm:w-72">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <input type="text" name="q" x-ref="searchInput" value="{{ search }}" @input.debounce.600ms="submitFilters()" placeholder="Search... (Press '/' to focus)" 
+                        class="w-full pl-9 pr-8 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm transition-all">
+                </div>
+                
+                <div class="w-full sm:w-40">
+                    <select name="type" @change="submitFilters()" class="w-full py-2 px-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm cursor-pointer">
+                        <option value="">All Types</option>
+                        {% for t in cert_types %}
+                        <option value="{{ t }}" {% if t == selected_type %}selected{% endif %}>{{ t }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Date Filter Button (Opens Flatpickr) -->
+                <button type="button" x-ref="datePickerBtn" class="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 transition">
+                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span x-text="dateLabel">Date Range</span>
+                </button>
+                <!-- Hidden inputs populated by Flatpickr -->
+                <input type="hidden" name="start_date" id="start_date" value="{{ request.args.get('start_date', '') }}">
+                <input type="hidden" name="end_date" id="end_date" value="{{ request.args.get('end_date', '') }}">
+            </form>
+
+            <!-- Right Side Actions -->
+            <div class="flex items-center gap-2 w-full xl:w-auto justify-end">
+                <!-- Dark Mode Toggle -->
+                <button @click="toggleDarkMode()" class="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white bg-slate-100 dark:bg-slate-700 rounded-lg transition" title="Toggle Dark Mode">
+                    <svg x-show="!isDarkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                    <svg x-show="isDarkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display:none;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                </button>
+
+                <!-- Column Settings Dropdown -->
+                <div class="relative" x-data="{ open: false }">
+                    <button @click="open = !open" class="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white bg-slate-100 dark:bg-slate-700 rounded-lg transition" title="Column Settings">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                    </button>
+                    <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 z-50 p-2 space-y-1">
+                        <p class="text-xs font-semibold text-slate-400 px-2 py-1 uppercase">Visible Columns</p>
+                        <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 rounded cursor-pointer text-sm dark:text-slate-300">
+                            <input type="checkbox" x-model="columns.type" class="rounded text-blue-600"> Type
+                        </label>
+                        <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 rounded cursor-pointer text-sm dark:text-slate-300">
+                            <input type="checkbox" x-model="columns.date" class="rounded text-blue-600"> Issue Date
+                        </label>
+                        <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 rounded cursor-pointer text-sm dark:text-slate-300">
+                            <input type="checkbox" x-model="columns.status" class="rounded text-blue-600"> Status
+                        </label>
+                    </div>
+                </div>
+
+                <a href="{{ url_for('certificates.new') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition flex items-center gap-2">
+                    + New
                 </a>
-                <form method="POST" action="{{ url_for('certificates.remove', cid=c.id) }}"
-                      onsubmit="return confirm('Delete certificate {{ c.cert_no }}?');"
-                      style="display:inline;">
-                    <button style="background:none; border:none; color:#ef4444;
-                        cursor:pointer; font-size:0.82rem;">Delete</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+            </div>
+        </div>
+
+        <!-- 3. BULK ACTIONS BAR -->
+        <div x-show="selected.length > 0" x-transition class="bg-blue-600 text-white rounded-xl p-3 flex justify-between items-center shadow-lg sticky top-4 z-40">
+            <div class="text-sm font-medium flex items-center gap-2">
+                <span class="bg-blue-500 px-2 py-0.5 rounded text-xs" x-text="selected.length"></span>
+                Records Selected
+            </div>
+            <div class="flex gap-2">
+                <button @click="exportToCSV(true)" class="bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded text-sm font-medium transition">Export Selected</button>
+                <button @click="bulkDelete()" class="bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded text-sm font-medium transition shadow-sm">Delete</button>
+            </div>
+        </div>
+
+        <!-- 4. THE TABLE -->
+        {% if not certs.items %}
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-12 text-center">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-slate-50 dark:bg-slate-700 mb-4">
+                <svg class="w-10 h-10 text-slate-300 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-1">No records found</h3>
+            <button @click="resetFilters()" class="text-blue-600 font-medium text-sm hover:underline">Clear all filters</button>
+        </div>
+        {% else %}
+        
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden relative">
+            <!-- Loading Overlay -->
+            <div x-show="loading" class="absolute inset-0 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm z-30 flex items-center justify-center" style="display: none;">
+                <svg class="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            </div>
+
+            <div class="overflow-x-auto custom-scrollbar max-h-[75vh]">
+                <table class="w-full text-left border-collapse whitespace-nowrap">
+                    <thead class="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-600 sticky top-0 z-20">
+                        <tr>
+                            <th class="px-4 py-3 w-10 bg-slate-50 dark:bg-slate-800">
+                                <input type="checkbox" @change="toggleAll($event)" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4">
+                            </th>
+                            <th class="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wider bg-slate-50 dark:bg-slate-800">Cert No</th>
+                            <th class="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wider bg-slate-50 dark:bg-slate-800">Student</th>
+                            
+                            <!-- Conditional Columns based on Alpine -->
+                            <th x-show="columns.type" class="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wider bg-slate-50 dark:bg-slate-800">Type</th>
+                            <th x-show="columns.date" class="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wider bg-slate-50 dark:bg-slate-800">Date</th>
+                            <th x-show="columns.status" class="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wider bg-slate-50 dark:bg-slate-800">Status</th>
+                            
+                            <!-- STICKY ACTIONS COLUMN -->
+                            <th class="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-300 uppercase tracking-wider text-right sticky right-0 bg-slate-50 dark:bg-slate-800 shadow-[-4px_0_10px_rgba(0,0,0,0.05)] border-l border-slate-200 dark:border-slate-600">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-800">
+                        {% for c in certs.items %}
+                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group" :class="{'bg-blue-50 dark:bg-slate-700': selected.includes({{ c.id }})}">
+                            <td class="px-4 py-3">
+                                <input type="checkbox" value="{{ c.id }}" x-model="selected" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4">
+                            </td>
+                            
+                            <td class="px-4 py-3">
+                                <button @click="copyText('{{ c.cert_no }}')" class="font-mono text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-1 rounded border border-slate-200 dark:border-slate-600 hover:bg-slate-200 transition">
+                                    {{ c.cert_no }}
+                                </button>
+                            </td>
+                            
+                            <td class="px-4 py-3">
+                                <div class="font-semibold text-slate-800 dark:text-white">{{ c.student_name }}</div>
+                                <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Roll: {{ c.roll_no or '—' }}</div>
+                            </td>
+                            
+                            <td x-show="columns.type" class="px-4 py-3">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold tracking-wide uppercase border bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600">
+                                    {{ c.cert_type }}
+                                </span>
+                            </td>
+                            
+                            <td x-show="columns.date" class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
+                                {{ c.issue_date.strftime('%d %b, %Y') if c.issue_date else '—' }}
+                            </td>
+
+                            <!-- Status Badge (Requires backend model update) -->
+                            <td x-show="columns.status" class="px-4 py-3">
+                                {% if c.status == 'Revoked' %}
+                                    <span class="flex items-center gap-1 text-xs font-semibold text-red-600 dark:text-red-400"><span class="w-1.5 h-1.5 rounded-full bg-red-600"></span> Revoked</span>
+                                {% else %}
+                                    <span class="flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Issued</span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- STICKY ACTIONS -->
+                            <td class="px-4 py-3 text-right sticky right-0 bg-white dark:bg-slate-800 group-hover:bg-slate-50 dark:group-hover:bg-slate-700/50 shadow-[-4px_0_10px_rgba(0,0,0,0.05)] border-l border-slate-100 dark:border-slate-700 transition-colors">
+                                <div class="flex items-center justify-end gap-1">
+                                    <a href="{{ url_for('certificates.view', cid=c.id) }}" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-600 rounded transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                    </a>
+                                    <button @click="deleteSingle({{ c.id }}, '{{ c.cert_no }}')" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-slate-600 rounded transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- PAGINATION -->
+            {% if certs.pages > 1 %}
+            <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 flex items-center justify-between">
+                <span class="text-xs text-slate-500 dark:text-slate-400">Page {{ certs.page }} of {{ certs.pages }}</span>
+                <div class="flex gap-1">
+                    {% if certs.has_prev %}
+                    <a href="{{ url_for('certificates.index', page=certs.prev_num, q=search, type=selected_type, start_date=request.args.get('start_date'), end_date=request.args.get('end_date')) }}" class="px-3 py-1.5 text-xs font-medium border border-slate-300 dark:border-slate-600 rounded-md hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition">Prev</a>
+                    {% endif %}
+                    {% if certs.has_next %}
+                    <a href="{{ url_for('certificates.index', page=certs.next_num, q=search, type=selected_type, start_date=request.args.get('start_date'), end_date=request.args.get('end_date')) }}" class="px-3 py-1.5 text-xs font-medium border border-slate-300 dark:border-slate-600 rounded-md hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition">Next</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
 </div>
-{% endif %}
+
+<form id="bulkDeleteForm" method="POST" action="{{ url_for('certificates.bulk_delete') }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="ids" id="bulkDeleteIds">
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+function enterpriseCertTable() {
+    return {
+        selected: [],
+        loading: false,
+        isDarkMode: localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches),
+        
+        // Column Visibility State
+        columns: {
+            type: true,
+            date: true,
+            status: true
+        },
+        
+        dateLabel: 'Date Range',
+
+        init() {
+            // 1. Dark Mode apply on load
+            if (this.isDarkMode) document.documentElement.classList.add('dark');
+            
+            // 2. Initialize Flatpickr Date Range Picker
+            flatpickr(this.$refs.datePickerBtn, {
+                mode: "range",
+                dateFormat: "Y-m-d",
+                defaultDate: ["{{ request.args.get('start_date', '') }}", "{{ request.args.get('end_date', '') }}"].filter(Boolean),
+                onChange: (selectedDates, dateStr) => {
+                    if (selectedDates.length === 2) {
+                        document.getElementById('start_date').value = selectedDates[0].toISOString().split('T')[0];
+                        document.getElementById('end_date').value = selectedDates[1].toISOString().split('T')[0];
+                        this.dateLabel = `${selectedDates[0].getDate()} ${selectedDates[0].toLocaleString('default', { month: 'short' })} - ${selectedDates[1].getDate()} ${selectedDates[1].toLocaleString('default', { month: 'short' })}`;
+                        this.submitFilters();
+                    }
+                }
+            });
+
+            // 3. Keyboard Shortcuts
+            document.addEventListener('keydown', (e) => {
+                // '/' to focus search
+                if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    this.$refs.searchInput.focus();
+                }
+                // 'Escape' to blur search
+                if (e.key === 'Escape') {
+                    this.$refs.searchInput.blur();
+                }
+            });
+
+            // Set initial date label if dates exist in URL
+            if ("{{ request.args.get('start_date') }}" && "{{ request.args.get('end_date') }}") {
+                this.dateLabel = "Filtered";
+            }
+        },
+
+        toggleDarkMode() {
+            this.isDarkMode = !this.isDarkMode;
+            if (this.isDarkMode) {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            }
+        },
+
+        submitFilters() {
+            this.loading = true;
+            document.getElementById('filterForm').submit();
+        },
+
+        resetFilters() {
+            window.location.href = "{{ url_for('certificates.index') }}";
+        },
+
+        toggleAll(e) {
+            if (e.target.checked) {
+                this.selected = Array.from(document.querySelectorAll('input[type="checkbox"][value]')).map(cb => parseInt(cb.value));
+            } else {
+                this.selected = [];
+            }
+        },
+
+        copyText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+                Toast.fire({ icon: 'success', title: 'Copied!' });
+            });
+        },
+
+        deleteSingle(id, certNo) {
+            Swal.fire({
+                title: 'Delete Certificate?',
+                html: `You are about to delete <b class="text-red-500">${certNo}</b>.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'Delete',
+                preConfirm: () => {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = `/certificates/remove/${id}`; 
+                    const csrf = document.createElement('input');
+                    csrf.type = 'hidden'; csrf.name = 'csrf_token'; csrf.value = '{{ csrf_token() }}';
+                    form.appendChild(csrf); document.body.appendChild(form); form.submit();
+                }
+            });
+        },
+
+        bulkDelete() {
+            if (this.selected.length === 0) return;
+            Swal.fire({
+                title: 'Delete Selected?',
+                text: `Deleting ${this.selected.length} certificates cannot be undone.`,
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'Delete All'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('bulkDeleteIds').value = JSON.stringify(this.selected);
+                    document.getElementById('bulkDeleteForm').submit();
+                }
+            });
+        },
+
+        exportToCSV(onlySelected = false) {
+            const rows = document.querySelectorAll('tbody tr');
+            if(rows.length === 0) return Swal.fire('Empty', 'No data to export', 'info');
+            
+            let csvContent = "data:text/csv;charset=utf-8,Cert No,Student,Type,Issue Date\n";
+            
+            rows.forEach(row => {
+                const checkbox = row.querySelector('input[type="checkbox"]');
+                if (onlySelected && !this.selected.includes(parseInt(checkbox.value))) return;
+                
+                const certNo = row.children[1].innerText.trim().replace(/,/g, '');
+                const student = row.children[2].innerText.split('\n')[0].trim().replace(/,/g, '');
+                const type = row.children[3].innerText.trim().replace(/,/g, '');
+                const date = row.children[4].innerText.trim().replace(/,/g, '');
+                
+                csvContent += `${certNo},${student},${type},${date}\n`;
+            });
+            
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "certificates_export.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+}
+</script>
 {% endblock %}
