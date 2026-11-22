@@ -8,9 +8,11 @@
     <a href="{{ url_for('hall_ticket.index') }}"
        style="color:#64748b; text-decoration:none; font-size:0.85rem;">← Back</a>
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-        <a href="{{ url_for('hall_ticket.index', exam_id=exam.id) }}"
+        <a href="{{ url_for('hall_ticket.bulk_print', exam_id=exam.id) }}"
            target="_blank" class="btn"
-           style="background:#3b82f6; font-size:0.85rem;">🖨️ Print All Tickets</a>
+           style="background:#3b82f6; color:#fff; text-decoration:none; padding:0.45rem 0.85rem; border-radius:6px; font-size:0.85rem; font-weight:600;">
+            🖨️ Print All Tickets
+        </a>
     </div>
 </div>
 
@@ -21,12 +23,16 @@
     </h2>
     <div style="font-size:0.85rem; color:#64748b;">
         {% if exam.exam_date %}Date: <strong>{{ exam.exam_date }}</strong>{% endif %}
+        {% if exam.center %} • Center: <strong>{{ exam.center }}</strong>{% endif %}
+        {% if exam.result_date %} • Result: <strong>{{ exam.result_date }}</strong>{% endif %}
         {% if exam.subjects %}
             • Subjects:
             {% if exam.subjects is string %}
                 {{ exam.subjects }}
             {% else %}
-                {{ exam.subjects | join(', ') }}
+                {% for sub in exam.subjects %}
+                    {{ sub.subject_name or sub.subject or sub.name or sub }}{% if not loop.last %}, {% endif %}
+                {% endfor %}
             {% endif %}
         {% endif %}
         {% if exam.max_marks is not none %}• Max Marks: {{ exam.max_marks }}/subject{% endif %}
@@ -43,14 +49,15 @@
     <div style="background:#d1fae5; padding:0.65rem; border-radius:6px; margin-bottom:0.75rem; font-size:0.85rem; color:#065f46;">
         ✅ {{ total_set }} students ke seats already assigned hain.
         {% if seating_summary %}
-        Rooms: {% for r in seating_summary %}{{ r.room_no }}({{ r.count }}){% if not loop.last %}, {% endif %}{% endfor %}
+        Rooms: {% for r in seating_summary %}{{ r.room_no }}({{ r.student_count if r.student_count is defined else r.count }}){% if not loop.last %}, {% endif %}{% endfor %}
         {% endif %}
     </div>
     {% endif %}
 
-    <form method="POST" action="{{ url_for('hall_ticket.auto_seat', exam_id=exam.id) }}"
+    <form method="POST" action="{{ url_for('hall_ticket.seating', exam_id=exam.id) }}"
           style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;"
           onsubmit="return confirm('Auto-assign karega {{ students | length }} students ke seats. Existing overwrite ho jayenge. OK?');">
+        <input type="hidden" name="action" value="auto">
         <div>
             <label for="room_start" style="font-size:0.72rem; color:#64748b; display:block; margin-bottom:0.15rem;">
                 Starting Room
@@ -59,13 +66,13 @@
                    style="padding:0.5rem; border:1px solid #cbd5e1; border-radius:5px; font-size:0.85rem; width:80px;">
         </div>
         <div>
-            <label for="per_room" style="font-size:0.72rem; color:#64748b; display:block; margin-bottom:0.15rem;">
+            <label for="room_capacity" style="font-size:0.72rem; color:#64748b; display:block; margin-bottom:0.15rem;">
                 Students per Room
             </label>
-            <input id="per_room" name="per_room" type="number" value="30" min="1" required
+            <input id="room_capacity" name="room_capacity" type="number" value="30" min="1" required
                    style="padding:0.5rem; border:1px solid #cbd5e1; border-radius:5px; font-size:0.85rem; width:90px;">
         </div>
-        <button type="submit" class="btn" style="background:#8b5cf6;">
+        <button type="submit" class="btn" style="background:#8b5cf6; color:#fff; border:none; padding:0.5rem 0.9rem; border-radius:6px; font-size:0.85rem; font-weight:600; cursor:pointer;">
             ⚡ Auto-Assign
         </button>
         {% if total_set > 0 %}
@@ -92,44 +99,58 @@
         </thead>
         <tbody>
             {% for s in students %}
+            {% set s_id = s.id if s.id is defined else s[0] %}
+            {% set s_name = s.name if s.name is defined else s[1] %}
+            {% set s_roll = s.roll_no if s.roll_no is defined and s.roll_no else (s.roll if s.roll is defined else '—') %}
+            {% set s_cls = s.class_name if s.class_name is defined and s.class_name else exam.class_name %}
+            {% set s_sec = s.section if s.section is defined else '' %}
+            {% set s_room = s.room_no if s.room_no is defined else '' %}
+            {% set s_seat = s.seat_no if s.seat_no is defined else '' %}
             <tr style="border-top:1px solid #e2e8f0;">
-                <td style="padding:0.55rem; color:#64748b;">{{ s.roll or '—' }}</td>
-                <td style="padding:0.55rem;"><strong>{{ s.name }}</strong></td>
+                <td style="padding:0.55rem; color:#64748b;">{{ s_roll or '—' }}</td>
+                <td style="padding:0.55rem;"><strong>{{ s_name }}</strong></td>
                 <td style="padding:0.55rem;">
-                    {{ s.class_name or '—' }}{% if s.section %}-{{ s.section }}{% endif %}
+                    {{ s_cls or '—' }}{% if s_sec %}-{{ s_sec }}{% endif %}
                 </td>
                 <td style="padding:0.55rem; text-align:center;">
-                    {% if s.room_no %}
+                    {% if s_room %}
                     <span style="background:#dbeafe; color:#1e40af; padding:0.15rem 0.5rem; border-radius:3px; font-weight:600; font-size:0.78rem;">
-                        {{ s.room_no }}
+                        {{ s_room }}
                     </span>
                     {% else %}—{% endif %}
                 </td>
                 <td style="padding:0.55rem; text-align:center;">
-                    {% if s.seat_no %}
+                    {% if s_seat %}
                     <span style="background:#ede9fe; color:#5b21b6; padding:0.15rem 0.5rem; border-radius:3px; font-weight:600; font-size:0.78rem; font-family:monospace;">
-                        {{ s.seat_no }}
+                        {{ s_seat }}
                     </span>
                     {% else %}—{% endif %}
                 </td>
                 <td style="padding:0.55rem; text-align:right; white-space:nowrap;">
-                    <form method="POST" action="{{ url_for('hall_ticket.set_seat', exam_id=exam.id) }}"
+                    <form method="POST" action="{{ url_for('hall_ticket.seating', exam_id=exam.id) }}"
                           style="display:inline-flex; gap:0.3rem; align-items:center;">
-                        <input type="hidden" name="student_id" value="{{ s.id }}">
-                        <input name="room_no" type="text" value="{{ s.room_no or '' }}" placeholder="Room"
+                        <input type="hidden" name="action" value="manual">
+                        <input type="hidden" name="student_id" value="{{ s_id }}">
+                        <input name="room_no" type="text" value="{{ s_room }}" placeholder="Room"
                                style="width:55px; padding:0.25rem; border:1px solid #cbd5e1; border-radius:3px; font-size:0.75rem;">
-                        <input name="seat_no" type="text" value="{{ s.seat_no or '' }}" placeholder="Seat"
+                        <input name="seat_no" type="text" value="{{ s_seat }}" placeholder="Seat"
                                style="width:55px; padding:0.25rem; border:1px solid #cbd5e1; border-radius:3px; font-size:0.75rem;">
                         <button type="submit"
                                 style="background:#3b82f6; color:white; border:none; padding:0.25rem 0.55rem; border-radius:3px; cursor:pointer; font-size:0.75rem; font-weight:600;">
                             ✓
                         </button>
                     </form>
-                    <a href="{{ url_for('hall_ticket.index', exam_id=exam.id, student_id=s.id) }}"
+                    <a href="{{ url_for('hall_ticket.view_ticket', exam_id=exam.id, student_id=s_id) }}"
                        target="_blank"
                        style="color:#8b5cf6; text-decoration:none; font-size:0.78rem; margin-left:0.4rem;">
                         Ticket
                     </a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="padding:1.25rem; text-align:center; color:#64748b;">
+                    Is exam ke liye koi student nahi mila.
                 </td>
             </tr>
             {% endfor %}
@@ -138,8 +159,10 @@
 </div>
 
 <!-- Hidden clear form -->
-<form method="POST" action="{{ url_for('hall_ticket.clear_seating', exam_id=exam.id) }}"
-      id="clearForm" style="display:none;"></form>
+<form method="POST" action="{{ url_for('hall_ticket.seating', exam_id=exam.id) }}"
+      id="clearForm" style="display:none;">
+    <input type="hidden" name="action" value="clear">
+</form>
 
 <script>
     function clearSeating() {
