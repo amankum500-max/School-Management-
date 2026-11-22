@@ -3,6 +3,8 @@
 {% block page_title %}Bulk Hall Tickets — {{ exam.name }}{% endblock %}
 
 {% block content %}
+{% set sched_list = schedule if schedule is defined and schedule and schedule is iterable and schedule is not string and schedule is not mapping else (exam.subjects if exam.subjects is defined and exam.subjects and exam.subjects is iterable and exam.subjects is not string and exam.subjects is not mapping else []) %}
+
 <div class="no-print" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
     <div>
         <h3 style="margin: 0; color: #1e293b;">{{ exam.name }} (Class {{ exam.class_name }})</h3>
@@ -10,7 +12,7 @@
     </div>
     <div>
         <button onclick="window.print()" class="btn" style="background: #4f46e5; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
-            🖨️ Print All Tickets
+            Print All Tickets
         </button>
         <a href="{{ url_for('hall_ticket.index') }}" class="btn" style="background: #e2e8f0; color: #334155; padding: 10px 20px; border: none; border-radius: 8px; text-decoration: none; font-weight: bold; margin-left: 10px;">
             ← Back
@@ -18,14 +20,16 @@
     </div>
 </div>
 
-<!-- Loop for all students -->
 {% for student in students %}
+{% set st_name = student.name if student.name else 'Student Name' %}
+{% set fallback_img = 'https://ui-avatars.com/api/?name=' ~ (st_name | urlencode) ~ '&background=4f46e5&color=fff&size=150' %}
+
 <div class="hall-card print-break" style="width: 100%; max-width: 750px; background: #fff; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto 30px auto; overflow: hidden; font-family: 'Poppins', sans-serif;">
-    
+
     <!-- Header -->
     <div style="background: linear-gradient(90deg, #1e293b 0%, #3730a3 100%); color: #fff; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
         <div>
-            <div style="font-size: 18px; font-weight: 700; letter-spacing: 0.5px;">{{ school.school_name or 'MY SCHOOL ACADEMY' }}</div>
+            <div style="font-size: 18px; font-weight: 700; letter-spacing: 0.5px;">{{ school.school_name or school.name or 'MY SCHOOL ACADEMY' }}</div>
             <div style="font-size: 12px; color: #e0e7ff; margin-top: 3px;">{{ exam.name }} — Official Hall Ticket</div>
         </div>
         <div style="background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: bold;">
@@ -35,32 +39,85 @@
 
     <!-- Body -->
     <div style="padding: 20px; display: flex; gap: 20px; align-items: flex-start; border-bottom: 1px solid #e2e8f0;">
-        
+
         <!-- Photo -->
         <div>
-            {% if student.photo_url %}
-                <img src="{{ student.photo_url }}" alt="Photo" style="width: 90px; height: 110px; object-fit: cover; border-radius: 8px; border: 2px solid #cbd5e1;">
-            {% else %}
-                <div style="width: 90px; height: 110px; background: #f1f5f9; border-radius: 8px; border: 2px dashed #cbd5e1; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px; text-align: center;">No<br>Photo</div>
-            {% endif %}
+            <img
+                src="{{ student.photo_url or fallback_img }}"
+                alt="{{ st_name }}"
+                onerror="this.onerror=null;this.src='{{ fallback_img }}';"
+                style="width: 90px; height: 110px; object-fit: cover; border-radius: 8px; border: 2px solid #cbd5e1; display: block;"
+            >
         </div>
 
         <!-- Student Details -->
         <div style="flex: 1;">
-            <h2 style="margin: 0 0 5px 0; font-size: 20px; color: #0f172a;">{{ student.name }}</h2>
+            <h2 style="margin: 0 0 5px 0; font-size: 20px; color: #0f172a;">{{ st_name }}</h2>
             <div style="font-size: 14px; color: #475569; margin-bottom: 12px;">
-                Class: <strong>{{ student.class_name }}</strong> 
-                {% if student.section %} - {{ student.section }}{% endif %} 
-                | Roll No: <strong>{{ student.roll_no }}</strong>
+                Class: <strong>{{ student.class_name or exam.class_name or '—' }}</strong>
+                {% if student.section %} - <strong>{{ student.section }}</strong>{% endif %}
+                | Roll No: <strong>{{ student.roll_no or '—' }}</strong>
             </div>
-            
+
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; color: #334155;">
-                <div><span style="color: #64748b;">Father Name:</span> <strong>{{ student.father_name }}</strong></div>
-                <div><span style="color: #64748b;">DOB:</span> <strong>{{ student.dob }}</strong></div>
-                <div><span style="color: #64748b;">Gender:</span> <strong>{{ student.gender }}</strong></div>
-                <div><span style="color: #64748b;">Exam Date:</span> <strong>{{ exam.exam_date }}</strong></div>
+                <div><span style="color: #64748b;">Father Name:</span> <strong>{{ student.father_name or student.parent_name or '—' }}</strong></div>
+                <div><span style="color: #64748b;">DOB:</span> <strong>{{ student.dob or '—' }}</strong></div>
+                <div><span style="color: #64748b;">Gender:</span> <strong>{{ student.gender or '—' }}</strong></div>
+                <div><span style="color: #64748b;">Room / Seat:</span> <strong>{{ student.room_no or exam.center or '—' }}{% if student.seat_no %} / Seat {{ student.seat_no }}{% endif %}</strong></div>
+                <div><span style="color: #64748b;">Exam Date:</span> <strong>{{ exam.exam_date or '—' }}</strong></div>
+                <div><span style="color: #64748b;">Result Date:</span> <strong>{{ exam.result_date or '—' }}</strong></div>
             </div>
         </div>
+    </div>
+
+    <!-- Exam Schedule -->
+    <div style="padding: 14px 20px; border-bottom: 1px solid #e2e8f0;">
+        <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #3730a3; margin-bottom: 8px;">Exam Schedule</div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px; color: #1e293b;">
+            <thead>
+                <tr style="background: #f1f5f9; text-align: left;">
+                    <th style="padding: 6px 8px; border: 1px solid #e2e8f0;">Date</th>
+                    <th style="padding: 6px 8px; border: 1px solid #e2e8f0;">Subject</th>
+                    <th style="padding: 6px 8px; border: 1px solid #e2e8f0;">Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if sched_list and sched_list|length > 0 %}
+                    {% for item in sched_list %}
+                        {% if item is mapping %}
+                            <tr>
+                                <td style="padding: 6px 8px; border: 1px solid #e2e8f0;">{{ item.exam_date or item.date or exam.exam_date or '—' }}</td>
+                                <td style="padding: 6px 8px; border: 1px solid #e2e8f0;">{{ item.subject_name or item.subject or item.name or '—' }}</td>
+                                <td style="padding: 6px 8px; border: 1px solid #e2e8f0;">{{ item.start_time or item.time or '—' }}{% if item.end_time %} - {{ item.end_time }}{% endif %}</td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td style="padding: 6px 8px; border: 1px solid #e2e8f0;">{{ exam.exam_date or '—' }}</td>
+                                <td style="padding: 6px 8px; border: 1px solid #e2e8f0;">{{ item }}</td>
+                                <td style="padding: 6px 8px; border: 1px solid #e2e8f0;">{{ exam.start_time or '—' }}{% if exam.end_time %} - {{ exam.end_time }}{% endif %}</td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td style="padding: 6px 8px; border: 1px solid #e2e8f0;">{{ exam.exam_date or '—' }}</td>
+                        <td style="padding: 6px 8px; border: 1px solid #e2e8f0;">{{ exam.subject or 'All Scheduled Subjects' }}</td>
+                        <td style="padding: 6px 8px; border: 1px solid #e2e8f0;">{{ exam.start_time or '—' }}{% if exam.end_time %} - {{ exam.end_time }}{% endif %}</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Official Exam Alert & Instructions -->
+    <div style="padding: 12px 20px; background: #fffbeb; border-bottom: 1px solid #fde68a; font-size: 11px; color: #78350f; line-height: 1.5;">
+        <div style="font-weight: 700; text-transform: uppercase; margin-bottom: 4px; color: #92400e;">Official Examination Alert & Instructions</div>
+        <ul style="margin: 0; padding-left: 16px;">
+            <li><strong>Reporting Time:</strong> Arrive at the exam center at least 30 minutes before the scheduled start time.</li>
+            <li><strong>Mandatory Carry:</strong> Bring this Hall Ticket and a valid School ID Card with required stationery.</li>
+            <li><strong>Prohibited Items:</strong> Mobile phones, smartwatches, calculators, notes, or unfair means are strictly forbidden.</li>
+            <li><strong>Check Details:</strong> Verify student name, roll number, subject dates, and timings immediately; report errors to the exam cell beforehand.</li>
+        </ul>
     </div>
 
     <!-- Footer Signatures -->
@@ -79,13 +136,13 @@
 </div>
 {% endfor %}
 
-<!-- Print CSS -->
 <style>
     @media print {
         body { background: #fff; margin: 0; padding: 0; }
         .no-print { display: none !important; }
         .hall-card { box-shadow: none !important; border: 1px solid #000 !important; margin-bottom: 0 !important; }
-        .print-break { page-break-after: always; } /* Har ticket ek naye page par */
+        .print-break { page-break-after: always; }
+        .hall-card:last-child { page-break-after: auto; }
     }
 </style>
 {% endblock %}
