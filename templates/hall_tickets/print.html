@@ -7,7 +7,8 @@
     {% set e = exam if exam is defined and exam else {} %}
     {% set st = seating if seating is defined and seating else {} %}
     {% set cfg = settings if settings is defined and settings else {} %}
-    {% set sched = schedule if schedule is defined and schedule else [] %}
+    {% set raw_sched = schedule if schedule is defined and schedule else (e.get('subjects') if e.get('subjects') is iterable and e.get('subjects') is not string and e.get('subjects') is not mapping else []) %}
+    {% set sched = raw_sched if raw_sched is iterable and raw_sched is not string and raw_sched is not mapping else [] %}
     <title>Hall Ticket — {{ e.get('name') or 'Examination' }}</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -171,7 +172,7 @@
 
         /* Schedule Section */
         .schedule-wrap {
-            padding: 0 18px 14px;
+            padding: 0 18px 12px;
         }
         .schedule-title {
             font-size: 11.5px;
@@ -198,9 +199,9 @@
             font-weight: 600;
         }
 
-        /* Result & Signatures */
+        /* Result & Alert Box */
         .extra-strip {
-            padding: 0 18px 12px;
+            padding: 0 18px 10px;
             display: flex;
             justify-content: space-between;
             flex-wrap: wrap;
@@ -208,6 +209,35 @@
             font-size: 11.5px;
             color: #1e293b;
         }
+        .alert-wrap {
+            padding: 0 18px 12px;
+        }
+        .alert-box {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-left: 4px solid #f59e0b;
+            border-radius: 8px;
+            padding: 9px 12px;
+            font-size: 11px;
+            color: #78350f;
+            line-height: 1.45;
+        }
+        .alert-heading {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #92400e;
+            margin-bottom: 4px;
+            letter-spacing: 0.4px;
+        }
+        .alert-list {
+            margin: 0;
+            padding-left: 16px;
+        }
+        .alert-list li {
+            margin-bottom: 2px;
+        }
+
         .sig-row {
             padding: 10px 18px 14px;
             display: flex;
@@ -270,10 +300,12 @@
     </style>
 </head>
 <body>
-    {% set school_title = cfg.get('school_name') or 'MY SCHOOL' %}
+    {% set school_title = cfg.get('school_name') or cfg.get('name') or 'MY SCHOOL' %}
     {% set s_name = s.get('name') or 'Student Name' %}
     {% set roll_val = s.get('roll_no') or s.get('roll') or '—' %}
     {% set father_val = s.get('father_name') or s.get('parent_name') or '—' %}
+    {% set room_val = st.get('room_no') or s.get('room_no') or e.get('room_no') or '—' %}
+    {% set seat_val = st.get('seat_no') or s.get('seat_no') or e.get('seat_no') or '—' %}
     {% set photo_src = s.get('photo_url') or ('https://ui-avatars.com/api/?name=' ~ (s_name | urlencode) ~ '&background=3730a3&color=fff&size=150') %}
 
     <div class="top-bar">
@@ -293,7 +325,7 @@
         <div class="card-header">
             <div>
                 <div class="school-name">{{ school_title }}</div>
-                <div class="exam-sub">{{ e.get('name') or 'Examination' }}</div>
+                <div class="exam-sub">{{ e.get('name') or 'Examination' }}{% if e.get('center') %} • Center: {{ e.get('center') }}{% endif %}</div>
             </div>
             <span class="card-tag">Hall Ticket</span>
         </div>
@@ -311,7 +343,7 @@
                 <div class="student-heading">{{ s_name }}</div>
                 <div class="student-sub">
                     Class: <strong>{{ e.get('class_name') or s.get('class_name') or '—' }}</strong>
-                    {% if s.get('section') %}-{{ s.get('section') }}{% endif %}
+                    {% if s.get('section') %}-<strong>{{ s.get('section') }}</strong>{% endif %}
                     • Roll: <strong>{{ roll_val }}</strong>
                 </div>
                 <div class="meta-grid">
@@ -319,8 +351,8 @@
                     <div><span>Mother:</span> <strong>{{ s.get('mother_name') or '—' }}</strong></div>
                     <div><span>DOB:</span> <strong>{{ s.get('dob') or '—' }}</strong></div>
                     <div><span>Gender:</span> <strong>{{ s.get('gender') or '—' }}</strong></div>
-                    <div><span>Room:</span> <strong>{{ st.get('room_no') or e.get('room_no') or '—' }}</strong></div>
-                    <div><span>Seat:</span> <strong>{{ st.get('seat_no') or e.get('seat_no') or '—' }}</strong></div>
+                    <div><span>Room:</span> <strong>{{ room_val }}</strong></div>
+                    <div><span>Seat:</span> <strong>{{ seat_val }}</strong></div>
                 </div>
             </div>
 
@@ -348,12 +380,21 @@
                 <tbody>
                     {% if sched and sched|length > 0 %}
                         {% for row in sched %}
-                        <tr>
-                            <td>{{ row.get('exam_date') or '—' }}</td>
-                            <td>{{ row.get('day_name') or '—' }}</td>
-                            <td><strong>{{ row.get('subject_name') or row.get('subject') or '—' }}</strong></td>
-                            <td>{{ row.get('start_time') or '' }}{% if row.get('end_time') %} - {{ row.get('end_time') }}{% endif %}{% if not row.get('start_time') and not row.get('end_time') %}—{% endif %}</td>
-                        </tr>
+                            {% if row is mapping %}
+                                <tr>
+                                    <td>{{ row.get('exam_date') or row.get('date') or e.get('exam_date') or '—' }}</td>
+                                    <td>{{ row.get('day_name') or row.get('day') or '—' }}</td>
+                                    <td><strong>{{ row.get('subject_name') or row.get('subject') or row.get('name') or '—' }}</strong></td>
+                                    <td>{{ row.get('start_time') or row.get('time') or '' }}{% if row.get('end_time') %} - {{ row.get('end_time') }}{% endif %}{% if not (row.get('start_time') or row.get('time') or row.get('end_time')) %}—{% endif %}</td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td>{{ e.get('exam_date') or '—' }}</td>
+                                    <td>{{ e.get('day_name') or '—' }}</td>
+                                    <td><strong>{{ row }}</strong></td>
+                                    <td>{{ e.get('start_time') or '—' }}{% if e.get('end_time') %} - {{ e.get('end_time') }}{% endif %}</td>
+                                </tr>
+                            {% endif %}
                         {% endfor %}
                     {% else %}
                         <tr>
@@ -370,6 +411,18 @@
         <div class="extra-strip">
             <div><span>Result Date:</span> <strong>{{ e.get('result_date') or 'To Be Announced' }}</strong></div>
             <div><span>Reporting Time:</span> <strong>{{ e.get('reporting_time') or '—' }}</strong></div>
+        </div>
+
+        <div class="alert-wrap">
+            <div class="alert-box">
+                <div class="alert-heading">Official Examination Alert & Instructions</div>
+                <ul class="alert-list">
+                    <li><strong>Reporting Time:</strong> Reach the exam center at least 30 minutes before the scheduled time.</li>
+                    <li><strong>Mandatory Carry:</strong> Bring this Hall Ticket and a valid School ID Card with required stationery.</li>
+                    <li><strong>Strictly Prohibited:</strong> Mobile phones, smartwatches, calculators, notes, or unfair means are not allowed inside the hall.</li>
+                    <li><strong>Detail Verification:</strong> Verify name, roll number, subject dates, and timings immediately; report any error to the exam office beforehand.</li>
+                </ul>
+            </div>
         </div>
 
         <div class="sig-row">
@@ -428,10 +481,15 @@
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF("p", "mm", "a4");
                 const pageW = pdf.internal.pageSize.getWidth();
-                const margin = 16;
+                const pageH = pdf.internal.pageSize.getHeight();
+                const margin = 12;
                 const imgW = pageW - margin * 2;
-                const imgH = (canvas.height * imgW) / canvas.width;
-                pdf.addImage(imgData, "PNG", margin, 20, imgW, imgH);
+                let imgH = (canvas.height * imgW) / canvas.width;
+                const maxH = pageH - margin * 2;
+                if (imgH > maxH) {
+                    imgH = maxH;
+                }
+                pdf.addImage(imgData, "PNG", margin, margin, imgW, imgH);
                 pdf.save(`hall-ticket-${rollNo || "student"}.pdf`);
             } catch (e) {
                 alert("PDF download nahi ho paya, Print Ticket option use karein.");
