@@ -2,19 +2,174 @@
 {% block title %}AI Gate Scanner{% endblock %}
 
 {% block content %}
-<div class="bg-black h-screen flex flex-col items-center justify-center relative">
-    <h2 class="text-[#00ffcc] text-2xl absolute top-10">LIVE BIOMETRIC SCANNER</h2>
-    
-    <!-- Camera View -->
-    <div class="relative w-full max-w-2xl border-4 border-[#00ffcc] rounded-xl overflow-hidden">
-        <video id="webcam" autoplay playsinline class="w-full"></video>
-        <canvas id="output_canvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+<div class="bg-slate-950 min-h-screen flex flex-col items-center justify-center p-4 relative text-white">
+    <h2 class="text-[#00ffcc] text-xl md:text-2xl font-bold tracking-wider mb-4 text-center">
+        LIVE GATE &amp; HALL TICKET SCANNER
+    </h2>
+
+    <div id="scannerStatus" class="mb-3 px-4 py-1.5 rounded-full text-xs md:text-sm bg-slate-800 text-[#00ffcc] border border-[#00ffcc]/40">
+        Starting camera...
     </div>
-    
-    <a href="{{ url_for('hall_tickets.index') }}" class="mt-8 text-white bg-red-600 px-6 py-2 rounded">Close Scanner</a>
+
+    <!-- Camera View -->
+    <div class="relative w-full max-w-2xl border-4 border-[#00ffcc] rounded-xl overflow-hidden bg-black shadow-lg">
+        <video id="webcam" autoplay playsinline muted class="w-full block"></video>
+        <canvas id="output_canvas" class="hidden"></canvas>
+        <canvas id="overlay_canvas" class="absolute top-0 left-0 w-full h-full pointer-events-none"></canvas>
+    </div>
+
+    <!-- Scanned Result Box -->
+    <div id="scanResultBox" class="hidden w-full max-w-2xl mt-4 p-4 rounded-xl bg-slate-900 border border-slate-700 text-sm">
+        <div class="flex items-center justify-between gap-2 mb-1">
+            <span class="font-bold text-[#00ffcc]" id="scanResultTitle">Ticket Detected</span>
+            <button type="button" onclick="resumeScanning()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded border border-slate-600">
+                Scan Again
+            </button>
+        </div>
+        <div id="scanResultDetails" class="text-slate-200 break-all"></div>
+    </div>
+
+    <a href="{{ url_for('hall_ticket.index') }}"
+       onclick="stopScannerStream()"
+       class="mt-6 text-white bg-red-600 hover:bg-red-700 px-6 py-2 rounded-lg font-semibold text-sm">
+        Close Scanner
+    </a>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-    <!-- MediaPipe ka JavaScript yahan aayega -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<script>
+    const videoEl = document.getElementById("webcam");
+    const captureCanvas = document.getElementById("output_canvas");
+    const overlayCanvas = document.getElementById("overlay_canvas");
+    const statusEl = document.getElementById("scannerStatus");
+    const resultBox = document.getElementById("scanResultBox");
+    const resultTitle = document.getElementById("scanResultTitle");
+    const resultDetails = document.getElementById("scanResultDetails");
+
+    const SECRET_KEY = "SCHOOL_HALL_TICKET_KEY";
+    let activeStream = null;
+    let scanningPaused = false;
+    let animFrameId = null;
+
+    function stopScannerStream() {
+        if (animFrameId) {
+            cancelAnimationFrame(animFrameId);
+            animFrameId = null;
+        }
+        if (activeStream) {
+            activeStream.getTracks().forEach(track => track.stop());
+            activeStream = null;
+        }
+    }
+
+    function resumeScanning() {
+        scanningPaused = false;
+        resultBox.classList.add("hidden");
+        statusEl.textContent = "Scanning hall ticket QR...";
+        animFrameId = requestAnimationFrame(scanFrame);
+    }
+
+    function decodeTicketPayload(rawText) {
+        try {
+            const bytes = CryptoJS.AES.decrypt(rawText, SECRET_KEY);
+            const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+            if (decrypted && decrypted.includes("|")) {
+                const parts = decrypted.split("|");
+                return {
+                    valid: true,
+                    examId: parts[0] || "—",
+                    studentId: parts[1] || "—",
+                    rollNo: parts[2] || "—"
+                };
+            }
+        } catch (err) {
+            // Fall through to plain text fallback
+        }
+        return { valid: false, raw: rawText };
+    }
+
+    function drawBox(location) {
+        const ctx = overlayCanvas.getContext("2d");
+        overlayCanvas.width = videoEl.videoWidth;
+        overlayCanvas.height = videoEl.videoHeight;
+        ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+        if (!location) return;
+        ctx.strokeStyle = "#00ffcc";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(location.topLeftCorner.x, location.topLeftCorner.y);
+        ctx.lineTo(location.topRightCorner.x, location.topRightCorner.y);
+        ctx.lineTo(location.bottomRightCorner.x, location.bottomRightCorner.y);
+        ctx.lineTo(location.bottomLeftCorner.x, location.bottomLeftCorner.y);
+        ctx.closePath();
+        ctx.stroke();
+    }
+
+    function scanFrame() {
+        if (scanningPaused) return;
+
+        if (videoEl.readyState === videoEl.HAVE_ENOUGH_DATA) {
+            captureCanvas.width = videoEl.videoWidth;
+            captureCanvas.height = videoEl.videoHeight;
+            const ctx = captureCanvas.getContext("2d");
+            ctx.drawImage(videoEl, 0, 0, captureCanvas.width, captureCanvas.height);
+
+            const imageData = ctx.getImageData(0, 0, captureCanvas.width, captureCanvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: "dontInvert"
+            });
+
+            if (code && code.data) {
+                drawBox(code.location);
+                scanningPaused = true;
+
+                const parsed = decodeTicketPayload(code.data);
+                resultBox.classList.remove("hidden");
+
+                if (parsed.valid) {
+                    statusEl.textContent = "Verified Hall Ticket";
+                    resultTitle.textContent = "Verified Hall Ticket";
+                    resultDetails.innerHTML =
+                        `Exam ID: <strong>${parsed.examId}</strong> • Student ID: <strong>${parsed.studentId}</strong> • Roll No: <strong>${parsed.rollNo}</strong>`;
+                } else {
+                    statusEl.textContent = "Code Detected";
+                    resultTitle.textContent = "Scanned Code";
+                    resultDetails.textContent = parsed.raw;
+                }
+                return;
+            } else {
+                drawBox(null);
+            }
+        }
+
+        animFrameId = requestAnimationFrame(scanFrame);
+    }
+
+    async function initCamera() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            statusEl.textContent = "Camera API not supported on this browser/connection.";
+            return;
+        }
+
+        try {
+            activeStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: "environment" } },
+                audio: false
+            });
+            videoEl.srcObject = activeStream;
+            await videoEl.play();
+            statusEl.textContent = "Scanning hall ticket QR...";
+            animFrameId = requestAnimationFrame(scanFrame);
+        } catch (err) {
+            statusEl.textContent = "Camera access denied or unavailable.";
+        }
+    }
+
+    window.addEventListener("DOMContentLoaded", initCamera);
+    window.addEventListener("beforeunload", stopScannerStream);
+</script>
 {% endblock %}
