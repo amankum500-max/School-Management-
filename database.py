@@ -5340,3 +5340,77 @@ def get_class_subjects(class_name=None, section=None, class_id=None, **kwargs):
         return []
     finally:
         cur.close(); conn.close()
+def add_class_subject(class_name=None, subject_name=None, section=None, class_id=None, **kwargs):
+    target_cls = class_name or kwargs.get("cls")
+    if not target_cls and class_id is not None:
+        cls_obj = get_class_by_id(class_id)
+        if cls_obj:
+            target_cls = cls_obj.get("class_name") or cls_obj.get("name")
+
+    cls = (str(target_cls).strip() if target_cls else "")
+    subj = (
+        str(
+            subject_name
+            or kwargs.get("subject")
+            or kwargs.get("name")
+            or ""
+        ).strip()
+    )
+    sec = (str(section).strip() if section else "")
+
+    if not subj:
+        return None
+
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'subjects';
+        """)
+        cols = {row[0] for row in cur.fetchall()}
+        if not cols:
+            return None
+
+        insert_cols = []
+        insert_vals = []
+
+        if "subject_name" in cols:
+            insert_cols.append("subject_name")
+            insert_vals.append(subj)
+        elif "name" in cols:
+            insert_cols.append("name")
+            insert_vals.append(subj)
+
+        if cls:
+            if "class_name" in cols:
+                insert_cols.append("class_name")
+                insert_vals.append(cls)
+            elif "class_id" in cols and cls.isdigit():
+                insert_cols.append("class_id")
+                insert_vals.append(int(cls))
+
+        if sec and "section" in cols:
+            insert_cols.append("section")
+            insert_vals.append(sec)
+
+        if not insert_cols:
+            return None
+
+        placeholders = ", ".join(["%s"] * len(insert_cols))
+        col_sql = ", ".join(insert_cols)
+        returning_sql = " RETURNING id;" if "id" in cols else ";"
+
+        cur.execute(
+            f"INSERT INTO subjects ({col_sql}) VALUES ({placeholders}){returning_sql}",
+            tuple(insert_vals)
+        )
+        row = cur.fetchone() if "id" in cols else None
+        conn.commit()
+        return row[0] if row else True
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+      
