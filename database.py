@@ -5325,7 +5325,13 @@ def get_classes_stats():
         "active_students": active_students,
         "inactive_students": inactive_students,
     }
-
+def add_section_to_class(class_name, section, roll_no=None, student_name=None):
+    cls = (str(class_name) if class_name is not None else "").strip()
+    sec = (str(section) if section is not None else "").strip()
+    if not cls or not sec:
+        return None
+    return create_new_class(cls, section=sec, roll_no=roll_no, student_name=student_name)
+  
       
   
       
