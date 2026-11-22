@@ -5332,7 +5332,69 @@ def add_section_to_class(class_name, section, roll_no=None, student_name=None):
         return None
     return create_new_class(cls, section=sec, roll_no=roll_no, student_name=student_name)
   
-      
+ def get_class_subjects(class_name=None, section=None, class_id=None, **kwargs):
+    target_cls = class_name or kwargs.get("cls")
+    if not target_cls and class_id is not None:
+        cls_obj = get_class_by_id(class_id)
+        if cls_obj:
+            target_cls = cls_obj.get("class_name") or cls_obj.get("name")
+
+    cls = (str(target_cls).strip() if target_cls else "")
+    sec = (str(section).strip() if section else "")
+
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'subjects';
+        """)
+        cols = {row[0] for row in cur.fetchall()}
+        if not cols:
+            return []
+
+        q = "SELECT * FROM subjects"
+        params = []
+        conditions = []
+
+        if cls:
+            if "class_name" in cols:
+                conditions.append("class_name=%s")
+                params.append(cls)
+            elif "class_id" in cols and cls.isdigit():
+                conditions.append("class_id=%s")
+                params.append(int(cls))
+
+        if sec and "section" in cols:
+            conditions.append("section=%s")
+            params.append(sec)
+
+        if conditions:
+            q += " WHERE " + " AND ".join(conditions)
+
+        if "id" in cols:
+            q += " ORDER BY id ASC"
+
+        q += ";"
+        cur.execute(q, tuple(params))
+        col_names = [desc[0] for desc in cur.description]
+        rows = cur.fetchall()
+
+        results = []
+        for r in rows:
+            item = dict(zip(col_names, r))
+            if "name" not in item and "subject_name" in item:
+                item["name"] = item["subject_name"]
+            if "subject_name" not in item and "name" in item:
+                item["subject_name"] = item["name"]
+            results.append(item)
+        return results
+    except Exception:
+        conn.rollback()
+        return []
+    finally:
+        cur.close(); conn.close()
+                                     
   
       
       
