@@ -36,7 +36,7 @@
     <!-- Buttons to open new pages -->
     {% set first_exam_id = exams[0].id if exams and exams[0].id is defined else none %}
     <div class="mt-8 mb-4 flex flex-wrap gap-4">
-        <a href="{{ url_for('hall_ticket.scanner') if 'hall_ticket.scanner' in current_app.view_functions else '#' }}" class="holo-btn">
+        <a href="{{ url_for('hall_ticket.scanner') }}" class="holo-btn">
             Open AI Scanner
         </a>
         {% if first_exam_id %}
