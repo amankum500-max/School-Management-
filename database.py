@@ -5124,4 +5124,46 @@ def get_next_roll_number(class_name=None, section=None):
         return "1"
     finally:
         cur.close(); conn.close()
+def get_advanced_classes_list():
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT
+                COALESCE(class_name, 'Unassigned') AS class_name,
+                COUNT(*) FILTER (WHERE status='active') AS active_count,
+                COUNT(*) FILTER (WHERE status='inactive') AS inactive_count,
+                COUNT(*) AS total_count,
+                ARRAY_AGG(DISTINCT section) FILTER (WHERE section IS NOT NULL AND section != '') AS sections
+            FROM students
+            GROUP BY COALESCE(class_name, 'Unassigned')
+            ORDER BY class_name NULLS LAST;
+        """)
+        rows = cur.fetchall()
+        result = []
+        for idx, r in enumerate(rows):
+            cls = r[0]
+            seq_idx = CLASS_SEQUENCE.index(cls) if cls in CLASS_SEQUENCE else 999
+            next_cls = get_next_class(cls) if cls in CLASS_SEQUENCE else None
+            result.append({
+                "id": idx + 1,
+                "class_name": cls,
+                "name": cls,
+                "active": int(r[1] or 0),
+                "active_count": int(r[1] or 0),
+                "inactive": int(r[2] or 0),
+                "inactive_count": int(r[2] or 0),
+                "total": int(r[3] or 0),
+                "total_count": int(r[3] or 0),
+                "sections": sorted(r[4]) if r[4] else [],
+                "sequence": seq_idx,
+                "next_class": next_cls,
+            })
+        result.sort(key=lambda x: (x["sequence"], x["class_name"]))
+        return result
+    except Exception:
+        conn.rollback()
+        return []
+    finally:
+        cur.close(); conn.close()
+      
       
