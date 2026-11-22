@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="bg-[#050505] text-white min-h-screen -m-6 p-4 md:p-6">
-    <h1 class="text-2xl md:text-3xl font-bold text-white tracking-wide">Cyber Control Center</h1>
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h1 class="text-2xl md:text-3xl font-bold text-white tracking-wide">Cyber Control Center</h1>
+    </div>
 
     <!-- Top Stats & Charts -->
     {% include 'hall_tickets/_analytics.html' %}
@@ -9,20 +11,22 @@
     <!-- Exams / Student Hall Tickets Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
         {% for e in exams %}
+            {% set ex_sched = e.schedule if e.schedule is defined and e.schedule else (e.subjects if e.subjects is defined and e.subjects else []) %}
             {% if e.tickets is defined and e.tickets %}
                 {% for tk in e.tickets %}
-                    {% with exam=e, ticket=tk, student=(tk.student if tk.student is defined and tk.student else {}) %}
+                    {% set st_obj = tk.student if tk.student is defined and tk.student else tk %}
+                    {% with exam=e, ticket=tk, student=st_obj, schedule=ex_sched %}
                         {% include 'hall_tickets/_exam_card.html' %}
                     {% endwith %}
                 {% endfor %}
-            {% elif students is defined and students %}
-                {% for st in students %}
-                    {% with exam=e, student=st %}
+            {% elif e.students is defined and e.students %}
+                {% for st in e.students %}
+                    {% with exam=e, student=st, schedule=ex_sched %}
                         {% include 'hall_tickets/_exam_card.html' %}
                     {% endwith %}
                 {% endfor %}
             {% else %}
-                {% with exam=e %}
+                {% with exam=e, schedule=ex_sched %}
                     {% include 'hall_tickets/_exam_card.html' %}
                 {% endwith %}
             {% endif %}
@@ -30,9 +34,20 @@
     </div>
 
     <!-- Buttons to open new pages -->
+    {% set first_exam_id = exams[0].id if exams and exams[0].id is defined else none %}
     <div class="mt-8 mb-4 flex flex-wrap gap-4">
-        <a href="#" class="holo-btn">Open AI Scanner</a>
-        <a href="#" class="holo-btn">Bulk Generate PDF</a>
+        <a href="{{ url_for('hall_ticket.scanner') if 'hall_ticket.scanner' in current_app.view_functions else '#' }}" class="holo-btn">
+            Open AI Scanner
+        </a>
+        {% if first_exam_id %}
+            <a href="{{ url_for('hall_ticket.bulk_print', exam_id=first_exam_id) }}" class="holo-btn">
+                Bulk Generate PDF
+            </a>
+        {% else %}
+            <a href="{{ url_for('hall_ticket.index') }}" class="holo-btn">
+                Bulk Generate PDF
+            </a>
+        {% endif %}
     </div>
 
     <!-- Modals -->
