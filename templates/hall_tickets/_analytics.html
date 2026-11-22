@@ -1,140 +1,145 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analytics Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f6f9;
-            margin: 0;
-            padding: 16px;
-        }
-        .dashboard-container {
-            max-width: 900px;
-            margin: 0 auto;
-        }
-        .stats-grid {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-            margin-bottom: 24px;
-        }
-        .stat-card {
-            background: white;
-            padding: 18px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            flex: 1 1 200px;
-            min-width: 0;
-            border-left: 4px solid #4e73df;
-        }
-        .stat-title {
-            font-size: 13px;
-            color: #6c757d;
-            text-transform: uppercase;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2e59d9;
-        }
-        .chart-container {
-            background: white;
-            padding: 18px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-        .chart-title {
-            margin-top: 0;
-            color: #333;
-            font-size: 18px;
-            margin-bottom: 16px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-        }
-        .chart-wrapper {
-            position: relative;
-            width: 100%;
-            height: 280px;
-        }
-    </style>
-</head>
-<body>
+<style>
+  .ht-analytics-wrap {
+    max-width: 900px;
+    margin: 0 auto 24px auto;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  .ht-stats-grid {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .ht-stat-card {
+    background: #ffffff;
+    padding: 16px 18px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    flex: 1 1 180px;
+    min-width: 0;
+    border-left: 4px solid #4e73df;
+  }
+  .ht-stat-card--generated {
+    border-left-color: #36b9cc;
+  }
+  .ht-stat-card--printed {
+    border-left-color: #1cc88a;
+  }
+  .ht-stat-title {
+    font-size: 12px;
+    color: #6c757d;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .ht-stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #1e293b;
+  }
+  .ht-chart-card {
+    background: #ffffff;
+    padding: 18px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  }
+  .ht-chart-title {
+    margin: 0 0 14px 0;
+    color: #1e293b;
+    font-size: 16px;
+    font-weight: 600;
+    border-bottom: 1px solid #eef2f7;
+    padding-bottom: 10px;
+  }
+  .ht-chart-box {
+    position: relative;
+    width: 100%;
+    height: 260px;
+  }
+</style>
 
-    <div class="dashboard-container">
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-title">Total Exams</div>
-                <div class="stat-value">{{ stats.total_exams if stats and stats.total_exams is not none else 0 }}</div>
-            </div>
+{% set st_data = stats if stats is defined and stats else {} %}
+{% set total_exams_val = st_data.total_exams if st_data.total_exams is defined and st_data.total_exams is not none else (exams|length if exams is defined else 0) %}
+{% set gen_tickets_val = st_data.total_tickets if st_data.total_tickets is defined and st_data.total_tickets is not none else (st_data.tickets_generated if st_data.tickets_generated is defined and st_data.tickets_generated is not none else 0) %}
+{% set prt_tickets_val = st_data.printed_tickets if st_data.printed_tickets is defined and st_data.printed_tickets is not none else (st_data.tickets_printed if st_data.tickets_printed is defined and st_data.tickets_printed is not none else 0) %}
 
-            <div class="stat-card">
-                <div class="stat-title">Tickets Generated</div>
-                <div class="stat-value">{{ stats.total_tickets if stats and stats.total_tickets is not none else 0 }}</div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-title">Tickets Printed</div>
-                <div class="stat-value">{{ stats.printed_tickets if stats and stats.printed_tickets is not none else 0 }}</div>
-            </div>
-        </div>
-
-        <div class="chart-container">
-            <h2 class="chart-title">Ticket Stats Overview</h2>
-            <div class="chart-wrapper">
-                <canvas id="ticketStatsChart"></canvas>
-            </div>
-        </div>
+<div class="ht-analytics-wrap">
+  <div class="ht-stats-grid">
+    <div class="ht-stat-card">
+      <div class="ht-stat-title">Total Exams</div>
+      <div class="ht-stat-value">{{ total_exams_val }}</div>
     </div>
 
-    <script>
-        const generatedTickets = parseInt("{{ stats.total_tickets if stats and stats.total_tickets is not none else 0 }}", 10) || 0;
-        const printedTickets = parseInt("{{ stats.printed_tickets if stats and stats.printed_tickets is not none else 0 }}", 10) || 0;
+    <div class="ht-stat-card ht-stat-card--generated">
+      <div class="ht-stat-title">Tickets Generated</div>
+      <div class="ht-stat-value">{{ gen_tickets_val }}</div>
+    </div>
 
-        const ctx = document.getElementById('ticketStatsChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['Tickets Generated', 'Tickets Printed'],
-                datasets: [{
-                    label: 'Number of Tickets',
-                    data: [generatedTickets, printedTickets],
-                    backgroundColor: [
-                        'rgba(78, 115, 223, 0.7)',
-                        'rgba(28, 200, 138, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(78, 115, 223, 1)',
-                        'rgba(28, 200, 138, 1)'
-                    ],
-                    borderWidth: 1,
-                    borderRadius: 5
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 1
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
+    <div class="ht-stat-card ht-stat-card--printed">
+      <div class="ht-stat-title">Tickets Printed</div>
+      <div class="ht-stat-value">{{ prt_tickets_val }}</div>
+    </div>
+  </div>
+
+  <div class="ht-chart-card">
+    <h3 class="ht-chart-title">Ticket Stats Overview</h3>
+    <div class="ht-chart-box">
+      <canvas id="ticketStatsChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const canvas = document.getElementById('ticketStatsChart');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    const generatedTickets = parseInt("{{ gen_tickets_val }}", 10) || 0;
+    const printedTickets = parseInt("{{ prt_tickets_val }}", 10) || 0;
+
+    if (window._ticketStatsChartInstance) {
+      window._ticketStatsChartInstance.destroy();
+    }
+
+    window._ticketStatsChartInstance = new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: ['Tickets Generated', 'Tickets Printed'],
+        datasets: [{
+          label: 'Number of Tickets',
+          data: [generatedTickets, printedTickets],
+          backgroundColor: [
+            'rgba(54, 185, 204, 0.75)',
+            'rgba(28, 200, 138, 0.75)'
+          ],
+          borderColor: [
+            'rgba(54, 185, 204, 1)',
+            'rgba(28, 200, 138, 1)'
+          ],
+          borderWidth: 1,
+          borderRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 1,
+              precision: 0
             }
-        });
-    </script>
-</body>
-</html>
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+  })();
+</script>
