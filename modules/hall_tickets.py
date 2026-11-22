@@ -5,6 +5,7 @@ Place in modules/ or project root. Register in app.py: from modules.hall_tickets
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, abort
 from functools import wraps
 import database as db
+import json
 from datetime import datetime
 
 hall_ticket_bp = Blueprint('hall_ticket', __name__, url_prefix='/hall-ticket')
@@ -18,6 +19,22 @@ def login_required(f):
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return wrapper
+
+
+def _parse_subjects(raw_subjects):
+    if not raw_subjects:
+        return []
+    if isinstance(raw_subjects, str):
+        try:
+            parsed = json.loads(raw_subjects)
+            if isinstance(parsed, list):
+                return parsed
+        except Exception:
+            pass
+        return [s.strip() for s in raw_subjects.split(",") if s.strip()]
+    if isinstance(raw_subjects, (list, tuple)):
+        return list(raw_subjects)
+    return []
 
 
 def _get_school_settings():
@@ -70,7 +87,6 @@ def _normalize_students(raw_students, default_class=""):
             photo = s.get("photo_url") or s.get("photo") or ""
             sig = s.get("signature_url") or ""
         elif isinstance(s, (list, tuple)):
-            # None value को "" में बदलने के लिए `and s[x]` जोड़ा गया है
             sid = s[0] if len(s) > 0 and s[0] else ""
             name = s[1] if len(s) > 1 and s[1] else ""
             roll = s[2] if len(s) > 2 and s[2] else ""
@@ -138,9 +154,9 @@ def index():
 
     exam_list = []
     for e in exams:
-        subjects_val = e[4] if len(e) > 4 and e[4] else []
-        first_subject = subjects_val[0] if isinstance(subjects_val, (list, tuple)) and len(subjects_val) > 0 else ""
-        
+        subjects_val = _parse_subjects(e[4] if len(e) > 4 and e[4] else [])
+        first_subject = subjects_val[0] if len(subjects_val) > 0 else ""
+
         exam_dict = {
             "id": e[0],
             "name": e[1],
@@ -149,7 +165,6 @@ def index():
             "subjects": subjects_val,
             "subject": first_subject if isinstance(first_subject, str) else (first_subject.get("name") if isinstance(first_subject, dict) else ""),
             "max_marks": e[5] if len(e) > 5 and e[5] else None,
-            # 👇 Result Date और Center जोड़ा गया
             "result_date": e[6] if len(e) > 6 and e[6] else "",
             "center": e[7] if len(e) > 7 and e[7] else "",
             "seated_count": 0,
@@ -216,7 +231,11 @@ def seating(exam_id):
                 flash("Room and seat are required", "warning")
         return redirect(url_for('hall_ticket.seating', exam_id=exam_id))
 
-    students = db.get_exam_students_for_tickets(exam_id)
+    raw_students = db.get_exam_students_for_tickets(exam_id)
+    students = _normalize_students(raw_students, default_class=exam[2] or "")
+    if not students:
+        students = _fallback_students_for_class(exam[2] or "")
+
     summary = db.get_exam_seating_summary(exam_id)
     total_set = sum(r.get("student_count", r.get("count", 0)) for r in summary)
 
@@ -225,9 +244,8 @@ def seating(exam_id):
         "name": exam[1],
         "class_name": exam[2],
         "exam_date": exam[3],
-        "subjects": exam[4] if len(exam) > 4 and exam[4] else [],
+        "subjects": _parse_subjects(exam[4] if len(exam) > 4 and exam[4] else []),
         "max_marks": exam[5] if len(exam) > 5 and exam[5] else None,
-        # 👇 Result Date और Center जोड़ा गया
         "result_date": exam[6] if len(exam) > 6 and exam[6] else "",
         "center": exam[7] if len(exam) > 7 and exam[7] else "",
     }
@@ -261,9 +279,8 @@ def view_ticket(exam_id, student_id):
         "name": exam[1],
         "class_name": req_class or exam[2],
         "exam_date": exam[3],
-        "subjects": exam[4] if len(exam) > 4 and exam[4] else [],
+        "subjects": _parse_subjects(exam[4] if len(exam) > 4 and exam[4] else []),
         "max_marks": exam[5] if len(exam) > 5 and exam[5] else None,
-        # 👇 Result Date और Center जोड़ा गया
         "result_date": exam[6] if len(exam) > 6 and exam[6] else "",
         "center": exam[7] if len(exam) > 7 and exam[7] else "",
     }
@@ -274,7 +291,6 @@ def view_ticket(exam_id, student_id):
         "roll_no": student_row[2],
         "class_name": req_class or (student_row[3] if len(student_row) > 3 and student_row[3] else ""),
         "section": req_section or (student_row[4] if len(student_row) > 4 and student_row[4] else ""),
-        # 👇 डेटाबेस के इंडेक्स के हिसाब से DOB और Gender जोड़ा गया
         "dob": student_row[5] if len(student_row) > 5 and student_row[5] else "",
         "gender": student_row[6] if len(student_row) > 6 and student_row[6] else "",
         "parent_name": student_row[7] if len(student_row) > 7 and student_row[7] else "",
@@ -322,13 +338,14 @@ def bulk_print(exam_id):
         "name": exam[1],
         "class_name": exam[2],
         "exam_date": exam[3],
-        "subjects": exam[4] if len(exam) > 4 and exam[4] else [],
+        "subjects": _parse_subjects(exam[4] if len(exam) > 4 and exam[4] else []),
         "max_marks": exam[5] if len(exam) > 5 and exam[5] else None,
-        # 👇 Result Date और Center जोड़ा गया
         "result_date": exam[6] if len(exam) > 6 and exam[6] else "",
         "center": exam[7] if len(exam) > 7 and exam[7] else "",
     }
     students = _normalize_students(db.get_exam_students_for_tickets(exam_id), default_class=exam[2] or "")
+    if not students:
+        students = _fallback_students_for_class(exam[2] or "")
     settings = _get_school_settings()
 
     return render_template(
@@ -341,7 +358,21 @@ def bulk_print(exam_id):
 
 
 # ─────────────────────────────────────────────────────────
-# 5. STATS / SUMMARY API
+# 5. GATE / QR SCANNER
+# ─────────────────────────────────────────────────────────
+@hall_ticket_bp.route('/scanner')
+@login_required
+def scanner():
+    school_cfg = _get_school_settings()
+    return render_template(
+        'hall_tickets/scanner.html',
+        settings=school_cfg,
+        school=school_cfg,
+    )
+
+
+# ─────────────────────────────────────────────────────────
+# 6. STATS / SUMMARY API
 # ─────────────────────────────────────────────────────────
 @hall_ticket_bp.route('/stats/<int:exam_id>')
 @login_required
