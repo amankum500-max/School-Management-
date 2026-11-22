@@ -624,7 +624,7 @@ def bulk_mark_attendance(class_name, section, date_str, status, admin_id):
     try:
         q = "INSERT INTO attendance (student_id, date, status, marked_by) SELECT id, %s, %s, %s FROM students WHERE status='active' AND class_name=%s"
         params = [date_str, status, admin_id, class_name]
-        if section: q += " AND section=%s"; params.append(section)
+        if section: q += " AND s.section=%s"; params.append(section)
         q += " ON CONFLICT (student_id, date) DO UPDATE SET status=EXCLUDED.status, marked_by=EXCLUDED.marked_by, marked_at=NOW();"
         cur.execute(q, tuple(params)); conn.commit()
     except Exception:
@@ -1613,14 +1613,12 @@ def get_teacher_timetable(staff_id):
     finally:
         cur.close(); conn.close()
 
-# --- NAYA FUNCTION: Absent Teachers Fetch Karne Ke Liye ---
 def get_absent_teachers(date_str):
-    """Us specific date par absent teachers ki ID list return karta hai"""
     conn = get_conn(); cur = conn.cursor()
     try:
         cur.execute("""
-            SELECT teacher_id 
-            FROM teacher_attendance 
+            SELECT teacher_id
+            FROM teacher_attendance
             WHERE date = %s AND LOWER(status) = 'absent'
         """, (date_str,))
         rows = cur.fetchall()
@@ -4622,18 +4620,7 @@ def reopen_thread(thread_id):
     finally:
         cur.close(); conn.close()
 
-def get_threads_for_parent(parent_id):
-    conn = get_conn(); cur = conn.cursor()
-    try:
-        cur.execute("SELECT t.id, t.student_id, t.subject, t.status, t.last_message_at, t.last_message_by, t.unread_by_parent, s.name AS student_name, (SELECT body FROM messages WHERE thread_id=t.id ORDER BY created_at DESC LIMIT 1) AS last_msg FROM message_threads t LEFT JOIN students s ON s.id = t.student_id WHERE t.parent_id=%s ORDER BY t.last_message_at DESC;", (parent_id,))
-        rows = cur.fetchall()
-        return [{"id": r[0], "student_id": r[1], "subject": r[2], "status": r[3],
-                 "last_message_at": r[4], "last_message_by": r[5],
-                 "unread": r[6] or 0, "student_name": r[7], "last_message": r[8]} for r in rows]
-    finally:
-        cur.close(); conn.close()
-
-def get_all_threads(status=None, search=None, limit=100):
+def get_threads_for_admin(status=None, search=None, limit=100):
     conn = get_conn(); cur = conn.cursor()
     try:
         q = """SELECT t.id, t.parent_id, t.student_id, t.subject, t.status,
@@ -4652,29 +4639,50 @@ def get_all_threads(status=None, search=None, limit=100):
             like = f"%{search}%"; params += [like, like, like, like]
         q += " ORDER BY t.last_message_at DESC LIMIT %s;"; params.append(limit)
         cur.execute(q, tuple(params)); rows = cur.fetchall()
-        return [{"id": r[0], "parent_id": r[1], "student_id": r[2], "subject": r[3],
-                 "status": r[4], "last_message_at": r[5], "last_message_by": r[6],
-                 "unread": r[7] or 0, "parent_name": r[8], "parent_phone": r[9],
-                 "student_name": r[10], "class_name": r[11], "last_message": r[12]} for r in rows]
+        return [{"id": r[0], "parent_id": r[1], "student_id": r[2],
+                 "subject": r[3], "status": r[4], "last_message_at": r[5],
+                 "last_message_by": r[6], "unread": r[7] or 0,
+                 "parent_name": r[8], "parent_phone": r[9],
+                 "student_name": r[10], "class_name": r[11],
+                 "last_message": r[12] or ""} for r in rows]
     finally:
         cur.close(); conn.close()
 
-def count_unread_threads_admin():
+def get_threads_for_parent(parent_id):
     conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("SELECT COUNT(*) FROM message_threads WHERE unread_by_admin > 0;")
-        return cur.fetchone()[0] or 0
+        cur.execute("""SELECT t.id, t.student_id, t.subject, t.status,
+                              t.last_message_at, t.last_message_by, t.unread_by_parent,
+                              s.name AS student_name,
+                              (SELECT body FROM messages WHERE thread_id=t.id ORDER BY created_at DESC LIMIT 1) AS last_msg
+                       FROM message_threads t
+                       LEFT JOIN students s ON s.id = t.student_id
+                       WHERE t.parent_id=%s
+                       ORDER BY t.last_message_at DESC;""", (parent_id,))
+        rows = cur.fetchall()
+        return [{"id": r[0], "student_id": r[1], "subject": r[2], "status": r[3],
+                 "last_message_at": r[4], "last_message_by": r[5],
+                 "unread": r[6] or 0, "student_name": r[7],
+                 "last_message": r[8] or ""} for r in rows]
+    finally:
+        cur.close(); conn.close()
+
+def count_unread_admin_messages():
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT COALESCE(SUM(unread_by_admin), 0) FROM message_threads WHERE status='open';")
+        return int(cur.fetchone()[0] or 0)
     except Exception:
         conn.rollback()
         return 0
     finally:
         cur.close(); conn.close()
 
-def count_unread_threads_parent(parent_id):
+def count_unread_parent_messages(parent_id):
     conn = get_conn(); cur = conn.cursor()
     try:
         cur.execute("SELECT COALESCE(SUM(unread_by_parent), 0) FROM message_threads WHERE parent_id=%s;", (parent_id,))
-        return cur.fetchone()[0] or 0
+        return int(cur.fetchone()[0] or 0)
     except Exception:
         conn.rollback()
         return 0
@@ -4682,313 +4690,150 @@ def count_unread_threads_parent(parent_id):
         cur.close(); conn.close()
 
 # ============================================================
-# SECTION 39 — EXAMS (consolidated)
+# SECTION 39 — EXAM SCHEDULER
 # ============================================================
 def get_exam_schedule(exam_id):
     conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("SELECT id, exam_id, subject, exam_date, start_time, end_time, room_no, max_marks, pass_marks FROM exam_schedule WHERE exam_id=%s ORDER BY exam_date, start_time;", (exam_id,))
+        cur.execute("SELECT id, exam_id, subject, exam_date, start_time, end_time, room_no, invigilator FROM exam_schedules WHERE exam_id=%s ORDER BY exam_date, start_time;", (exam_id,))
         rows = cur.fetchall()
-        return [{"id": r[0], "exam_id": r[1], "subject": r[2], "exam_date": r[3],
-                 "start_time": r[4], "end_time": r[5], "room_no": r[6],
-                 "max_marks": r[7], "pass_marks": r[8]} for r in rows]
+        return [{"id": r[0], "exam_id": r[1], "subject": r[2],
+                 "exam_date": r[3], "start_time": r[4], "end_time": r[5],
+                 "room_no": r[6], "invigilator": r[7]} for r in rows]
     finally:
         cur.close(); conn.close()
 
-def save_exam_schedule_row(exam_id, subject, exam_date, start_time=None,
-                           end_time=None, room_no=None, max_marks=100, pass_marks=33):
+def save_exam_schedule_slot(exam_id, subject, exam_date, start_time, end_time, room_no, invigilator):
     conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("INSERT INTO exam_schedule (exam_id, subject, exam_date, start_time, end_time, room_no, max_marks, pass_marks) VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id;",
-                    (exam_id, subject, exam_date, start_time or None, end_time or None,
-                     room_no or None, max_marks, pass_marks))
+        cur.execute("INSERT INTO exam_schedules (exam_id, subject, exam_date, start_time, end_time, room_no, invigilator) VALUES (%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (exam_id, subject) DO UPDATE SET exam_date=EXCLUDED.exam_date, start_time=EXCLUDED.start_time, end_time=EXCLUDED.end_time, room_no=EXCLUDED.room_no, invigilator=EXCLUDED.invigilator RETURNING id;",
+                    (exam_id, subject, exam_date or None, start_time or None,
+                     end_time or None, room_no or None, invigilator or None))
         sid = cur.fetchone()[0]; conn.commit(); return sid
     except Exception:
         conn.rollback(); raise
     finally:
         cur.close(); conn.close()
 
-def delete_exam_schedule_row(schedule_id):
+def delete_exam_schedule_slot(slot_id):
     conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("DELETE FROM exam_schedule WHERE id=%s;", (schedule_id,))
-        conn.commit(); return True
+        cur.execute("DELETE FROM exam_schedules WHERE id=%s;", (slot_id,))
+        conn.commit()
     except Exception:
         conn.rollback(); raise
-    finally:
-        cur.close(); conn.close()
-
-def get_exam_subjects(exam_id):
-    conn = get_conn(); cur = conn.cursor()
-    try:
-        cur.execute("SELECT subjects FROM exams WHERE id=%s;", (exam_id,))
-        row = cur.fetchone()
-        if row and row[0]: return list(row[0])
-        cur.execute("SELECT DISTINCT subject FROM exam_schedule WHERE exam_id=%s;", (exam_id,))
-        return [r[0] for r in cur.fetchall()]
-    finally:
-        cur.close(); conn.close()
-
-def get_all_exams():
-    conn = get_conn(); cur = conn.cursor()
-    try:
-        cur.execute("SELECT id, name, class_name, exam_date, max_marks, subjects FROM exams ORDER BY exam_date DESC;")
-        rows = cur.fetchall()
-        return [{"id": r[0], "name": r[1], "class_name": r[2], "exam_date": r[3],
-                 "max_marks": r[4], "subjects": r[5]} for r in rows]
-    finally:
-        cur.close(); conn.close()
-
-def get_exam_by_id(exam_id):
-    conn = get_conn(); cur = conn.cursor()
-    try:
-        cur.execute("SELECT id, name, class_name, exam_date, max_marks, subjects FROM exams WHERE id=%s;", (exam_id,))
-        r = cur.fetchone()
-        if not r: return None
-        return {"id": r[0], "name": r[1], "class_name": r[2], "exam_date": r[3],
-                "max_marks": r[4], "subjects": r[5]}
-    finally:
-        cur.close(); conn.close()
-
-def get_exams_by_class(class_name):
-    conn = get_conn(); cur = conn.cursor()
-    try:
-        cur.execute("SELECT id, name, class_name, exam_date, max_marks, subjects FROM exams WHERE class_name=%s ORDER BY exam_date DESC;", (class_name,))
-        rows = cur.fetchall()
-        return [{"id": r[0], "name": r[1], "class_name": r[2], "exam_date": r[3],
-                 "max_marks": r[4], "subjects": r[5]} for r in rows]
-    finally:
-        cur.close(); conn.close()
-
-def promote_class_section(student_ids, from_class, to_class, from_section=None, to_section=None):
-    if not student_ids: return 0
-    conn = get_conn(); cur = conn.cursor()
-    try:
-        ids_list = list(student_ids)
-        if to_section:
-            cur.execute("UPDATE students SET class_name=%s, section=%s WHERE id = ANY(%s);",
-                        (to_class, to_section, ids_list))
-        else:
-            cur.execute("UPDATE students SET class_name=%s WHERE id = ANY(%s);",
-                        (to_class, ids_list))
-        updated = cur.rowcount; conn.commit(); return updated
-    except Exception:
-        conn.rollback(); raise
-    finally:
-        cur.close(); conn.close()
-
-def get_exam_results_for_class(exam_id, class_name):
-    conn = get_conn(); cur = conn.cursor()
-    try:
-        cur.execute("""SELECT s.id as student_id, s.name, s.roll_no, s.class_name, s.section,
-                              COALESCE(SUM(m.obtained), 0) as total_marks
-                       FROM students s
-                       LEFT JOIN marks m ON s.id = m.student_id AND m.exam_id = %s
-                       WHERE s.class_name = %s
-                       GROUP BY s.id, s.name, s.roll_no, s.class_name, s.section
-                       ORDER BY total_marks DESC, s.roll_no ASC;""", (exam_id, class_name))
-        rows = cur.fetchall()
-        return [{"student_id": r[0], "name": r[1], "roll_no": r[2],
-                 "class_name": r[3], "section": r[4],
-                 "total_marks": float(r[5] or 0)} for r in rows]
-    finally:
-        cur.close(); conn.close()
-
-def get_top_performers(exam_id=None, limit=5):
-    conn = get_conn(); cur = conn.cursor()
-    try:
-        if exam_id:
-            cur.execute("""SELECT s.id, s.name, s.roll_no, s.class_name, s.section,
-                                  COALESCE(SUM(m.obtained), 0) as total
-                           FROM students s
-                           JOIN marks m ON s.id = m.student_id
-                           WHERE m.exam_id = %s
-                           GROUP BY s.id, s.name, s.roll_no, s.class_name, s.section
-                           ORDER BY total DESC LIMIT %s;""", (exam_id, limit))
-        else:
-            cur.execute("""SELECT s.id, s.name, s.roll_no, s.class_name, s.section,
-                                  COALESCE(SUM(m.obtained), 0) as total
-                           FROM students s
-                           JOIN marks m ON s.id = m.student_id
-                           GROUP BY s.id, s.name, s.roll_no, s.class_name, s.section
-                           ORDER BY total DESC LIMIT %s;""", (limit,))
-        rows = cur.fetchall()
-        return [{"id": r[0], "name": r[1], "roll_no": r[2], "class_name": r[3],
-                 "section": r[4], "total": float(r[5] or 0)} for r in rows]
     finally:
         cur.close(); conn.close()
 
 # ============================================================
 # SECTION 40 — HALL TICKET
 # ============================================================
-def get_hall_ticket_data(exam_id, student_id):
+def get_hall_ticket_data(exam_id, class_name=None, section=None, student_id=None):
+    exam = get_exam_details(exam_id)
+    if not exam: return None
+    schedule = get_exam_schedule(exam_id)
     conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("SELECT id, name, roll_no, class_name, section, gender, dob, parent_name, parent_phone, photo_url FROM students WHERE id=%s;", (student_id,))
-        s_row = cur.fetchone()
-        if not s_row: return None
-        student = {"id": s_row[0], "name": s_row[1], "roll_no": s_row[2],
-                   "class_name": s_row[3], "section": s_row[4], "gender": s_row[5],
-                   "dob": s_row[6], "parent_name": s_row[7], "parent_phone": s_row[8],
-                   "photo_url": s_row[9]}
-        cur.execute("SELECT id, name, class_name, exam_date, max_marks, subjects FROM exams WHERE id=%s;", (exam_id,))
-        e_row = cur.fetchone()
-        if not e_row: return None
-        exam = {"id": e_row[0], "name": e_row[1], "class_name": e_row[2],
-                "exam_date": e_row[3], "max_marks": e_row[4], "subjects": e_row[5]}
-        schedule = get_exam_schedule(exam_id)
-        return {"student": student, "exam": exam, "schedule": schedule}
-    finally:
-        cur.close(); conn.close()
-
-def get_bulk_hall_tickets(exam_id, class_name, section=None):
-    conn = get_conn(); cur = conn.cursor()
-    try:
-        q = "SELECT id FROM students WHERE status='active' AND class_name=%s"
-        params = [class_name]
-        if section: q += " AND section=%s"; params.append(section)
+        q = "SELECT id, name, roll_no, class_name, section, gender, dob, parent_name, parent_phone, photo_url FROM students WHERE status='active'"
+        params = []
+        if student_id: q += " AND id=%s"; params.append(student_id)
+        else:
+            target_cls = class_name or exam.get("class_name")
+            if target_cls: q += " AND class_name=%s"; params.append(target_cls)
+            if section: q += " AND section=%s"; params.append(section)
         q += " ORDER BY section, roll_no, name;"
-        cur.execute(q, tuple(params))
-        student_ids = [r[0] for r in cur.fetchall()]
-    finally:
-        cur.close(); conn.close()
-    tickets = []
-    for sid in student_ids:
-        data = get_hall_ticket_data(exam_id, sid)
-        if data: tickets.append(data)
-    return tickets
-
-def get_hall_ticket_stats(exam_id, class_name):
-    conn = get_conn(); cur = conn.cursor()
-    try:
-        cur.execute("SELECT COUNT(*) FROM students WHERE status='active' AND class_name=%s;", (class_name,))
-        total_students = cur.fetchone()[0] or 0
-        cur.execute("SELECT COUNT(*) FROM exam_schedule WHERE exam_id=%s;", (exam_id,))
-        scheduled_subjects = cur.fetchone()[0] or 0
-        return {"total_students": total_students, "scheduled_subjects": scheduled_subjects,
-                "ready": scheduled_subjects > 0}
+        cur.execute(q, tuple(params)); rows = cur.fetchall()
+        students = [{"id": r[0], "name": r[1], "roll_no": r[2],
+                     "class_name": r[3], "section": r[4], "gender": r[5],
+                     "dob": r[6], "parent_name": r[7], "parent_phone": r[8],
+                     "photo_url": r[9]} for r in rows]
+        return {"exam": exam, "schedule": schedule, "students": students}
     finally:
         cur.close(); conn.close()
 
 # ============================================================
 # SECTION 41 — REPORT CARDS
 # ============================================================
-def calculate_grade(percentage):
-    if percentage >= 90: return "A+"
-    elif percentage >= 80: return "A"
-    elif percentage >= 70: return "B+"
-    elif percentage >= 60: return "B"
-    elif percentage >= 50: return "C"
-    elif percentage >= 33: return "D"
-    else: return "F"
+def calculate_grade(percent):
+    if percent >= 90: return "A+"
+    if percent >= 80: return "A"
+    if percent >= 70: return "B+"
+    if percent >= 60: return "B"
+    if percent >= 50: return "C"
+    if percent >= 33: return "D"
+    return "F"
 
-def get_report_card_data(student_id, exam_id):
-    conn = get_conn(); cur = conn.cursor()
-    try:
-        cur.execute("SELECT id, name, roll_no, class_name, section, gender, dob, parent_name, parent_phone, photo_url FROM students WHERE id=%s;", (student_id,))
-        s_row = cur.fetchone()
-        if not s_row: return None
-        student = {"id": s_row[0], "name": s_row[1], "roll_no": s_row[2],
-                   "class_name": s_row[3], "section": s_row[4], "gender": s_row[5],
-                   "dob": s_row[6], "parent_name": s_row[7], "parent_phone": s_row[8],
-                   "photo_url": s_row[9]}
-        cur.execute("SELECT id, name, class_name, exam_date, max_marks, subjects FROM exams WHERE id=%s;", (exam_id,))
-        e_row = cur.fetchone()
-        if not e_row: return None
-        exam = {"id": e_row[0], "name": e_row[1], "class_name": e_row[2],
-                "exam_date": e_row[3], "max_marks": e_row[4], "subjects": e_row[5]}
-        cur.execute("SELECT subject, obtained FROM marks WHERE exam_id=%s AND student_id=%s;", (exam_id, student_id))
-        marks_rows = cur.fetchall()
-        marks_map = {r[0]: float(r[1] or 0) for r in marks_rows}
-        subjects = exam["subjects"] if exam["subjects"] else list(marks_map.keys())
-        max_per_subject = float(exam["max_marks"] or 100)
-        subject_details = []
-        total_obtained = 0.0
-        for sub in subjects:
-            obt = marks_map.get(sub, 0.0)
-            total_obtained += obt
-            pct = round((obt / max_per_subject) * 100, 1) if max_per_subject > 0 else 0
-            subject_details.append({"subject": sub, "obtained": obt,
-                                    "max_marks": max_per_subject,
-                                    "percentage": pct, "grade": calculate_grade(pct)})
-        total_max = max_per_subject * len(subjects) if subjects else max_per_subject
-        overall_pct = round((total_obtained / total_max) * 100, 2) if total_max > 0 else 0
-        overall_grade = calculate_grade(overall_pct)
-        status = "PASS" if overall_pct >= 33 else "FAIL"
-        return {"student": student, "exam": exam, "subjects": subject_details,
-                "total_obtained": total_obtained, "total_max": total_max,
-                "percentage": overall_pct, "grade": overall_grade, "status": status}
-    finally:
-        cur.close(); conn.close()
+def get_student_report_card(exam_id, student_id):
+    exam = get_exam_details(exam_id)
+    if not exam: return None
+    s_row = get_student(student_id)
+    if not s_row: return None
+    keys = ["id","name","roll_no","class_name","section","gender","dob",
+            "parent_name","parent_phone","address","admission_date",
+            "status","created_at","photo_url"]
+    student = dict(zip(keys, s_row))
+    subjects = exam.get("subjects") or []; max_per_subj = float(exam.get("max_marks") or 100)
+    raw_marks = get_student_marks_report(exam_id, student_id)
+    rows = []; total_obtained = 0.0; failed_any = False
+    for subj in subjects:
+        val = raw_marks.get(subj)
+        if val is not None:
+            fval = float(val); total_obtained += fval
+            pct_s = (fval / max_per_subj * 100) if max_per_subj else 0
+            if pct_s < 33: failed_any = True
+            rows.append({"subject": subj, "obtained": fval, "max": max_per_subj,
+                         "grade": calculate_grade(pct_s), "pass": pct_s >= 33})
+        else:
+            rows.append({"subject": subj, "obtained": None, "max": max_per_subj,
+                         "grade": "-", "pass": False})
+    total_max = max_per_subj * len(subjects) if subjects else 0
+    overall_pct = round((total_obtained / total_max * 100), 1) if total_max else 0
+    merit = get_merit_list(exam_id); rank = None
+    for idx, m in enumerate(merit, start=1):
+        if m[0] == student_id: rank = idx; break
+    return {"exam": exam, "student": student, "rows": rows,
+            "total_obtained": total_obtained, "total_max": total_max,
+            "percent": overall_pct, "grade": calculate_grade(overall_pct),
+            "result": "FAIL" if failed_any or overall_pct < 33 else "PASS",
+            "rank": rank, "total_students_ranked": len(merit)}
 
-def get_class_report_cards(exam_id, class_name, section=None):
-    conn = get_conn(); cur = conn.cursor()
-    try:
-        q = "SELECT id FROM students WHERE status='active' AND class_name=%s"
-        params = [class_name]
-        if section: q += " AND section=%s"; params.append(section)
-        q += " ORDER BY section, roll_no, name;"
-        cur.execute(q, tuple(params))
-        student_ids = [r[0] for r in cur.fetchall()]
-    finally:
-        cur.close(); conn.close()
+def get_class_report_cards(exam_id, class_name=None, section=None):
+    exam = get_exam_details(exam_id)
+    if not exam: return []
+    target_cls = class_name or exam.get("class_name")
+    students = get_students_full(class_name=target_cls, section=section)
     cards = []
-    for sid in student_ids:
-        card = get_report_card_data(sid, exam_id)
-        if card: cards.append(card)
-    cards.sort(key=lambda x: x["percentage"], reverse=True)
-    for idx, c in enumerate(cards, start=1): c["rank"] = idx
+    for s in students:
+        rc = get_student_report_card(exam_id, s["id"])
+        if rc: cards.append(rc)
     return cards
 
 # ============================================================
-# SECTION 42 — PASSWORD OTP
+# SECTION 42 — PASSWORD RESET OTP
 # ============================================================
-def generate_otp_code(length=6):
-    return "".join([str(_random.randint(0, 9)) for _ in range(length)])
-
-def create_password_otp(user_type, identifier, otp_code=None):
-    if not otp_code: otp_code = generate_otp_code(6)
+def create_otp_request(admin_id):
+    otp = f"{_random.randint(100000, 999999)}"
     conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("INSERT INTO password_otps (user_type, identifier, otp_code, expires_at, is_used) VALUES (%s,%s,%s,NOW() + INTERVAL '10 minutes',FALSE) RETURNING id;",
-                    (user_type, identifier, otp_code))
+        cur.execute("UPDATE password_reset_otps SET used=TRUE WHERE admin_id=%s AND used=FALSE;", (admin_id,))
+        cur.execute("INSERT INTO password_reset_otps (admin_id, otp_code, expires_at) VALUES (%s, %s, NOW() + INTERVAL '10 minutes') RETURNING id;",
+                    (admin_id, otp))
         oid = cur.fetchone()[0]; conn.commit()
-        return {"id": oid, "otp": otp_code}
+        return {"id": oid, "otp": otp}
     except Exception:
         conn.rollback(); raise
     finally:
         cur.close(); conn.close()
 
-def verify_password_otp(user_type, identifier, otp_code):
+def verify_and_consume_otp(admin_id, otp_code):
     conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("SELECT id FROM password_otps WHERE user_type=%s AND identifier=%s AND otp_code=%s AND expires_at > NOW() AND is_used=FALSE ORDER BY created_at DESC LIMIT 1;",
-                    (user_type, identifier, otp_code))
+        cur.execute("SELECT id FROM password_reset_otps WHERE admin_id=%s AND otp_code=%s AND used=FALSE AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1;",
+                    (admin_id, str(otp_code).strip()))
         row = cur.fetchone()
         if not row: return False
-        cur.execute("UPDATE password_otps SET is_used=TRUE WHERE id=%s;", (row[0],))
+        cur.execute("UPDATE password_reset_otps SET used=TRUE WHERE id=%s;", (row[0],))
         conn.commit(); return True
-    except Exception:
-        conn.rollback(); return False
-    finally:
-        cur.close(); conn.close()
-
-def reset_password_by_identifier(user_type, identifier, new_password):
-    hashed = generate_password_hash(new_password)
-    conn = get_conn(); cur = conn.cursor()
-    try:
-        if user_type == "admin":
-            cur.execute("UPDATE admins SET password_hash=%s WHERE username=%s OR email=%s;",
-                        (hashed, identifier, identifier))
-        elif user_type == "teacher":
-            cur.execute("UPDATE teachers SET password_hash=%s WHERE username=%s;",
-                        (hashed, identifier))
-        elif user_type == "parent":
-            cur.execute("UPDATE parents SET password_hash=%s WHERE phone=%s;",
-                        (hashed, identifier))
-        else:
-            return False
-        updated = cur.rowcount; conn.commit(); return updated > 0
     except Exception:
         conn.rollback(); return False
     finally:
@@ -4997,102 +4842,195 @@ def reset_password_by_identifier(user_type, identifier, new_password):
 # ============================================================
 # SECTION 43 — SMS & GATEWAY
 # ============================================================
-def get_sms_logs(limit=100):
+def get_sms_templates(category=None):
     conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("SELECT id, phone, message, status, sent_at FROM sms_logs ORDER BY sent_at DESC LIMIT %s;", (limit,))
-        rows = cur.fetchall()
-        return [{"id": r[0], "phone": r[1], "message": r[2],
-                 "status": r[3], "sent_at": r[4]} for r in rows]
+        q = "SELECT id, name, category, body, created_at FROM sms_templates"
+        params = []
+        if category: q += " WHERE category=%s"; params.append(category)
+        q += " ORDER BY category, name;"
+        cur.execute(q, tuple(params)); rows = cur.fetchall()
+        return [{"id": r[0], "name": r[1], "category": r[2],
+                 "body": r[3], "created_at": r[4]} for r in rows]
     except Exception:
         conn.rollback()
         return []
     finally:
         cur.close(); conn.close()
 
-def log_sms(phone, message, status="sent"):
+def get_sms_template(tid):
     conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("INSERT INTO sms_logs (phone, message, status, sent_at) VALUES (%s,%s,%s,NOW()) RETURNING id;",
-                    (phone, message, status))
+        cur.execute("SELECT id, name, category, body FROM sms_templates WHERE id=%s;", (tid,))
+        row = cur.fetchone()
+        if not row: return None
+        return {"id": row[0], "name": row[1], "category": row[2], "body": row[3]}
+    except Exception:
+        conn.rollback()
+        return None
+    finally:
+        cur.close(); conn.close()
+
+def create_sms_template(name, category, body):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO sms_templates (name, category, body) VALUES (%s,%s,%s) RETURNING id;",
+                    (name, category, body))
+        tid = cur.fetchone()[0]; conn.commit(); return tid
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def update_sms_template(tid, name, category, body):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE sms_templates SET name=%s, category=%s, body=%s WHERE id=%s RETURNING id;",
+                    (name, category, body, tid))
+        res = cur.fetchone(); conn.commit(); return res[0] if res else None
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def delete_sms_template(tid):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM sms_templates WHERE id=%s;", (tid,)); conn.commit()
+    except Exception:
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def log_sms(student_id, template_id, phone, message, status, provider_response, admin_id):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO sms_logs (student_id, template_id, phone, message, status, provider_response, sent_by) VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id;",
+                    (student_id, template_id, phone, message, status or 'sent',
+                     provider_response, admin_id))
         lid = cur.fetchone()[0]; conn.commit(); return lid
     except Exception:
-        conn.rollback(); return None
+        conn.rollback(); raise
+    finally:
+        cur.close(); conn.close()
+
+def get_recent_sms_logs(limit=100):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT sl.id, sl.sent_at, sl.phone, sl.message, sl.status, sl.provider_response, s.name AS student_name, s.class_name, st.name AS template_name FROM sms_logs sl LEFT JOIN students s ON s.id = sl.student_id LEFT JOIN sms_templates st ON st.id = sl.template_id ORDER BY sl.sent_at DESC LIMIT %s;", (limit,))
+        rows = cur.fetchall()
+        return [{"id": r[0], "sent_at": r[1], "phone": r[2], "message": r[3],
+                 "status": r[4], "provider_response": r[5], "student_name": r[6],
+                 "class_name": r[7], "template_name": r[8]} for r in rows]
+    except Exception:
+        conn.rollback()
+        return []
+    finally:
+        cur.close(); conn.close()
+
+def was_sms_sent_recently(student_id, template_id, days=7):
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT sent_at FROM sms_logs WHERE student_id=%s AND template_id=%s AND status='sent' AND sent_at > NOW() - INTERVAL '%s days' ORDER BY sent_at DESC LIMIT 1;",
+                    (student_id, template_id, int(days)))
+        row = cur.fetchone(); return row[0] if row else None
+    except Exception:
+        conn.rollback()
+        return None
     finally:
         cur.close(); conn.close()
 
 def get_sms_stats():
     conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("SELECT COUNT(*), COUNT(*) FILTER (WHERE status='sent'), COUNT(*) FILTER (WHERE status='failed') FROM sms_logs;")
-        row = cur.fetchone()
-        return {"total": row[0] or 0, "sent": row[1] or 0, "failed": row[2] or 0}
+        cur.execute("SELECT COUNT(*) FILTER (WHERE status='sent'), COUNT(*) FILTER (WHERE status='failed'), COUNT(*) FILTER (WHERE status='sent' AND TO_CHAR(sent_at, 'YYYY-MM') = TO_CHAR(NOW(), 'YYYY-MM')) FROM sms_logs;")
+        r = cur.fetchone()
+        return {"total_sent": r[0] or 0, "total_failed": r[1] or 0,
+                "sent_this_month": r[2] or 0}
     except Exception:
         conn.rollback()
-        return {"total": 0, "sent": 0, "failed": 0}
+        return {"total_sent": 0, "total_failed": 0, "sent_this_month": 0}
     finally:
         cur.close(); conn.close()
 
 # ============================================================
-# SECTION 44 — SYSTEM HEALTH & METRICS
+# SECTION 44 — SYSTEM & HEALTH + DASHBOARD FIXED HELPERS
 # ============================================================
-def get_system_health():
+def check_db_health():
     conn = get_conn(); cur = conn.cursor()
     try:
-        cur.execute("SELECT 1;"); cur.fetchone()
-        return {"status": "healthy", "database": "connected",
-                "timestamp": datetime.now().isoformat()}
-    except Exception as e:
-        return {"status": "unhealthy", "database": "disconnected",
-                "error": str(e), "timestamp": datetime.now().isoformat()}
+        cur.execute("SELECT 1;")
+        cur.fetchone(); return True
+    except Exception:
+        return False
     finally:
-        try: cur.close()
-        except Exception: pass
-        try: conn.close()
-        except Exception: pass
+        cur.close(); conn.close()
 
-def get_database_tables_info():
+def get_db_table_counts():
+    tables = ["students","fee_structure","fee_payments","attendance","exams",
+              "marks","notices","parents","enquiries","staff","bills",
+              "timetable","salary_records","homework","bus_routes",
+              "student_transport","expenses","certificates","events","books",
+              "book_issues","promotion_logs","teachers","medical_records",
+              "vaccinations","custom_alerts","hostels","hostel_rooms",
+              "hostel_allocations","discount_types","student_discounts",
+              "visitors","online_payments","testimonials","gallery",
+              "contact_messages","automation_jobs","automation_settings",
+              "automation_runs","leave_types","staff_leaves","leave_balances",
+              "staff_attendance","advances","advance_repayments",
+              "message_threads","messages","exam_schedules",
+              "password_reset_otps","sms_templates","sms_logs","admins",
+              "audit_logs","password_resets","settings","whatsapp_templates",
+              "whatsapp_logs"]
     conn = get_conn(); cur = conn.cursor()
+    out = {}
     try:
-        cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;")
-        tables = [r[0] for r in cur.fetchall()]
-        info = []
         for t in tables:
             try:
                 cur.execute(f'SELECT COUNT(*) FROM "{t}";')
-                cnt = cur.fetchone()[0]
+                out[t] = cur.fetchone()[0]
             except Exception:
                 conn.rollback()
-                cnt = -1
-            info.append({"table_name": t, "row_count": cnt})
-        return info
-    except Exception:
-        conn.rollback()
-        return []
+                out[t] = -1
+        return out
     finally:
         cur.close(); conn.close()
 
 def get_app_metrics():
     conn = get_conn(); cur = conn.cursor()
     try:
+        today_str = date.today().isoformat()
+        month_str = date.today().strftime("%Y-%m")
         cur.execute("SELECT COUNT(*) FROM students WHERE status='active';")
-        students = cur.fetchone()[0] or 0
+        total_students = cur.fetchone()[0] or 0
         cur.execute("SELECT COUNT(*) FROM staff WHERE status='active';")
-        staff = cur.fetchone()[0] or 0
-        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM fee_payments;")
-        fees = float(cur.fetchone()[0] or 0)
-        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM expenses;")
-        expenses = float(cur.fetchone()[0] or 0)
-        return {"active_students": students, "active_staff": staff,
-                "total_fees_collected": fees, "total_expenses": expenses,
-                "server_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        total_staff = cur.fetchone()[0] or 0
+        cur.execute("SELECT COALESCE(SUM(amount), 0) FROM fee_payments WHERE month=%s;", (month_str,))
+        fees_month = float(cur.fetchone()[0] or 0)
+        cur.execute("SELECT COUNT(*) FILTER (WHERE status='present'), COUNT(*) FILTER (WHERE status IN ('present','absent','late','leave')) FROM attendance WHERE date=%s;", (today_str,))
+        att_row = cur.fetchone()
+        att_pct = round((att_row[0] / att_row[1] * 100), 1) if att_row and att_row[1] else None
+        cur.execute("SELECT COUNT(*) FROM enquiries WHERE status='new';")
+        new_enquiries = cur.fetchone()[0] or 0
+        cur.execute("SELECT COUNT(*) FROM book_issues WHERE status='issued' AND due_date < CURRENT_DATE;")
+        overdue_books = cur.fetchone()[0] or 0
+        cur.execute("SELECT COUNT(*) FROM staff_leaves WHERE status='pending';")
+        pending_leaves = cur.fetchone()[0] or 0
+        cur.execute("SELECT COUNT(*) FROM visitors WHERE check_out IS NULL;")
+        active_visitors = cur.fetchone()[0] or 0
+        return {"total_students": total_students, "total_staff": total_staff,
+                "fees_this_month": fees_month, "today_attendance_pct": att_pct,
+                "new_enquiries": new_enquiries, "overdue_books": overdue_books,
+                "pending_leaves": pending_leaves,
+                "active_visitors": active_visitors}
     except Exception:
         conn.rollback()
-        return {"active_students": 0, "active_staff": 0,
-                "total_fees_collected": 0.0, "total_expenses": 0.0,
-                "server_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        return {"total_students": 0, "total_staff": 0, "fees_this_month": 0.0,
+                "today_attendance_pct": None, "new_enquiries": 0,
+                "overdue_books": 0, "pending_leaves": 0, "active_visitors": 0}
     finally:
         cur.close(); conn.close()
+
 def get_next_roll_number(class_name=None, section=None):
     conn = get_conn(); cur = conn.cursor()
     try:
@@ -5124,6 +5062,7 @@ def get_next_roll_number(class_name=None, section=None):
         return "1"
     finally:
         cur.close(); conn.close()
+
 def get_advanced_classes_list():
     conn = get_conn(); cur = conn.cursor()
     try:
@@ -5165,6 +5104,7 @@ def get_advanced_classes_list():
         return []
     finally:
         cur.close(); conn.close()
+
 def create_new_class(class_name, section=None, roll_no=None, student_name=None):
     cls = (str(class_name) if class_name is not None else "").strip()
     if not cls:
@@ -5199,6 +5139,7 @@ def create_new_class(class_name, section=None, roll_no=None, student_name=None):
         raise
     finally:
         cur.close(); conn.close()
+
 def archive_class(class_name, section=None):
     cls = (str(class_name) if class_name is not None else "").strip()
     if not cls:
@@ -5221,6 +5162,7 @@ def archive_class(class_name, section=None):
         raise
     finally:
         cur.close(); conn.close()
+
 def restore_class(class_name, section=None):
     cls = (str(class_name) if class_name is not None else "").strip()
     if not cls:
@@ -5243,6 +5185,7 @@ def restore_class(class_name, section=None):
         raise
     finally:
         cur.close(); conn.close()
+
 def get_class_by_id(class_id):
     classes = get_advanced_classes_list()
     if class_id is None:
@@ -5264,6 +5207,7 @@ def get_class_by_id(class_id):
             return item
 
     return None
+
 def update_class_details(old_class_name=None, new_class_name=None, section=None, old_section=None, class_id=None, **kwargs):
     target_old_cls = old_class_name or kwargs.get("current_class") or kwargs.get("class_name")
     if not target_old_cls and class_id is not None:
@@ -5308,6 +5252,7 @@ def update_class_details(old_class_name=None, new_class_name=None, section=None,
         raise
     finally:
         cur.close(); conn.close()
+
 def get_classes_stats():
     classes = get_advanced_classes_list()
     total_classes = len(classes)
@@ -5325,13 +5270,14 @@ def get_classes_stats():
         "active_students": active_students,
         "inactive_students": inactive_students,
     }
+
 def add_section_to_class(class_name, section, roll_no=None, student_name=None):
     cls = (str(class_name) if class_name is not None else "").strip()
     sec = (str(section) if section is not None else "").strip()
     if not cls or not sec:
         return None
     return create_new_class(cls, section=sec, roll_no=roll_no, student_name=student_name)
-  
+
 def get_class_subjects(class_name=None, section=None, class_id=None, **kwargs):
     target_cls = class_name or kwargs.get("cls")
     if not target_cls and class_id is not None:
@@ -5394,9 +5340,3 @@ def get_class_subjects(class_name=None, section=None, class_id=None, **kwargs):
         return []
     finally:
         cur.close(); conn.close()
-                                     
-  
-      
-      
-      
-      
