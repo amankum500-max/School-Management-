@@ -5165,5 +5165,40 @@ def get_advanced_classes_list():
         return []
     finally:
         cur.close(); conn.close()
+def create_new_class(class_name, section=None, roll_no=None, student_name=None):
+    cls = (str(class_name) if class_name is not None else "").strip()
+    if not cls:
+        return None
+    sec = (str(section).strip() if section else None)
+    conn = get_conn(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT 1 FROM students WHERE class_name=%s LIMIT 1;", (cls,))
+        if cur.fetchone():
+            if sec:
+                cur.execute("SELECT 1 FROM students WHERE class_name=%s AND section=%s LIMIT 1;", (cls, sec))
+                if cur.fetchone():
+                    return True
+            else:
+                return True
+
+        r_no = str(roll_no).strip() if roll_no else get_next_roll_number(cls, sec)
+        s_name = (str(student_name).strip() if student_name else f"Class {cls} Placeholder")
+        cur.execute(
+            """
+            INSERT INTO students (name, roll_no, class_name, section, status)
+            VALUES (%s, %s, %s, %s, 'active')
+            RETURNING id;
+            """,
+            (s_name, r_no, cls, sec)
+        )
+        sid = cur.fetchone()[0]
+        conn.commit()
+        return sid
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close(); conn.close()
+      
       
       
