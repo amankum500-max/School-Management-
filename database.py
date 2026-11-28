@@ -7618,6 +7618,72 @@ def restore_class(class_name, section=None):
     finally:
         cur.close()
         conn.close()
+def get_class_by_id(class_id):
+    """Fetches a class record by ID from `classes` if present, or falls back by name."""
+    if class_id is None or str(class_id).strip() == "":
+        return None
+
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        try:
+            cid_int = int(str(class_id).strip())
+            cur.execute("SELECT id, name, section, capacity FROM classes WHERE id = %s;", (cid_int,))
+            row = cur.fetchone()
+            if row:
+                return {
+                    "id": row[0],
+                    "name": row[1],
+                    "class_name": row[1],
+                    "section": row[2] or "",
+                    "capacity": row[3] or 40,
+                }
+        except (ValueError, TypeError):
+            pass
+
+        name_str = str(class_id).strip()
+        cur.execute("SELECT id, name, section, capacity FROM classes WHERE name = %s LIMIT 1;", (name_str,))
+        row = cur.fetchone()
+        if row:
+            return {
+                "id": row[0],
+                "name": row[1],
+                "class_name": row[1],
+                "section": row[2] or "",
+                "capacity": row[3] or 40,
+            }
+
+        cur.execute(
+            "SELECT DISTINCT class_name FROM students WHERE class_name = %s AND status = 'active' LIMIT 1;",
+            (name_str,),
+        )
+        s_row = cur.fetchone()
+        if s_row:
+            return {
+                "id": s_row[0],
+                "name": s_row[0],
+                "class_name": s_row[0],
+                "section": "",
+                "capacity": 40,
+            }
+        return None
+    except psycopg2.errors.UndefinedTable:
+        conn.rollback()
+        name_str = str(class_id).strip()
+        return {
+            "id": name_str,
+            "name": name_str,
+            "class_name": name_str,
+            "section": "",
+            "capacity": 40,
+        }
+    except Exception:
+        conn.rollback()
+        return None
+    finally:
+        cur.close()
+        conn.close()
+        
         
         
       
