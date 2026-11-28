@@ -7543,4 +7543,26 @@ def delete_student_document(doc_id):
     finally:
         cur.close()
         conn.close()
-      
+def get_next_roll_number(class_name=None, section=None):
+    """Return the next suggested roll number for a class (and optional section)."""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        q = "SELECT roll_no FROM students WHERE roll_no IS NOT NULL AND roll_no ~ '^[0-9]+$'"
+        params = []
+        if class_name:
+            q += " AND class_name = %s"
+            params.append(class_name)
+        if section:
+            q += " AND section = %s"
+            params.append(section)
+        q += " ORDER BY roll_no::int DESC LIMIT 1;"
+        cur.execute(q, tuple(params))
+        row = cur.fetchone()
+        return str(int(row[0]) + 1) if row else "1"
+    except Exception:
+        return "1"
+    finally:
+        cur.close()
+        conn.close()
+        
