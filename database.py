@@ -7497,3 +7497,29 @@ def get_monthly_report_data(month):
     finally:
         cur.close()
         conn.close()
+def get_next_roll_number(class_name, section=None):
+    """Returns the next suggested roll number string for a given class (and optional section)."""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        q = "SELECT roll_no FROM students WHERE status='active' AND class_name=%s AND roll_no IS NOT NULL"
+        params = [class_name]
+        if section:
+            q += " AND section=%s"
+            params.append(section)
+        cur.execute(q, tuple(params))
+        rows = cur.fetchall()
+
+        max_num = 0
+        for (r_no,) in rows:
+            digits = "".join(ch for ch in str(r_no or "") if ch.isdigit())
+            if digits:
+                max_num = max(max_num, int(digits))
+        return str(max_num + 1)
+    except Exception:
+        conn.rollback()
+        return "1"
+    finally:
+        cur.close()
+        conn.close()
+        
