@@ -14,3 +14,5 @@ cloudinary
 twilio
 Pillow
 Flask-Mail
+bleach
+Flask-WTF
