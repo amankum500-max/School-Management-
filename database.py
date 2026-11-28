@@ -7759,6 +7759,46 @@ def update_class_details(class_id, class_name=None, section=None, capacity=40):
     finally:
         cur.close()
         conn.close()
+def promote_students(from_class, to_class, section=None, student_ids=None):
+    """Promotes active students from `from_class` to `to_class` (optionally filtered by section or student_ids)."""
+    from_class = (from_class or "").strip()
+    to_class = (to_class or "").strip()
+    section = (section or "").strip()
+    if not from_class or not to_class:
+        return 0
+
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        if student_ids:
+            cleaned_ids = [int(x) for x in student_ids if str(x).strip().isdigit()]
+            if not cleaned_ids:
+                return 0
+            cur.execute(
+                """
+                UPDATE students
+                SET class_name = %s
+                WHERE id = ANY(%s) AND status = 'active';
+                """,
+                (to_class, cleaned_ids),
+            )
+        else:
+            q = "UPDATE students SET class_name = %s WHERE status = 'active' AND class_name = %s"
+            params = [to_class, from_class]
+            if section:
+                q += " AND section = %s"
+                params.append(section)
+            cur.execute(q, tuple(params))
+
+        promoted = cur.rowcount or 0
+        conn.commit()
+        return promoted
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
         
         
         
