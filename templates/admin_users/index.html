@@ -20,13 +20,9 @@
     <h3 style="font-size:1rem; margin-bottom:0.75rem; color:#1e293b;">
         ➕ Create Admin User
     </h3>
-    <!-- 🔴 यहाँ CSRF टोकन जोड़ा गया है -->
     <form method="POST" action="{{ url_for('admin_users.add') }}"
           style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr auto; gap:0.5rem;
           align-items:end;">
-        
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
         <div>
             <label style="font-size:0.72rem; color:#64748b; display:block; margin-bottom:0.2rem;">
                 Username *
@@ -130,12 +126,9 @@
                     onclick="document.getElementById('edit-{{ a.id }}').style.display='table-row';"
                     style="background:none; border:none; color:#f59e0b; cursor:pointer;
                     font-size:0.8rem; margin-right:0.3rem;">Edit</button>
-                
-                <!-- 🔴 यहाँ CSRF टोकन जोड़ा गया है (Delete Form) -->
                 <form method="POST" action="{{ url_for('admin_users.remove', aid=a.id) }}"
                       onsubmit="return confirm('Delete {{ a.username }}?');"
                       style="display:inline; margin-right:0.3rem;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button style="background:none; border:none; color:#ef4444;
                         cursor:pointer; font-size:0.8rem;">Delete</button>
                 </form>
@@ -147,11 +140,8 @@
         {% if not is_self %}
         <tr id="edit-{{ a.id }}" style="display:none; background:#f8fafc;">
             <td colspan="6" style="padding:0.6rem;">
-                <!-- 🔴 यहाँ CSRF टोकन जोड़ा गया है (Edit Form) -->
                 <form method="POST" action="{{ url_for('admin_users.edit', aid=a.id) }}"
                       style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    
                     <input name="full_name" value="{{ a.full_name or '' }}"
                         placeholder="Full name"
                         style="padding:0.4rem; border:1px solid #cbd5e1; border-radius:4px;
@@ -171,11 +161,8 @@
                     </label>
                     <button type="submit" class="btn"
                         style="padding:0.4rem 0.8rem; font-size:0.8rem;">Save</button>
-                    
-                    <!-- 🔴 यहाँ CSRF टोकन जोड़ा गया है (Reset Password Form) -->
                     <form method="POST" action="{{ url_for('admin_users.reset', aid=a.id) }}"
                           style="display:flex; gap:0.3rem; align-items:center; margin-left:auto;">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input name="new_password" type="password" minlength="6" required
                             placeholder="new password"
                             style="padding:0.4rem; border:1px solid #cbd5e1; border-radius:4px;
