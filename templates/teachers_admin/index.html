@@ -17,6 +17,9 @@
     {% if staff_without_login %}
     <form method="POST" action="{{ url_for('teachers_admin.add') }}"
           style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:end;">
+        <!-- 🔴 यहाँ CSRF टोकन जोड़ा गया है -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
         <div style="flex:1; min-width:180px;">
             <label style="font-size:0.75rem; color:#64748b; display:block; margin-bottom:0.2rem;">Staff Member</label>
             <select name="staff_id" required
@@ -74,6 +77,9 @@
                 <form method="POST" action="{{ url_for('teachers_admin.reset', tid=t.id) }}"
                       style="display:inline-flex; gap:0.3rem; align-items:center; margin-right:0.4rem;"
                       onsubmit="return confirm('Password reset for {{ t.name }}?');">
+                    <!-- 🔴 यहाँ CSRF टोकन जोड़ा गया है -->
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
                     <input name="new_password" type="password" minlength="6" required
                         placeholder="new pass"
                         style="width:100px; padding:0.3rem; border:1px solid #cbd5e1;
@@ -86,6 +92,9 @@
                 <form method="POST" action="{{ url_for('teachers_admin.remove', tid=t.id) }}"
                       onsubmit="return confirm('Delete login for {{ t.name }}?');"
                       style="display:inline;">
+                    <!-- 🔴 यहाँ CSRF टोकन जोड़ा गया है -->
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
                     <button style="background:none; border:none; color:#ef4444;
                         cursor:pointer; font-size:0.78rem;">Delete</button>
                 </form>
