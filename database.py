@@ -7683,6 +7683,82 @@ def get_class_by_id(class_id):
     finally:
         cur.close()
         conn.close()
+def update_class_details(class_id, class_name=None, section=None, capacity=40):
+    """Updates a class record in `classes` if present; falls back cleanly if `classes` table does not exist."""
+    name_str = (class_name or str(class_id or "")).strip()
+    sec_str = (section or "").strip()
+    cap_int = int(capacity or 40)
+    if not name_str:
+        return None
+
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        try:
+            cid_int = int(str(class_id).strip())
+            cur.execute(
+                """
+                UPDATE classes
+                SET name = %s, section = %s, capacity = %s
+                WHERE id = %s
+                RETURNING id, name, section, capacity;
+                """,
+                (name_str, sec_str, cap_int, cid_int),
+            )
+            row = cur.fetchone()
+            if row:
+                conn.commit()
+                return {
+                    "id": row[0],
+                    "name": row[1],
+                    "class_name": row[1],
+                    "section": row[2] or "",
+                    "capacity": row[3] or cap_int,
+                }
+        except (ValueError, TypeError):
+            pass
+
+        cur.execute(
+            """
+            UPDATE classes
+            SET name = %s, section = %s, capacity = %s
+            WHERE name = %s
+            RETURNING id, name, section, capacity;
+            """,
+            (name_str, sec_str, cap_int, str(class_id).strip()),
+        )
+        row = cur.fetchone()
+        conn.commit()
+        if row:
+            return {
+                "id": row[0],
+                "name": row[1],
+                "class_name": row[1],
+                "section": row[2] or "",
+                "capacity": row[3] or cap_int,
+            }
+        return {
+            "id": class_id,
+            "name": name_str,
+            "class_name": name_str,
+            "section": sec_str,
+            "capacity": cap_int,
+        }
+    except psycopg2.errors.UndefinedTable:
+        conn.rollback()
+        return {
+            "id": class_id,
+            "name": name_str,
+            "class_name": name_str,
+            "section": sec_str,
+            "capacity": cap_int,
+        }
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
         
         
         
