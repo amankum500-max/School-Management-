@@ -7568,5 +7568,31 @@ def get_advanced_classes_list():
     finally:
         cur.close()
         conn.close()
+def archive_class(class_name, section=None):
+    """Archives (marks inactive) students in a given class (and optional section)."""
+    class_name = (class_name or "").strip()
+    section = (section or "").strip()
+    if not class_name:
+        return 0
+
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        q = "UPDATE students SET status='inactive' WHERE status='active' AND class_name=%s"
+        params = [class_name]
+        if section:
+            q += " AND section=%s"
+            params.append(section)
+        cur.execute(q, tuple(params))
+        updated = cur.rowcount or 0
+        conn.commit()
+        return updated
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
         
+      
         
