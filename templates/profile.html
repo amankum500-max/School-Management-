@@ -9,6 +9,8 @@
     <div class="card" style="margin-bottom:1rem;">
         <h3 style="font-size:1rem; margin-bottom:1rem; color:#1e293b;">👤 Profile Info</h3>
         <form method="POST">
+            <!-- 🔴 यहाँ CSRF टोकन जोड़ा गया है -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="profile">
 
             <div style="margin-bottom:1rem;">
@@ -35,6 +37,8 @@
     <div class="card">
         <h3 style="font-size:1rem; margin-bottom:1rem; color:#1e293b;">🔒 Change Password</h3>
         <form method="POST">
+            <!-- 🔴 यहाँ CSRF टोकन जोड़ा गया है -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="password">
 
             <div style="margin-bottom:0.75rem;">
