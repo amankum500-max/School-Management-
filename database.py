@@ -7522,4 +7522,51 @@ def get_next_roll_number(class_name, section=None):
     finally:
         cur.close()
         conn.close()
+def get_advanced_classes_list():
+    """Returns class summaries for the classes module (active student count, sections, and fee total)."""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT
+                s.class_name,
+                COUNT(*) FILTER (WHERE s.status = 'active') AS active_students,
+                COALESCE(
+                    ARRAY_AGG(DISTINCT s.section) FILTER (WHERE s.section IS NOT NULL AND s.section != ''),
+                    ARRAY[]::text[]
+                ) AS sections,
+                COALESCE(fs.monthly_fee, 0) AS monthly_fee
+            FROM students s
+            LEFT JOIN (
+                SELECT class_name, SUM(amount) AS monthly_fee
+                FROM fee_structure
+                GROUP BY class_name
+            ) fs ON fs.class_name = s.class_name
+            WHERE s.class_name IS NOT NULL AND s.class_name != ''
+            GROUP BY s.class_name, fs.monthly_fee
+            ORDER BY s.class_name;
+            """
+        )
+        rows = cur.fetchall()
+        result = []
+        for class_name, active_count, sections, monthly_fee in rows:
+            sec_list = sorted(sections or [])
+            result.append({
+                "class_name": class_name,
+                "name": class_name,
+                "active_students": int(active_count or 0),
+                "student_count": int(active_count or 0),
+                "sections": sec_list,
+                "section_count": len(sec_list),
+                "monthly_fee": float(monthly_fee or 0),
+            })
+        return result
+    except Exception:
+        conn.rollback()
+        return []
+    finally:
+        cur.close()
+        conn.close()
+        
         
