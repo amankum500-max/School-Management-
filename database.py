@@ -7565,4 +7565,36 @@ def get_next_roll_number(class_name=None, section=None):
     finally:
         cur.close()
         conn.close()
+def get_advanced_classes_list():
+    """Return active class/section breakdown with student counts."""
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            SELECT
+                COALESCE(class_name, 'Unassigned') AS class_name,
+                COALESCE(section, '') AS section,
+                COUNT(*) AS student_count
+            FROM students
+            WHERE status = 'active'
+            GROUP BY class_name, section
+            ORDER BY class_name NULLS LAST, section;
+            """
+        )
+        rows = cur.fetchall()
+        return [
+            {
+                "class_name": r[0],
+                "section": r[1],
+                "student_count": r[2],
+            }
+            for r in rows
+        ]
+    except Exception:
+        return []
+    finally:
+        cur.close()
+        conn.close()
+        
         
