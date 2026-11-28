@@ -88,6 +88,9 @@
         {% endwith %}
 
         <form method="POST" action="{{ url_for('auth.login') }}">
+            <!-- 🔴 यहाँ CSRF टोकन जोड़ा गया है -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
             <label>Username</label>
             <input type="text" name="username" required autofocus>
 
